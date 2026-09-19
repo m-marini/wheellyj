@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
@@ -41,7 +41,7 @@ import org.mmarini.wheelly.apis.WorldModel;
  * physical constraints prevent further movement (i.e., it can no longer move forward or backward).
  * </p>
  */
-public class RotateAction extends AbstractCommitmentAction {
+public class RotateState extends AbstractCommitmentAction {
 
     /**
      * The target direction angle in degrees.
@@ -59,7 +59,7 @@ public class RotateAction extends AbstractCommitmentAction {
      * @param commitmentTime the maximum time budget (in milliseconds) allowed for the rotation
      * @param targetDeg      the target heading angle in degrees
      */
-    public RotateAction(int commitmentTime, int targetDeg) {
+    public RotateState(int commitmentTime, int targetDeg) {
         super(commitmentTime);
         this.targetDeg = targetDeg;
     }

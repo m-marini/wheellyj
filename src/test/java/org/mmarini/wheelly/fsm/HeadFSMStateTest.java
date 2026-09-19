@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.fsm;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,21 +40,22 @@ import org.mmarini.wheelly.apis.WorldModelBuilder;
 import java.awt.geom.Point2D;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mmarini.wheelly.fsm.EnvironmentFSMEvent.COMPLETED;
 
-class HeadMacroActionTest {
-    public static final int COMMITMENT_TIME = 10;
-    public static final int SCAN_INTERVAL = 20;
+class HeadFSMStateTest {
+    public static final int COMMITMENT_TIME = 1000;
+    public static final int SCAN_INTERVAL = 2000;
     public static final int[] SCAN_HEAD_DEG = {-45, 0, 45};
     public static final int DIRECTION_RANGE_DEG = 45;
     public static final int TARGET_DISTANCE = 1;
 
-    MockMacroActionContext ctx;
-    private WorldModelBuilder builder;
+    MockFSMContext ctx;
+    WorldModelBuilder builder;
 
     @BeforeEach
     void setUp() {
         this.builder = new WorldModelBuilder();
-        this.ctx = new MockMacroActionContext();
+        this.ctx = new MockFSMContext().worldModel(builder.build());
     }
 
     @ParameterizedTest
@@ -93,118 +94,132 @@ class HeadMacroActionTest {
             targetDir = targetDir.opposite();
         }
         Point2D target = targetDir.at(world.robotStatus().headLocation(), TARGET_DISTANCE);
-        LookAtTargetAction action = new LookAtTargetAction(COMMITMENT_TIME, target, frontFacing, DIRECTION_RANGE_DEG);
+        LookAtTargetState action = new LookAtTargetState(COMMITMENT_TIME, target, frontFacing, DIRECTION_RANGE_DEG);
 
         // When executing the action for the first time
-        RobotCommands cmd = action.execute(ctx, world);
+        RobotCommands cmd = action.handleEvent(EnvironmentFSMEvent.TICK, ctx);
 
         // Then command should scan the expected direction
         assertEquals(expectedDir, cmd.scanDirection());
         // And no next action should have been required
-        assertEquals(0, ctx.requestNextActionNum());
+        assertFalse(ctx.isRequestNextAction());
         // And action should not be completed
         assertFalse(action.completed());
 
         // When executing the action after commitment time
-        ctx.clearRequests();
-        cmd = action.execute(ctx,
-                builder.addTime(COMMITMENT_TIME)
-                        .build());
+        ctx.worldModel(builder.addTime(COMMITMENT_TIME)
+                        .build())
+                .clear();
+        cmd = action.handleEvent(EnvironmentFSMEvent.TICK, ctx);
         // Then command should scan the expected direction
         assertEquals(expectedDir, cmd.scanDirection());
         // And next action should have been required
-        assertEquals(1, ctx.requestNextActionNum());
+        assertTrue(ctx.isRequestNextAction());
         // And action should be completed
         assertTrue(action.completed());
+    }
+
+    @Test
+    void testScanSubState() {
+        // Given a scan action
+        HeadScanSubState action = new HeadScanSubState(COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG);
+
+        //--------
+        // When executing the action for the first time
+        RobotCommands cmd = action.execute(EnvironmentFSMEvent.TICK, ctx);
+
+        // Then command should scan at first direction
+        assertEquals(SCAN_HEAD_DEG[0], cmd.scanDirection());
+        // And no next action should have been required
+        assertFalse(ctx.isRequestNextAction());
+
+        //--------
+        // When executing the action after commitment time (before scan interval)
+        ctx.worldModel(builder.addTime(COMMITMENT_TIME)
+                        .build())
+                .clear();
+        cmd = action.handleEvent(EnvironmentFSMEvent.TICK, ctx);
+
+        // Then command should scan at first direction
+        assertEquals(SCAN_HEAD_DEG[0], cmd.scanDirection());
+        // And no next action should have been required
+        assertFalse(ctx.isRequestNextAction());
+        // And action should not be completed
+        assertFalse(action.completed());
+
+        //--------
+        // When executing the action after scan interval and commitment interval
+        ctx.worldModel(builder.addTime(SCAN_INTERVAL - COMMITMENT_TIME)
+                        .build())
+                .clear();
+        cmd = action.handleEvent(EnvironmentFSMEvent.TICK, ctx);
+
+        // Then command should scan at second direction
+        assertEquals(SCAN_HEAD_DEG[1], cmd.scanDirection());
+        // And no next action should have been required
+        assertFalse(ctx.isRequestNextAction());
+        // And action should not be completed
+        assertFalse(action.completed());
+
+        //--------
+        // When executing the action after second scan interval and commitment interval
+        ctx.worldModel(builder.addTime(SCAN_INTERVAL)
+                        .build())
+                .clear();
+        cmd = action.handleEvent(EnvironmentFSMEvent.TICK, ctx);
+
+        // Then command should scan at second direction
+        assertEquals(SCAN_HEAD_DEG[2], cmd.scanDirection());
+        // And no next action should have been required
+        assertFalse(ctx.isRequestNextAction());
+        // And action should not be completed
+        assertFalse(action.completed());
+
+        //--------
+        // When executing the action after third scan interval and commitment interval
+        ctx.worldModel(builder.addTime(SCAN_INTERVAL)
+                        .build())
+                .clear();
+        cmd = action.handleEvent(EnvironmentFSMEvent.TICK, ctx);
+
+        // Then command should scan at second direction
+        assertEquals(0, cmd.scanDirection());
+        // And no next action should have been required
+        assertFalse(ctx.isRequestNextAction());
+        // And action should not be completed
+        assertTrue(action.completed());
+        assertEquals(COMPLETED, ctx.handleEvent());
     }
 
     @Test
     void testLookStraight() {
         // Given a look straight action
-        LookStraightAction action = new LookStraightAction(COMMITMENT_TIME);
+        LookStraightState action = new LookStraightState(COMMITMENT_TIME);
 
         // When executing the action for the first time
-        RobotCommands cmd = action.execute(ctx, builder.build());
+        ctx.worldModel(builder.build())
+                .clear();
+        RobotCommands cmd = action.handleEvent(EnvironmentFSMEvent.TICK, ctx);
 
         // Then command should scan straight head
         assertEquals(0, cmd.scanDirection());
         // And no next action should have been required
-        assertEquals(0, ctx.requestNextActionNum());
+        assertFalse(ctx.isRequestNextAction());
         // And action should not be completed
         assertFalse(action.completed());
 
         // When executing the action after commitment time
-        ctx.clearRequests();
-        cmd = action.execute(ctx,
-                builder.addTime(COMMITMENT_TIME)
-                        .build());
+        ctx.worldModel(
+                        builder.addTime(COMMITMENT_TIME)
+                                .build())
+                .clear();
+        cmd = action.handleEvent(EnvironmentFSMEvent.TICK, ctx);
         // Then command should scan straight head
         assertEquals(0, cmd.scanDirection());
         // And next action should have been required
-        assertEquals(1, ctx.requestNextActionNum());
+        assertTrue(ctx.isRequestNextAction());
         // And action should be completed
         assertTrue(action.completed());
     }
 
-    @Test
-    void testScan() {
-        // Given a scan action
-        ScanLeftRightAction action = new ScanLeftRightAction(COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG);
-
-        // When executing the action for the first time
-        RobotCommands cmd = action.execute(ctx, builder.build());
-
-        // Then command should scan at first direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd.scanDirection());
-        // And no next action should have been required
-        assertEquals(0, ctx.requestNextActionNum());
-
-        // When executing the action after commitment time (before scan interval)
-        ctx.clearRequests();
-        cmd = action.execute(ctx,
-                builder.addTime(COMMITMENT_TIME)
-                        .build());
-        // Then command should scan at first direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd.scanDirection());
-        // And next action should have been required
-        assertEquals(1, ctx.requestNextActionNum());
-        // And action should not be completed
-        assertFalse(action.completed());
-
-        // When executing the action after scan interval and commitment interval
-        ctx.clearRequests();
-        cmd = action.execute(ctx,
-                builder.addTime(SCAN_INTERVAL)
-                        .build());
-        // Then command should scan at second direction
-        assertEquals(SCAN_HEAD_DEG[1], cmd.scanDirection());
-        // And next action should have been required
-        assertEquals(1, ctx.requestNextActionNum());
-        // And action should not be completed
-        assertFalse(action.completed());
-
-        // When executing the action after second scan interval and commitment interval
-        ctx.clearRequests();
-        cmd = action.execute(ctx,
-                builder.addTime(SCAN_INTERVAL * 2)
-                        .build());
-        // Then command should scan at second direction
-        assertEquals(SCAN_HEAD_DEG[2], cmd.scanDirection());
-        // And next action should have been required
-        assertEquals(1, ctx.requestNextActionNum());
-        // And action should not be completed
-        assertFalse(action.completed());
-
-        // When executing the action after third scan interval and commitment interval
-        ctx.clearRequests();
-        cmd = action.execute(ctx,
-                builder.addTime(SCAN_INTERVAL * 3)
-                        .build());
-        // Then command should scan at second direction
-        assertEquals(SCAN_HEAD_DEG[2], cmd.scanDirection());
-        // And next action should have been required twice (commitment and end of action)
-        assertEquals(2, ctx.requestNextActionNum());
-        // And action should not be completed
-        assertTrue(action.completed());
-    }
 }

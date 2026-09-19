@@ -26,41 +26,58 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.fsm;
 
-import java.util.ArrayList;
-import java.util.List;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.WorldModel;
 
-public class MockMacroActionContext implements MacroActionContext {
-    private final List<MacroAction> actions;
-    private int requestNextActionNum;
+public class MockFSMContext implements EnvironmentFSMContext {
+    private WorldModel model;
+    private boolean requestNextAction;
+    private RobotCommands handleEventResult;
+    private EnvironmentFSMEvent handleEvent;
 
-    public MockMacroActionContext() {
-        this.actions = new ArrayList<>();
+    public MockFSMContext() {
+        handleEventResult = RobotCommands.halt();
     }
 
-    public List<MacroAction> actions() {
-        return actions;
-    }
-
-    public MockMacroActionContext clearRequests() {
-        requestNextActionNum = 0;
+    public MockFSMContext worldModel(WorldModel worldModel) {
+        this.model = worldModel;
         return this;
     }
 
+    public MockFSMContext clear() {
+        this.requestNextAction = false;
+        this.handleEvent = null;
+        return this;
+    }
+
+    public boolean isRequestNextAction() {
+        return this.requestNextAction;
+    }
+
     @Override
-    public MacroAction nextAction(MacroAction macroAction) {
-        actions.add(macroAction);
-        return macroAction;
+    public WorldModel worldModel() {
+        return model;
     }
 
     @Override
     public void requestNextAction() {
-        requestNextActionNum++;
-
+        requestNextAction = true;
     }
 
-    public int requestNextActionNum() {
-        return requestNextActionNum;
+    public MockFSMContext handleEventResult(RobotCommands handleEventResult) {
+        this.handleEventResult = handleEventResult;
+        return this;
+    }
+
+    @Override
+    public RobotCommands handle(EnvironmentFSMEvent event) {
+        handleEvent = event;
+        return handleEventResult;
+    }
+
+    public EnvironmentFSMEvent handleEvent() {
+        return handleEvent;
     }
 }

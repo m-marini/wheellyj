@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.fsm;
 
 
 /**

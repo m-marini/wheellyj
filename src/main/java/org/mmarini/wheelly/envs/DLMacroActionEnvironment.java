@@ -37,6 +37,8 @@ import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.fsm.MacroAction;
+import org.mmarini.wheelly.fsm.MacroActionContext;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.slf4j.Logger;

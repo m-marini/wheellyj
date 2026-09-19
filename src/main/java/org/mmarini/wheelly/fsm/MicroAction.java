@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;

@@ -26,53 +26,42 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModel;
 
-/**
- * An action that keeps the robot head oriented straight ahead.
- *
- * <p>The action remains active for the duration of its commitment interval.
- * Once the commitment expires, the execution context is requested to proceed
- * with the next action.</p>
- *
- * @author Marco Marini
- */
-public class LookStraightAction extends AbstractCommitmentAction {
+import static java.util.Objects.requireNonNull;
 
-    /**
-     * Creates an action that keeps the robot's head oriented straight ahead.
-     *
-     * @param commitmentInstant the instant at which the action commitment
-     *                          expires
-     */
-    public LookStraightAction(long commitmentInstant) {
-        super(commitmentInstant);
+public class ComposedAbstractAction implements MacroAction {
+    private final MacroAction baseMovementState;
+    private final MacroAction headMovementState;
+
+    public ComposedAbstractAction(MacroAction baseMovementState, MacroAction headMovementState) {
+        this.baseMovementState = requireNonNull(baseMovementState);
+        this.headMovementState = requireNonNull(headMovementState);
     }
 
     @Override
     public boolean completed() {
-        return expired();
+        return true;
     }
 
-    /**
-     * Executes the action.
-     *
-     * <p>The robot head is commanded to the straight-ahead position.
-     * If the commitment interval has expired, the execution context
-     * is requested to proceed to the next action.</p>
-     *
-     * @param context the macro-action execution context
-     * @param state   the current world model
-     * @return a scan command with the head oriented straight ahead
-     */
     @Override
-    protected RobotCommands executeAction(MacroActionContext context, WorldModel state) {
-        if (expired()) {
-            context.requestNextAction();
-        }
-        return RobotCommands.halt(0);
+    public RobotCommands execute(MacroActionContext context, WorldModel state) {
+        requireNonNull(context);
+        requireNonNull(state);
+
+        // Process both sub-states concurrently
+        RobotCommands motionCommands = baseMovementState.execute(context, state);
+        RobotCommands headCommands = headMovementState.execute(context, state);
+
+        // Merge the independent motor commands and scanner commands into a unified set
+        return RobotCommands.merge(motionCommands, headCommands);
+    }
+
+    @Override
+    public boolean expired() {
+        return false;
     }
 }

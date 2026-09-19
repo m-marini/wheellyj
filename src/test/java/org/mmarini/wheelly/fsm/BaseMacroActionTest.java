@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.fsm;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +44,7 @@ import static org.mmarini.wheelly.apis.Utils.MM;
 
 class BaseMacroActionTest {
     public static final int COMMITMENT_TIME = 1000;
+    public static final double SAFETY_DISTANCE = 0.5;
 
     MockMacroActionContext ctx;
     private WorldModelBuilder builder;
@@ -54,46 +55,23 @@ class BaseMacroActionTest {
         this.ctx = new MockMacroActionContext();
     }
 
-
     @Test
-    void testHalt() {
-        // Given a halt action
-        HaltAction action = new HaltAction(COMMITMENT_TIME);
-
-        // When executing the action for the first time
-        RobotCommands cmd = action.execute(ctx, builder.build());
-
-        // Then command should halt the robot
-        assertTrue(cmd.isHalt());
-        // And no next action should have been required
-        assertEquals(0, ctx.requestNextActionNum());
-
-        // When executing the action after commitment time
-        cmd = action.execute(ctx, builder
-                .addTime(COMMITMENT_TIME)
-                .build());
-
-        // Then command should halt the robot
-        assertTrue(cmd.isHalt());
-        // And no next action should have been required
-        assertEquals(1, ctx.requestNextActionNum());
-    }
-
-    @Test
-    void testMicroActionBackward() {
-        // Given a micro action
+    void testMoveSafetyBackward() {
+        // Given a move to safety action
         WorldModel world0 = builder.build();
         RobotStatus robotStatus = world0.robotStatus();
-        double distance = robotStatus.robotSpec().targetRange() * 2;
-        Point2D targetPosition = robotStatus.direction().at(robotStatus.location(), -distance);
-        MicroAction action = new MicroAction(COMMITMENT_TIME, targetPosition);
+        double safetyDistance = SAFETY_DISTANCE;
+        Point2D safetyTarget1 = robotStatus.direction().at(robotStatus.location(), -safetyDistance);
+        MoveSafetyAction action = new MoveSafetyAction(COMMITMENT_TIME, safetyDistance);
 
-        // When executing the action for the first time
-        RobotCommands cmd = action.execute(ctx, builder.build());
+        // When executing the action for the first time with front contact
+        RobotCommands cmd = action.execute(ctx, builder
+                .canMoveForward(false)
+                .build());
 
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        assertThat(cmd.target(), pointCloseTo(safetyTarget1, MM));
         // And action should not have been completed
         assertFalse(action.completed());
         // And action should not have been expired
@@ -101,13 +79,13 @@ class BaseMacroActionTest {
         // And no next action should have been required
         assertEquals(0, ctx.requestNextActionNum());
 
-        // When executing the action with robot at commitment time
+        // When executing the action with robot at commitment time without changes
         ctx.clearRequests();
         cmd = action.execute(ctx, builder.addTime(COMMITMENT_TIME).build());
 
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        assertThat(cmd.target(), pointCloseTo(safetyTarget1, MM));
         // And action should not have been completed
         assertFalse(action.completed());
         // And action should not have been expired
@@ -115,20 +93,55 @@ class BaseMacroActionTest {
         // And no next action should have been required
         assertEquals(1, ctx.requestNextActionNum());
 
-        // When executing the action with robot after commitment time and robot in target range
+        // When executing the action with robot moved back but still in contact
         ctx.clearRequests();
         cmd = action.execute(ctx, builder.addTime(COMMITMENT_TIME)
-                .backward(distance)
+                .backward(SAFETY_DISTANCE)
                 .build());
 
-        // Then the command should be forward to target position
-        assertTrue(cmd.isHalt());
+        // Then robot should move backward
+        assertEquals(RobotStatusId.BACKWARD, cmd.status());
+        Point2D safetyTarget2 = robotStatus.direction().at(robotStatus.location(), -safetyDistance);
+        assertThat(cmd.target(), pointCloseTo(safetyTarget2, MM));
         // And action should not have been completed
-        assertTrue(action.completed());
+        assertFalse(action.completed());
         // And action should not have been expired
         assertTrue(action.expired());
         // And no next action should have been required
         assertEquals(1, ctx.requestNextActionNum());
+
+        // When executing the action without contact
+        ctx.clearRequests();
+        cmd = action.execute(ctx, builder.addTime(COMMITMENT_TIME)
+                .canMoveForward(true)
+                .build());
+
+        // Then robot should move backward
+        assertEquals(RobotStatusId.BACKWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(safetyTarget2, MM));
+        // And action should not have been completed
+        assertFalse(action.completed());
+        // And action should not have been expired
+        assertTrue(action.expired());
+        // And no next action should have been required
+        assertEquals(1, ctx.requestNextActionNum());
+
+        // When executing the action without contact to safety target
+        ctx.clearRequests();
+        cmd = action.execute(ctx, builder.addTime(COMMITMENT_TIME)
+                .canMoveForward(true)
+                .backward(safetyDistance)
+                .build());
+
+        // Then robot should move backward
+        assertEquals(RobotStatusId.HALT, cmd.status());
+       // And action should not have been completed
+        assertFalse(action.completed());
+        // And action should not have been expired
+        assertTrue(action.expired());
+        // And no next action should have been required
+        assertEquals(1, ctx.requestNextActionNum());
+
     }
 
     @Test

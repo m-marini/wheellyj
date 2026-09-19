@@ -1,0 +1,80 @@
+/*
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
+package org.mmarini.wheelly.fsm;
+
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.WorldModel;
+
+/**
+ * Defines the execution context for the environment Finite State Machine (FSM).
+ * <p>
+ * This interface serves as the central repository for the state machine's operational
+ * data, maintaining the current map and sensory status via the {@link WorldModel}.
+ * It coordinates the execution lifecycle and handles sensory events to drive
+ * the robot's physical <b>behaviour</b>.
+ * </p>
+ */
+public interface EnvironmentFSMContext {
+
+    /**
+     * Returns the current model of the world containing sensory data and map features.
+     * <p>
+     * Active states utilise this model to <b>analyse</b> environmental changes,
+     * process spatial coordinates, and calculate obstacles.
+     * </p>
+     *
+     * @return the current {@link WorldModel} instance
+     */
+    WorldModel worldModel();
+
+    /**
+     * Flags a request to trigger the inference engine, scheduling it to generate
+     * the next macro action at the subsequent clock tick.
+     * <p>
+     * This method does not invoke the inference process immediately; instead, it defers
+     * the reasoning cycle to the next execution step to <b>optimise</b> sync and flow.
+     * </p>
+     */
+    void requestNextAction();
+
+    /**
+     * Handles incoming events originating from substates by dispatching them directly
+     * to the current superstate.
+     * <p>
+     * This method manages the hierarchical event delegation, ensuring that parent
+     * states can intercept, process, or <b>prioritise</b> substate signals before
+     * translating them into active {@link RobotCommands}.
+     * </p>
+     *
+     * @param event the {@link EnvironmentFSMEvent} received from a substate
+     * @return the {@link RobotCommands} to be executed by the robot architecture
+     * @throws NullPointerException if the provided event is null
+     */
+    RobotCommands handle(EnvironmentFSMEvent event);
+}

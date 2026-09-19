@@ -26,42 +26,41 @@
  *
  */
 
-package org.mmarini.wheelly.envs;
+package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.WorldModel;
+import java.util.ArrayList;
+import java.util.List;
 
-import static java.util.Objects.requireNonNull;
+public class MockMacroActionContext implements MacroActionContext {
+    private final List<MacroAction> actions;
+    private int requestNextActionNum;
 
-public class ComposedAbstractAction implements MacroAction {
-    private final MacroAction baseMovementState;
-    private final MacroAction headMovementState;
+    public MockMacroActionContext() {
+        this.actions = new ArrayList<>();
+    }
 
-    public ComposedAbstractAction(MacroAction baseMovementState, MacroAction headMovementState) {
-        this.baseMovementState = requireNonNull(baseMovementState);
-        this.headMovementState = requireNonNull(headMovementState);
+    public List<MacroAction> actions() {
+        return actions;
+    }
+
+    public MockMacroActionContext clearRequests() {
+        requestNextActionNum = 0;
+        return this;
     }
 
     @Override
-    public boolean completed() {
-        return true;
+    public MacroAction nextAction(MacroAction macroAction) {
+        actions.add(macroAction);
+        return macroAction;
     }
 
     @Override
-    public RobotCommands execute(MacroActionContext context, WorldModel state) {
-        requireNonNull(context);
-        requireNonNull(state);
+    public void requestNextAction() {
+        requestNextActionNum++;
 
-        // Process both sub-states concurrently
-        RobotCommands motionCommands = baseMovementState.execute(context, state);
-        RobotCommands headCommands = headMovementState.execute(context, state);
-
-        // Merge the independent motor commands and scanner commands into a unified set
-        return RobotCommands.merge(motionCommands, headCommands);
     }
 
-    @Override
-    public boolean expired() {
-        return false;
+    public int requestNextActionNum() {
+        return requestNextActionNum;
     }
 }
