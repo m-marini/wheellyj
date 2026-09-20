@@ -46,11 +46,11 @@ public class HaltState extends AbstractCommitmentState {
      * Constructs a {@code HaltState} with a specified initial timestamp to anchor
      * its minimum commitment duration.
      *
-     * @param commitmentInstant the timestamp representing the reference point utilised
-     *                          to calculate state expiration
+     * @param commitmentDuration the timestamp representing the reference point utilised
+     *                           to calculate state expiration
      */
-    public HaltState(long commitmentInstant) {
-        super(commitmentInstant);
+    public HaltState(long commitmentDuration) {
+        super(commitmentDuration);
     }
 
     /**
@@ -61,29 +61,15 @@ public class HaltState extends AbstractCommitmentState {
      * expiration, it triggers comprehensive halt parameters to <b>optimise</b> vehicle stabilisation.
      * </p>
      *
-     * @param event   the incoming {@link EnvironmentFSMEvent} triggering this execution step
      * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
      * @return the {@link RobotCommands} commanding an immediate and complete standstill of the robot
      */
     @Override
-    protected RobotCommands execute(EnvironmentFSMEvent event, EnvironmentFSMContext context) {
-        if (expired()) {
+    public RobotCommands tick(EnvironmentFSMContext context) {
+        if (expired(context)) {
+            complete();
             context.requestNextAction();
         }
         return RobotCommands.halt();
-    }
-
-    /**
-     * Indicates whether the halting routine has fulfilled its structural objective.
-     * <p>
-     * In this implementation, completion is entirely synchronised with the expiration of
-     * the state's minimum commitment time constraint.
-     * </p>
-     *
-     * @return true if the minimum commitment time has expired; false otherwise
-     */
-    @Override
-    public boolean completed() {
-        return expired();
     }
 }

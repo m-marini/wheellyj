@@ -31,20 +31,29 @@ package org.mmarini.wheelly.fsm;
 import org.mmarini.wheelly.apis.RobotCommands;
 
 /**
- * Represents a specialised state within the environment Finite State Machine (FSM).
+ * Defines a state within the environment Finite State Machine (FSM).
  * <p>
- * This interface binds the generic {@link FSMState} to the environmental components
- * of the system, utilising {@link EnvironmentFSMContext} for execution data,
- * {@link EnvironmentFSMEvent} for state inputs, and producing {@link RobotCommands}
- * as the output of event handling.
- * </p>
- * <p>
- * Implementations manage the operational lifecycle of the robot's state, checking
- * whether tasks are fully executed or if temporal thresholds have been exceeded to
- * <b>optimise</b> subsequent transition <b>behaviour</b>.
+ * This interface encapsulates the operational lifecycle of the robot's states,
+ * driving periodic execution and monitoring task fulfillment alongside temporal thresholds
+ * to coordinate reliable transition <b>behaviour</b>.
  * </p>
  */
-public interface EnvironmentFSMState extends FSMState<EnvironmentFSMContext, EnvironmentFSMEvent, RobotCommands> {
+public interface EnvironmentFSMState {
+
+    /**
+     * Processes a single periodic execution step within this state, producing
+     * the necessary robot commands.
+     * <p>
+     * This method is invoked on every clock cycle to update state-specific logic
+     * and interact with the operational environment via the provided context.
+     * </p>
+     *
+     * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
+     *                and driving inference routines
+     * @return the {@link RobotCommands} to be executed by the robot platform during this tick
+     * @throws NullPointerException if the provided context is null
+     */
+    RobotCommands tick(EnvironmentFSMContext context);
 
     /**
      * Indicates whether the internal routine or mission assigned to this state
@@ -57,17 +66,4 @@ public interface EnvironmentFSMState extends FSMState<EnvironmentFSMContext, Env
      * @return true if the state's operations are complete; false otherwise
      */
     boolean completed();
-
-    /**
-     * Indicates whether the minimum commitment time allocated to this state
-     * has elapsed.
-     * <p>
-     * This method ensures that the state machine remains locked within the current
-     * state for a required minimum duration, preventing premature transitions and
-     * stabilising the robot's overall <b>behaviour</b>.
-     * </p>
-     *
-     * @return true if the minimum commitment time has expired; false otherwise
-     */
-    boolean expired();
 }

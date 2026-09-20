@@ -28,7 +28,6 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModel;
 
 /**
@@ -43,17 +42,6 @@ import org.mmarini.wheelly.apis.WorldModel;
 public interface EnvironmentFSMContext {
 
     /**
-     * Returns the current model of the world containing sensory data and map features.
-     * <p>
-     * Active states utilise this model to <b>analyse</b> environmental changes,
-     * process spatial coordinates, and calculate obstacles.
-     * </p>
-     *
-     * @return the current {@link WorldModel} instance
-     */
-    WorldModel worldModel();
-
-    /**
      * Flags a request to trigger the inference engine, scheduling it to generate
      * the next macro action at the subsequent clock tick.
      * <p>
@@ -64,17 +52,13 @@ public interface EnvironmentFSMContext {
     void requestNextAction();
 
     /**
-     * Handles incoming events originating from substates by dispatching them directly
-     * to the current superstate.
+     * Returns the current model of the world containing sensory data and map features.
      * <p>
-     * This method manages the hierarchical event delegation, ensuring that parent
-     * states can intercept, process, or <b>prioritise</b> substate signals before
-     * translating them into active {@link RobotCommands}.
+     * Active states utilise this model to <b>analyse</b> environmental changes,
+     * process spatial coordinates, and calculate obstacles.
      * </p>
      *
-     * @param event the {@link EnvironmentFSMEvent} received from a substate
-     * @return the {@link RobotCommands} to be executed by the robot architecture
-     * @throws NullPointerException if the provided event is null
+     * @return the current {@link WorldModel} instance
      */
-    RobotCommands handle(EnvironmentFSMEvent event);
+    WorldModel worldModel();
 }

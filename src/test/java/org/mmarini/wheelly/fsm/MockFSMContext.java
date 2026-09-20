@@ -28,28 +28,16 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModel;
 
+import static java.util.Objects.requireNonNull;
+
 public class MockFSMContext implements EnvironmentFSMContext {
-    private WorldModel model;
+    private final WorldModel model;
     private boolean requestNextAction;
-    private RobotCommands handleEventResult;
-    private EnvironmentFSMEvent handleEvent;
 
-    public MockFSMContext() {
-        handleEventResult = RobotCommands.halt();
-    }
-
-    public MockFSMContext worldModel(WorldModel worldModel) {
-        this.model = worldModel;
-        return this;
-    }
-
-    public MockFSMContext clear() {
-        this.requestNextAction = false;
-        this.handleEvent = null;
-        return this;
+    public MockFSMContext(WorldModel model) {
+        this.model = requireNonNull(model);
     }
 
     public boolean isRequestNextAction() {
@@ -66,18 +54,4 @@ public class MockFSMContext implements EnvironmentFSMContext {
         requestNextAction = true;
     }
 
-    public MockFSMContext handleEventResult(RobotCommands handleEventResult) {
-        this.handleEventResult = handleEventResult;
-        return this;
-    }
-
-    @Override
-    public RobotCommands handle(EnvironmentFSMEvent event) {
-        handleEvent = event;
-        return handleEventResult;
-    }
-
-    public EnvironmentFSMEvent handleEvent() {
-        return handleEvent;
-    }
 }

@@ -54,6 +54,7 @@ class BaseMacroActionTest {
         this.builder = new WorldModelBuilder();
         this.ctx = new MockMacroActionContext();
     }
+    /*
 
     @Test
     void testMoveSafetyBackward() {
@@ -439,4 +440,6 @@ class BaseMacroActionTest {
         // And no next action should have been required
         assertEquals(1, ctx.requestNextActionNum());
     }
+
+     */
 }

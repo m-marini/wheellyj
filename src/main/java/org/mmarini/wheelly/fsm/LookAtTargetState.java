@@ -47,60 +47,66 @@ import static java.util.Objects.requireNonNull;
  */
 public class LookAtTargetState extends AbstractCommitmentState {
 
-    /** The coordinate point of the spatial target to track. */
-    private final Point2D target;
-
-    /** Flag indicating whether the front side of the head should face the target. */
-    private final boolean frontFacing;
-
-    /** The angular threshold in degrees within which the target direction is considered valid. */
+    /**
+     * The angular threshold in degrees within which the target direction is considered valid.
+     */
     private final int directionRangeDeg;
 
     /**
-     * Constructs a {@code LookAtTargetState} with the specified commitment instant,
-     * tracking coordinates, alignment profile, and acceptable angular range.
-     *
-     * @param commitmentInstant the timestamp utilised to evaluate state expiration
-     * @param target            the {@link Point2D} coordinate of the target, must not be null
-     * @param frontFacing       true if front-facing tracking is required; false for rear-facing
-     * @param directionRangeDeg the angular range tolerance expressed in degrees
-     * @throws NullPointerException if the provided target is null
+     * The coordinate point of the spatial target to track.
      */
-    public LookAtTargetState(long commitmentInstant, Point2D target, boolean frontFacing, int directionRangeDeg) {
-        super(commitmentInstant);
-        this.target = requireNonNull(target);
-        this.frontFacing = frontFacing;
+    private Point2D target;
+
+    /**
+     * Flag indicating whether the front side of the head should face the target.
+     */
+    private boolean frontFacing;
+
+    /**
+     * Constructs a {@code LookAtTargetState} with the specified commitment duration
+     * and acceptable angular range tolerance.
+     *
+     * @param commitmentDuration the length of time in milliseconds that the state must remain active
+     * @param directionRangeDeg  the angular range tolerance expressed in degrees
+     */
+    public LookAtTargetState(long commitmentDuration, int directionRangeDeg) {
+        super(commitmentDuration);
         this.directionRangeDeg = directionRangeDeg;
     }
 
     /**
-     * Indicates whether the target tracking routine has fulfilled its structural objective.
+     * Initialises the state by setting the target coordinates, alignment profile, and tracking timeline.
      * <p>
-     * Completion is fully synchronised with the expiration of the state's minimum commitment time.
+     * This method prepares the state parameters for ongoing execution ticks, registering the
+     * objective coordinates and configuring the spatial orientation settings.
      * </p>
      *
-     * @return true if the minimum commitment time has expired; false otherwise
+     * @param context     the {@link EnvironmentFSMContext} tracking the shared operational data
+     * @param target      the {@link Point2D} coordinate of the target, must not be null
+     * @param frontFacing true if front-facing tracking is required; false for rear-facing
+     * @throws NullPointerException if the provided target is null
      */
-    @Override
-    public boolean completed() {
-        return expired();
-    }
+    public void init(EnvironmentFSMContext context, Point2D target, boolean frontFacing) {
+        super.init(context);
+        this.target = requireNonNull(target);
+        this.frontFacing = frontFacing;
+      }
 
     /**
      * Executes the internal tracking logic for the current tick, generating a head-orienting command profile.
      * <p>
      * This method computes the absolute direction to the target based on the current head location.
      * It reverses the direction if rear-looking is active and snaps to a frontal zero alignment
-     * if the destination is outside the specified range. If expired, it signals a request to
-     * trigger macro-action inference at the next execution tick.
+     * if the destination is outside the specified range. If expired, it flags the state as completed
+     * and signals a request to trigger macro-action inference at the next execution tick.
      * </p>
      *
-     * @param event   the incoming {@link EnvironmentFSMEvent} triggering this execution step
      * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
      * @return the {@link RobotCommands} enforcing the calculated head target angle orientation
+     * @throws NullPointerException if the internal target or provided context is null
      */
     @Override
-    protected RobotCommands execute(EnvironmentFSMEvent event, EnvironmentFSMContext context) {
+    public RobotCommands tick(EnvironmentFSMContext context) {
         Complex direction = Complex.direction(context.worldModel().robotStatus().headLocation(), target);
         if (!frontFacing) {
             // Revert head direction if rear head required
@@ -108,7 +114,8 @@ public class LookAtTargetState extends AbstractCommitmentState {
         }
         direction = direction.isClose0(directionRangeDeg)
                 ? direction : Complex.DEG0;
-        if (expired()) {
+        if (expired(context)) {
+            complete();
             context.requestNextAction();
         }
         return RobotCommands.halt(direction.toIntDeg());

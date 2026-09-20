@@ -42,7 +42,7 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class HeadFSMStateTest {
+class HaltStateTest {
     public static final int COMMITMENT_TIME = 1000;
     public static final int SCAN_INTERVAL = 2000;
     public static final int[] SCAN_HEAD_DEG = {-45, 0, 45};
@@ -131,39 +131,6 @@ class HeadFSMStateTest {
     }
 
     @Test
-    void testLookStraight() {
-        // Given a look straight action
-        LookStraightState action = new LookStraightState(COMMITMENT_TIME);
-        MockFSMContext[] ctx = createContext(
-                builder.build(),
-                builder.build(),
-                builder.addTime(COMMITMENT_TIME)
-                        .build()
-        );
-
-        // When executing the action for the first time
-        action.init(ctx[0]);
-
-        // When executing the action
-        RobotCommands[] cmd = Arrays.stream(ctx)
-                .skip(1)
-                .map(action::tick)
-                .toArray(RobotCommands[]::new);
-
-        // Then command should scan straight head
-        assertEquals(0, cmd[0].scanDirection());
-        // And no next action should have been required
-        assertFalse(ctx[1].isRequestNextAction());
-
-        // Then command should scan straight head
-        assertEquals(0, cmd[1].scanDirection());
-        // And next action should have been required
-        assertTrue(ctx[2].isRequestNextAction());
-        // And action should be completed
-        assertTrue(action.completed());
-    }
-
-    @Test
     void testScanSubState() {
         // Given a scan action
         HeadScanState action = new HeadScanState(COMMITMENT_TIME, SCAN_INTERVAL);
@@ -172,7 +139,7 @@ class HeadFSMStateTest {
                 builder.build(),
                 builder.addTime(COMMITMENT_TIME)
                         .build(),
-                builder.addTime(SCAN_INTERVAL - COMMITMENT_TIME)
+                builder.addTime(SCAN_INTERVAL-COMMITMENT_TIME)
                         .build(),
                 builder.addTime(SCAN_INTERVAL)
                         .build(),
@@ -220,6 +187,39 @@ class HeadFSMStateTest {
         // And no next action should have been required
         assertTrue(ctx[5].isRequestNextAction());
         // And action should not be completed
+        assertTrue(action.completed());
+    }
+
+    @Test
+    void testLookStraight() {
+        // Given a look straight action
+        LookStraightState action = new LookStraightState(COMMITMENT_TIME);
+        MockFSMContext[] ctx = createContext(
+                builder.build(),
+                builder.build(),
+                builder.addTime(COMMITMENT_TIME)
+                        .build()
+        );
+
+        // When executing the action for the first time
+        action.init(ctx[0]);
+
+        // When executing the action
+        RobotCommands[] cmd = Arrays.stream(ctx)
+                .skip(1)
+                .map(action::tick)
+                .toArray(RobotCommands[]::new);
+
+        // Then command should scan straight head
+        assertEquals(0, cmd[0].scanDirection());
+        // And no next action should have been required
+        assertFalse(ctx[1].isRequestNextAction());
+
+        // Then command should scan straight head
+        assertEquals(0, cmd[1].scanDirection());
+        // And next action should have been required
+        assertTrue(ctx[2].isRequestNextAction());
+        // And action should be completed
         assertTrue(action.completed());
     }
 }
