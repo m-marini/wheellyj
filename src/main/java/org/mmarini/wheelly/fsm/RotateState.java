@@ -31,36 +31,102 @@ package org.mmarini.wheelly.fsm;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WorldModel;
 
-public class RotateState extends AbstractCommitmentAction {
-    private final int targetDeg;
-    private boolean completed;
+import java.util.function.Function;
 
-    public RotateState(int commitmentTime, int targetDeg) {
+/**
+ * Represents a finite state machine state that handles the rotational
+ * behaviour of the robot towards a specific target direction.
+ * <p>
+ * This state monitors the robot's orientation relative to a target angle and
+ * optimises transitions upon completion or when an obstacle contact occurs.
+ * </p>
+ */
+public class RotateState extends AbstractCommitmentState {
+
+    /** The target orientation in degrees. */
+    private int targetDeg;
+
+    /** The callback function executed when the rotation completion condition is met. */
+    private Function<EnvironmentFSMContext, RobotCommands> onCompletion;
+
+    /** The callback function executed when the robot detects a contact or obstacle. */
+    private Function<EnvironmentFSMContext, RobotCommands> onContact;
+
+    /**
+     * Initialises a new instance of {@code RotateState} with a specified commitment duration.
+     *
+     * @param commitmentTime the maximum time duration for which this state remains active
+     */
+    public RotateState(int commitmentTime) {
         super(commitmentTime);
+    }
+
+    /**
+     * Initialises the state context and sets the target angle for the rotation.
+     *
+     * @param context   the environment finite state machine context
+     * @param targetDeg the target direction angle in degrees
+     */
+    public void init(EnvironmentFSMContext context, int targetDeg) {
+        super.init(context);
         this.targetDeg = targetDeg;
     }
 
-    @Override
-    public boolean completed() {
-        return completed;
+    /**
+     * Customises the state by assigning a callback function for successful completion.
+     *
+     * @param callback the function to execute upon reaching the target angle
+     * @return this state instance to allow method chaining
+     */
+    public RotateState onCompletion(Function<EnvironmentFSMContext, RobotCommands> callback) {
+        this.onCompletion = callback;
+        return this;
     }
 
-    @Override
-    protected RobotCommands executeAction(MacroActionContext context, WorldModel state) {
-        RobotStatus robotStatus = state.robotStatus();
+    /**
+     * Customises the state by assigning a callback function for contact or obstacle events.
+     *
+     * @param callback the function to execute if a contact is detected
+     * @return this state instance to allow method chaining
+     */
+    public RotateState onContact(Function<EnvironmentFSMContext, RobotCommands> callback) {
+        this.onContact = callback;
+        return this;
+    }
+
+    /**
+     * Evaluates the environment state on each clock tick and produces the next robot command.
+     * <p>
+     * This method verifies if the robot can safely turn, checks whether the orientation
+     * is within the acceptable target range, and issues the rotation command if required.
+     * </p>
+     *
+     * @param context the current finite state machine context containing the world model
+     * @return the computed {@link RobotCommands} to guide the robot's behaviour
+     */
+   @Override
+    public RobotCommands tick(EnvironmentFSMContext context) {
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward()) {
+            complete();
+            return onContact != null
+                    ? onContact.apply(context)
+                    : RobotCommands.halt();
+        }
+        if (completed()) {
+            return onCompletion != null
+                    ? onCompletion.apply(context)
+                    : RobotCommands.halt();
+        }
+
         Complex directionRange = robotStatus.robotSpec().directionRange();
-        if (robotStatus.direction().isCloseTo(targetDeg, directionRange.toIntDeg())
-                || !robotStatus.canMoveForward()
-                || !robotStatus.canMoveBackward()) {
-            completed = true;
+        if (robotStatus.direction().isCloseTo(targetDeg, directionRange.toIntDeg())) {
+            complete();
+            return onCompletion != null
+                    ? onCompletion.apply(context)
+                    : RobotCommands.halt();
         }
-        if (completed || expired()) {
-            context.requestNextAction();
-        }
-        return completed
-                ? RobotCommands.halt()
-                : RobotCommands.rotate(targetDeg);
+        return RobotCommands.rotate(targetDeg);
     }
 }

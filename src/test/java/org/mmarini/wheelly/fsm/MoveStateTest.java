@@ -36,10 +36,14 @@ import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.*;
 
 import java.awt.geom.Point2D;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.empty;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.Utils.MM;
@@ -72,21 +76,22 @@ class MoveStateTest {
     }
 
     WorldModelBuilder builder;
-    MoveState action;
-    EnvironmentFSMContext onCompletionContext;
-    EnvironmentFSMContext onContactContext;
+    MoveState state;
+    List<EnvironmentFSMContext> onCompletionContext;
+    List<EnvironmentFSMContext> onContactContext;
 
     @BeforeEach
     void setUp() {
         this.builder = new WorldModelBuilder();
-        this.onCompletionContext = this.onContactContext = null;
-        this.action = new MoveState(COMMITMENT_TIME)
+        this.onCompletionContext = new ArrayList<>();
+        this.onContactContext = new ArrayList<>();
+        this.state = new MoveState(COMMITMENT_TIME)
                 .onCompletion(ctx1 -> {
-                    onCompletionContext = ctx1;
+                    onCompletionContext.add(ctx1);
                     return RobotCommands.halt();
                 })
                 .onContact(ctx1 -> {
-                    onContactContext = ctx1;
+                    onContactContext.add(ctx1);
                     return RobotCommands.halt();
                 });
     }
@@ -125,11 +130,11 @@ class MoveStateTest {
 
         //--------
         // When executing the action for the first time
-        action.init(ctx[0], targetPosition);
+        state.init(ctx[0], targetPosition);
 
         RobotCommands[] cmd = Arrays.stream(ctx)
                 .skip(1)
-                .map(action::tick)
+                .map(state::tick)
                 .toArray(RobotCommands[]::new);
 
         // Then the command should be forward to target position
@@ -149,14 +154,16 @@ class MoveStateTest {
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.HALT, cmd[2].status());
         // And action should not have been completed
-        assertTrue(action.completed());
+        assertTrue(state.completed());
         // And action should not have been expired
-        assertTrue(action.expired(ctx[3]));
+        assertTrue(state.expired(ctx[3]));
         // And no next action should have been required
         assertFalse(ctx[3].isRequestNextAction());
         // And on completion context should be the last one
-        assertSame(ctx[3], onCompletionContext);
-        assertNull(onContactContext);
+        // And on contact context should be the last one
+        // And on completion context should be the last one
+        assertThat(onCompletionContext, contains(ctx[3]));
+        assertThat(onContactContext, empty());
     }
 
     @ParameterizedTest
@@ -188,16 +195,18 @@ class MoveStateTest {
                         .robotDir(targetDir.toIntDeg())
                         // and robot forward by movement distance + 1mm
                         .forward(movementDistance + MM)
-                        .build()
+                        .build(),
+                // tick after completion
+                builder.addTime(COMMITMENT_TIME).build()
         );
 
         //--------
-        // When executing the action for the first time
-        action.init(ctx[0], targetPosition);
-
+        // When init
+        state.init(ctx[0], targetPosition);
+        // When ticks
         RobotCommands[] cmd = Arrays.stream(ctx)
                 .skip(1)
-                .map(action::tick)
+                .map(state::tick)
                 .toArray(RobotCommands[]::new);
 
         // Then the command should be forward to target position
@@ -216,15 +225,21 @@ class MoveStateTest {
         //--------
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.HALT, cmd[2].status());
-        // And action should not have been completed
-        assertTrue(action.completed());
-        // And action should not have been expired
-        assertTrue(action.expired(ctx[3]));
         // And no next action should have been required
         assertFalse(ctx[3].isRequestNextAction());
+
+        //--------
+        // Then the command should be forward to target position
+        assertEquals(RobotStatusId.HALT, cmd[3].status());
+        // And action should not have been completed
+        assertTrue(state.completed());
+        // And action should not have been expired
+        assertTrue(state.expired(ctx[4]));
+        // And no next action should have been required
+        assertFalse(ctx[4].isRequestNextAction());
         // And on completion context should be the last one
-        assertSame(ctx[3], onCompletionContext);
-        assertNull(onContactContext);
+        assertThat(onCompletionContext, contains(ctx[3], ctx[4]));
+        assertThat(onContactContext, empty());
     }
 
     @ParameterizedTest
@@ -260,13 +275,13 @@ class MoveStateTest {
                         // and front contact
                         .canMoveBackward(false)
                         .build()
-        );
+             );
 
         // When executing the action
-        action.init(ctx[0], targetPosition);
+        state.init(ctx[0], targetPosition);
         RobotCommands[] cmd = Arrays.stream(ctx)
                 .skip(1)
-                .map(action::tick)
+                .map(state::tick)
                 .toArray(RobotCommands[]::new);
 
         // Then the command should be forward to target position
@@ -284,12 +299,14 @@ class MoveStateTest {
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.HALT, cmd[2].status());
         // And action should not have been completed
-        assertTrue(action.completed());
+        assertTrue(state.completed());
         // And action should not have been expired
-        assertFalse(action.expired(ctx[3]));
+        assertFalse(state.expired(ctx[3]));
         // And next action should have been required
         assertFalse(ctx[3].isRequestNextAction());
-        assertNull(onCompletionContext);
+        // And on contact context should be the last one
+        assertThat(onContactContext, contains(ctx[3]));
+        assertThat(onCompletionContext, empty());
     }
 
     @ParameterizedTest
@@ -327,10 +344,10 @@ class MoveStateTest {
         );
 
         // When executing the action
-        action.init(ctx[0], targetPosition);
+        state.init(ctx[0], targetPosition);
         RobotCommands[] cmd = Arrays.stream(ctx)
                 .skip(1)
-                .map(action::tick)
+                .map(state::tick)
                 .toArray(RobotCommands[]::new);
 
         // Then the command should be forward to target position
@@ -348,11 +365,13 @@ class MoveStateTest {
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.HALT, cmd[2].status());
         // And action should not have been completed
-        assertTrue(action.completed());
+        assertTrue(state.completed());
         // And action should not have been expired
-        assertFalse(action.expired(ctx[3]));
+        assertFalse(state.expired(ctx[3]));
         // And next action should have been required
         assertFalse(ctx[3].isRequestNextAction());
-        assertNull(onCompletionContext);
+        // And on contact context should be the last one
+        assertThat(onContactContext, contains(ctx[3]));
+        assertThat(onCompletionContext, empty());
     }
 }
