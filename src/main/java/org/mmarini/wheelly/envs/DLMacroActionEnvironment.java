@@ -37,8 +37,6 @@ import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.fsm.MacroAction;
-import org.mmarini.wheelly.fsm.MacroActionContext;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.slf4j.Logger;
@@ -55,7 +53,7 @@ import static java.util.Objects.requireNonNull;
  * Connects the world modeller to reinforcement learning agent
  * generating state signals and converting actions to robot command
  */
-public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionContext {
+public class DLMacroActionEnvironment implements EnvironmentApi {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-dl-schema-0.1";
     public static final String ACTION_FUNCTION_ID = "actionFunction";
     public static final String STATE_FUNCTION_ID = "stateFunction";
@@ -98,7 +96,6 @@ public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionCont
     private RewardFunction rewardFunc;
     private volatile AgentConnector agent;
     private volatile EnvironmentStepState stepState;
-    private volatile MacroAction currentAction;
     private volatile boolean requestNextAction;
 
     /**
@@ -111,7 +108,6 @@ public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionCont
         this.actionFunc = requireNonNull(actionFunc);
         this.stateFunctionBuilder = requireNonNull(stateFunctionBuilder);
         this.rewards = PublishProcessor.create();
-        this.currentAction = null;
         logger.atDebug().log("Created");
     }
 
@@ -192,12 +188,6 @@ public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionCont
     }
 
     @Override
-    public MacroAction nextAction(MacroAction currentAction) {
-        this.currentAction = requireNonNull(currentAction);
-        return this.currentAction;
-    }
-
-    @Override
     public RobotCommands onInference(WorldModel state) {
         requireNonNull(state);
         ensureConnected();
@@ -206,7 +196,7 @@ public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionCont
             // Process resulting actions
             requestNextAction = false;
         }
-        return currentAction.execute(this, state);
+        return null;
     }
 
     /**
@@ -214,11 +204,6 @@ public class DLMacroActionEnvironment implements EnvironmentApi, MacroActionCont
      */
     public Flowable<Double> readRewards() {
         return rewards;
-    }
-
-    @Override
-    public void requestNextAction() {
-        this.requestNextAction = true;
     }
 
     @Override
