@@ -51,7 +51,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.Utils.MM;
-import static org.mmarini.wheelly.fsm.HeadFSMStateTest.createContext;
+import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
 class MovePathStateTest {
     public static final int COMMITMENT_TIME = 1000;

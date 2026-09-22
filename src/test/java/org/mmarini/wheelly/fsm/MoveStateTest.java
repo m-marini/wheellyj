@@ -47,7 +47,7 @@ import static org.hamcrest.Matchers.empty;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.Utils.MM;
-import static org.mmarini.wheelly.fsm.HeadFSMStateTest.createContext;
+import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
 class MoveStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -141,14 +141,12 @@ class MoveStateTest {
         assertEquals(RobotStatusId.BACKWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
         // And no next action should have been required
-        assertFalse(ctx[1].isRequestNextAction());
 
         //--------
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.BACKWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
         // And next action should have been required
-        assertFalse(ctx[2].isRequestNextAction());
 
         //--------
         // Then the command should be forward to target position
@@ -158,7 +156,6 @@ class MoveStateTest {
         // And action should not have been expired
         assertTrue(state.expired(ctx[3]));
         // And no next action should have been required
-        assertFalse(ctx[3].isRequestNextAction());
         // And on completion context should be the last one
         // And on contact context should be the last one
         // And on completion context should be the last one
@@ -213,20 +210,17 @@ class MoveStateTest {
         assertEquals(RobotStatusId.FORWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
         // And no next action should have been required
-        assertFalse(ctx[1].isRequestNextAction());
 
         //--------
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.FORWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
         // And next action should have been required
-        assertFalse(ctx[2].isRequestNextAction());
 
         //--------
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.HALT, cmd[2].status());
         // And no next action should have been required
-        assertFalse(ctx[3].isRequestNextAction());
 
         //--------
         // Then the command should be forward to target position
@@ -236,7 +230,6 @@ class MoveStateTest {
         // And action should not have been expired
         assertTrue(state.expired(ctx[4]));
         // And no next action should have been required
-        assertFalse(ctx[4].isRequestNextAction());
         // And on completion context should be the last one
         assertThat(onCompletionContext, contains(ctx[3], ctx[4]));
         assertThat(onContactContext, empty());
@@ -287,14 +280,10 @@ class MoveStateTest {
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.FORWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
-        // And no next action should have been required
-        assertFalse(ctx[1].isRequestNextAction());
 
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.FORWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
-        // And no next action should have been required
-        assertFalse(ctx[2].isRequestNextAction());
 
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.HALT, cmd[2].status());
@@ -302,8 +291,6 @@ class MoveStateTest {
         assertTrue(state.completed());
         // And action should not have been expired
         assertFalse(state.expired(ctx[3]));
-        // And next action should have been required
-        assertFalse(ctx[3].isRequestNextAction());
         // And on contact context should be the last one
         assertThat(onContactContext, contains(ctx[3]));
         assertThat(onCompletionContext, empty());
@@ -353,14 +340,10 @@ class MoveStateTest {
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.BACKWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
-        // And no next action should have been required
-        assertFalse(ctx[1].isRequestNextAction());
 
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.BACKWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
-        // And no next action should have been required
-        assertFalse(ctx[2].isRequestNextAction());
 
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.HALT, cmd[2].status());
@@ -368,8 +351,6 @@ class MoveStateTest {
         assertTrue(state.completed());
         // And action should not have been expired
         assertFalse(state.expired(ctx[3]));
-        // And next action should have been required
-        assertFalse(ctx[3].isRequestNextAction());
         // And on contact context should be the last one
         assertThat(onContactContext, contains(ctx[3]));
         assertThat(onCompletionContext, empty());

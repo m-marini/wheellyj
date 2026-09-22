@@ -47,8 +47,8 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.wheelly.fsm.HeadFSMStateTest.createContext;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
 class RotateStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -126,25 +126,18 @@ class RotateStateTest {
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.ROTATE, cmd[0].status());
         assertEquals(targetDir.toIntDeg(), cmd[0].rotationDirection());
-        // And no next action should have been required
-        assertFalse(ctx[1].isRequestNextAction());
 
         //--------
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.ROTATE, cmd[1].status());
         assertEquals(targetDir.toIntDeg(), cmd[1].rotationDirection());
-        // And next action should have been required
-        assertFalse(ctx[2].isRequestNextAction());
 
         //--------
         // Then the command should be halt
         assertEquals(RobotStatusId.HALT, cmd[2].status());
-        // And next action should have been required
-        assertFalse(ctx[3].isRequestNextAction());
 
         // And next action should have been required
         assertEquals(RobotStatusId.HALT, cmd[3].status());
-        assertFalse(ctx[4].isRequestNextAction());
         assertThat(onCompletionContexts, contains(ctx[3], ctx[4]));
         assertThat(onContactContexts, empty());
     }
@@ -187,20 +180,17 @@ class RotateStateTest {
         assertEquals(RobotStatusId.ROTATE, cmd[0].status());
         assertEquals(targetDir.toIntDeg(), cmd[0].rotationDirection());
         // And no next action should have been required
-        assertFalse(ctx[1].isRequestNextAction());
 
         //--------
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.ROTATE, cmd[1].status());
         assertEquals(targetDir.toIntDeg(), cmd[1].rotationDirection());
         // And next action should have been required
-        assertFalse(ctx[2].isRequestNextAction());
 
         //--------
         // Then the command should be halt
         assertEquals(RobotStatusId.HALT, cmd[2].status());
         // And next action should have been required
-        assertFalse(ctx[3].isRequestNextAction());
         assertThat(onContactContexts, contains(ctx[3]));
         assertThat(onCompletionContexts, empty());
     }
@@ -242,21 +232,16 @@ class RotateStateTest {
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.ROTATE, cmd[0].status());
         assertEquals(targetDir.toIntDeg(), cmd[0].rotationDirection());
-        // And no next action should have been required
-        assertFalse(ctx[1].isRequestNextAction());
 
         //--------
         // Then the command should be forward to target position
         assertEquals(RobotStatusId.ROTATE, cmd[1].status());
         assertEquals(targetDir.toIntDeg(), cmd[1].rotationDirection());
-        // And next action should have been required
-        assertFalse(ctx[2].isRequestNextAction());
 
         //--------
         // Then the command should be halt
         assertEquals(RobotStatusId.HALT, cmd[2].status());
-        // And next action should have been required
-        assertFalse(ctx[3].isRequestNextAction());
+
         assertThat(onContactContexts, contains(ctx[3]));
         assertThat(onCompletionContexts, empty());
     }

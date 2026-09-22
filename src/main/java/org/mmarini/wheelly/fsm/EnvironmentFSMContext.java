@@ -49,7 +49,7 @@ public interface EnvironmentFSMContext {
      * the reasoning cycle to the next execution step to <b>optimise</b> sync and flow.
      * </p>
      */
-    void requestNextAction();
+    //void requestNextAction();
 
     /**
      * Returns the current model of the world containing sensory data and map features.

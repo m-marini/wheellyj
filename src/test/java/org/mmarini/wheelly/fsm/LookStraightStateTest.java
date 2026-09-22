@@ -31,63 +31,51 @@ package org.mmarini.wheelly.fsm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatusId;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
-class HaltStateTest {
+class LookStraightStateTest {
     public static final int COMMITMENT_TIME = 1000;
 
     WorldModelBuilder builder;
-    HaltState state;
-    List<EnvironmentFSMContext> onCompletionContexts;
+    LookStraightState state;
 
     @BeforeEach
     void setUp() {
         this.builder = new WorldModelBuilder();
-        this.onCompletionContexts = new ArrayList<>();
-        this.state = new HaltState(COMMITMENT_TIME)
-                .onCompletion(ctx -> {
-                    onCompletionContexts.add(ctx);
-                    return RobotCommands.halt();
-                });
+        this.state = new LookStraightState(COMMITMENT_TIME);
     }
 
     @Test
-    void testTick() {
+    void testLookStraight() {
+        // Given a look straight action
+
         MockFSMContext[] ctx = createContext(
                 builder.build(),
                 builder.build(),
-                builder.addTime(COMMITMENT_TIME / 2)
-                        .build(),
-                builder.addTime(COMMITMENT_TIME / 2 + 1)
+                builder.addTime(COMMITMENT_TIME)
                         .build(),
                 builder.addTime(COMMITMENT_TIME)
                         .build()
         );
 
-        // When ...
+        // When executing the action for the first time
         state.init(ctx[0]);
-        // And ...
+
+        // When executing the action
         RobotCommands[] cmd = Arrays.stream(ctx)
                 .skip(1)
                 .map(state::tick)
                 .toArray(RobotCommands[]::new);
 
-        // Then ...
-        assertEquals(RobotStatusId.HALT, cmd[0].status());
-        assertEquals(RobotStatusId.HALT, cmd[1].status());
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
-        assertEquals(RobotStatusId.HALT, cmd[3].status());
+        // Then command should scan straight head
+        assertEquals(0, cmd[0].scanDirection());
 
-        assertThat(onCompletionContexts, contains(ctx[3], ctx[4]));
+        // Then command should scan straight head
+        assertEquals(0, cmd[1].scanDirection());
     }
 }

@@ -31,7 +31,7 @@ package org.mmarini.wheelly.fsm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatusId;
+import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.util.ArrayList;
@@ -41,20 +41,27 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
-class HaltStateTest {
+class HeadScanStateTest {
     public static final int COMMITMENT_TIME = 1000;
+    public static final int SCAN_INTERVAL = 2000;
+    public static final int[] SCAN_HEAD_DEG = {-45, 0, 45};
+
+    static MockFSMContext[] createContext(WorldModel... worldModel) {
+        return Arrays.stream(worldModel)
+                .map(MockFSMContext::new)
+                .toArray(MockFSMContext[]::new);
+    }
 
     WorldModelBuilder builder;
-    HaltState state;
+    HeadScanState state;
     List<EnvironmentFSMContext> onCompletionContexts;
 
     @BeforeEach
     void setUp() {
         this.builder = new WorldModelBuilder();
         this.onCompletionContexts = new ArrayList<>();
-        this.state = new HaltState(COMMITMENT_TIME)
+        this.state = new HeadScanState(COMMITMENT_TIME, SCAN_INTERVAL)
                 .onCompletion(ctx -> {
                     onCompletionContexts.add(ctx);
                     return RobotCommands.halt();
@@ -62,32 +69,61 @@ class HaltStateTest {
     }
 
     @Test
-    void testTick() {
+    void testScan() {
+        // Given ...
         MockFSMContext[] ctx = createContext(
                 builder.build(),
                 builder.build(),
-                builder.addTime(COMMITMENT_TIME / 2)
-                        .build(),
-                builder.addTime(COMMITMENT_TIME / 2 + 1)
-                        .build(),
                 builder.addTime(COMMITMENT_TIME)
+                        .build(),
+                builder.addTime(SCAN_INTERVAL - COMMITMENT_TIME)
+                        .build(),
+                builder.addTime(SCAN_INTERVAL)
+                        .build(),
+                builder.addTime(SCAN_INTERVAL)
+                        .build(),
+                builder.addTime(SCAN_INTERVAL)
                         .build()
         );
 
-        // When ...
-        state.init(ctx[0]);
-        // And ...
+        // When init
+        state.init(ctx[0], SCAN_HEAD_DEG);
+
+        //--------
+        // When executing the action
         RobotCommands[] cmd = Arrays.stream(ctx)
                 .skip(1)
                 .map(state::tick)
                 .toArray(RobotCommands[]::new);
 
-        // Then ...
-        assertEquals(RobotStatusId.HALT, cmd[0].status());
-        assertEquals(RobotStatusId.HALT, cmd[1].status());
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
-        assertEquals(RobotStatusId.HALT, cmd[3].status());
 
-        assertThat(onCompletionContexts, contains(ctx[3], ctx[4]));
+        // Then command should scan at first direction
+        assertEquals(SCAN_HEAD_DEG[0], cmd[0].scanDirection());
+        // And no next action should have been required
+
+        //--------
+        // Then command should scan at first direction
+        assertEquals(SCAN_HEAD_DEG[0], cmd[1].scanDirection());
+        // And no next action should have been required
+
+        //--------
+        // Then command should scan at second direction
+        assertEquals(SCAN_HEAD_DEG[1], cmd[2].scanDirection());
+        // And no next action should have been required
+
+        //--------
+        // Then command should scan at second direction
+        assertEquals(SCAN_HEAD_DEG[2], cmd[3].scanDirection());
+        // And no next action should have been required
+
+        //--------
+        // Then command should scan at second direction
+        assertEquals(0, cmd[4].scanDirection());
+
+        //--------
+        // Then command should scan at second direction
+        assertEquals(0, cmd[5].scanDirection());
+
+        assertThat(onCompletionContexts, contains(ctx[5], ctx[6]));
     }
 }

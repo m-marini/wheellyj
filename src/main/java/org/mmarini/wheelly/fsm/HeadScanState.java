@@ -30,6 +30,8 @@ package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.RobotCommands;
 
+import java.util.function.Function;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -63,6 +65,7 @@ public class HeadScanState extends AbstractCommitmentState {
      * The index pointing to the active target angle within the scan sequence.
      */
     private int currentStepIndex;
+    private Function<EnvironmentFSMContext, RobotCommands> onCompletion;
 
     /**
      * Constructs a {@code HeadScanState} with the specified commitment duration
@@ -102,6 +105,17 @@ public class HeadScanState extends AbstractCommitmentState {
     }
 
     /**
+     * Customises the state by assigning a callback function for successful completion.
+     *
+     * @param callback the function to execute upon reaching the destination
+     * @return this state instance to allow method chaining
+     */
+    public HeadScanState onCompletion(Function<EnvironmentFSMContext, RobotCommands> callback) {
+        this.onCompletion = callback;
+        return this;
+    }
+
+    /**
      * Executes the sequential scanning logic for the current execution tick.
      * <p>
      * This method monitors the elapsed robot time against the active step marker. When the interval
@@ -112,11 +126,16 @@ public class HeadScanState extends AbstractCommitmentState {
      *
      * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
      * @return the {@link RobotCommands} restricting execution to the active head target angle,
-     *         or a stationary halt profile upon sequence completion
+     * or a stationary halt profile upon sequence completion
      * @throws NullPointerException if the provided context is null
      */
     @Override
     public RobotCommands tick(EnvironmentFSMContext context) {
+        if (completed()) {
+            return onCompletion != null
+                    ? onCompletion.apply(context)
+                    : RobotCommands.halt();
+        }
         long time = context.worldModel().robotStatus().robotTime();
         if (time >= startStepTime + scanInterval) {
             // Scan interval elapsed
@@ -126,11 +145,13 @@ public class HeadScanState extends AbstractCommitmentState {
                 startStepTime = time;
             } else {
                 complete();
-                context.requestNextAction();
-                return RobotCommands.halt();
+                return onCompletion != null
+                        ? onCompletion.apply(context)
+                        : RobotCommands.halt();
             }
         }
         // Handles commitment interval
         return RobotCommands.halt(headDeg[currentStepIndex]);
     }
+
 }

@@ -34,24 +34,13 @@ import static java.util.Objects.requireNonNull;
 
 public class MockFSMContext implements EnvironmentFSMContext {
     private final WorldModel model;
-    private boolean requestNextAction;
 
     public MockFSMContext(WorldModel model) {
         this.model = requireNonNull(model);
-    }
-
-    public boolean isRequestNextAction() {
-        return this.requestNextAction;
     }
 
     @Override
     public WorldModel worldModel() {
         return model;
     }
-
-    @Override
-    public void requestNextAction() {
-        requestNextAction = true;
-    }
-
 }

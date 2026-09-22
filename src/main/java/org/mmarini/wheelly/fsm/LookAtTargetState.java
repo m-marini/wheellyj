@@ -41,8 +41,6 @@ import static java.util.Objects.requireNonNull;
  * This state calculates the directional vector from the robot's head location to the designated
  * target. It allows configuring whether the look profile should be front-facing or rear-facing,
  * resetting the gaze forward if the required angle falls outside a specific tolerance range.
- * Upon minimum commitment time expiration, it requests the context to schedule the next macro-action
- * inference for the subsequent execution tick.
  * </p>
  */
 public class LookAtTargetState extends AbstractCommitmentState {
@@ -90,15 +88,14 @@ public class LookAtTargetState extends AbstractCommitmentState {
         super.init(context);
         this.target = requireNonNull(target);
         this.frontFacing = frontFacing;
-      }
+    }
 
     /**
      * Executes the internal tracking logic for the current tick, generating a head-orienting command profile.
      * <p>
      * This method computes the absolute direction to the target based on the current head location.
      * It reverses the direction if rear-looking is active and snaps to a frontal zero alignment
-     * if the destination is outside the specified range. If expired, it flags the state as completed
-     * and signals a request to trigger macro-action inference at the next execution tick.
+     * if the destination is outside the specified range.
      * </p>
      *
      * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
@@ -114,10 +111,6 @@ public class LookAtTargetState extends AbstractCommitmentState {
         }
         direction = direction.isClose0(directionRangeDeg)
                 ? direction : Complex.DEG0;
-        if (expired(context)) {
-            complete();
-            context.requestNextAction();
-        }
         return RobotCommands.halt(direction.toIntDeg());
     }
 }

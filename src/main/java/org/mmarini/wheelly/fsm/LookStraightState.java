@@ -68,10 +68,6 @@ public class LookStraightState extends AbstractCommitmentState {
      */
     @Override
     public RobotCommands tick(EnvironmentFSMContext context) {
-        if (expired(context)) {
-            complete();
-            context.requestNextAction();
-        }
         return RobotCommands.halt(0);
     }
 }

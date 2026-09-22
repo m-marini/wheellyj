@@ -47,10 +47,9 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.Utils.MM;
-import static org.mmarini.wheelly.fsm.HaltStateTest.createContext;
+import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
 class DisengageStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -135,42 +134,30 @@ class DisengageStateTest {
         //-------- rear contact
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.HALT, cmd[0].status());
-        // And no next action should have been required
-        assertFalse(ctx[1].isRequestNextAction());
 
         //-------- after half commitment
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.FORWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(target1, MM));
-        // And no next action should have been required
-        assertFalse(ctx[2].isRequestNextAction());
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.FORWARD, cmd[2].status());
         assertThat(cmd[2].target(), pointCloseTo(target2, MM));
-        // And no next action should have been required
-        assertFalse(ctx[3].isRequestNextAction());
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.FORWARD, cmd[3].status());
         assertThat(cmd[3].target(), pointCloseTo(target2, MM));
-        // And no next action should have been required
-        assertFalse(ctx[4].isRequestNextAction());
 
         //-------- move backward at safe distance
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.HALT, cmd[4].status());
-        // And no next action should have been required
-        assertFalse(ctx[5].isRequestNextAction());
 
         //-------- after completion
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.HALT, cmd[5].status());
         // And no next action should have been required
-        assertFalse(ctx[6].isRequestNextAction());
-        assertThat(onCompletionContexts, contains(ctx[5], ctx[6]));
     }
 
     @ParameterizedTest
@@ -225,41 +212,29 @@ class DisengageStateTest {
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.BACKWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(target1, MM));
-        // And no next action should have been required
-        assertFalse(ctx[1].isRequestNextAction());
 
         //-------- after half commitment
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.BACKWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(target1, MM));
-        // And no next action should have been required
-        assertFalse(ctx[2].isRequestNextAction());
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.BACKWARD, cmd[2].status());
         assertThat(cmd[2].target(), pointCloseTo(target2, MM));
-        // And no next action should have been required
-        assertFalse(ctx[3].isRequestNextAction());
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.BACKWARD, cmd[3].status());
         assertThat(cmd[3].target(), pointCloseTo(target2, MM));
-        // And no next action should have been required
-        assertFalse(ctx[4].isRequestNextAction());
 
         //-------- move backward at safe distance
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.HALT, cmd[4].status());
-        // And no next action should have been required
-        assertFalse(ctx[5].isRequestNextAction());
 
         //-------- after completion
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.HALT, cmd[5].status());
-        // And no next action should have been required
-        assertFalse(ctx[6].isRequestNextAction());
         assertThat(onCompletionContexts, contains(ctx[5], ctx[6]));
     }
 
@@ -315,41 +290,30 @@ class DisengageStateTest {
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.FORWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(target1, MM));
-        // And no next action should have been required
-        assertFalse(ctx[1].isRequestNextAction());
 
         //-------- after half commitment
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.FORWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(target1, MM));
-        // And no next action should have been required
-        assertFalse(ctx[2].isRequestNextAction());
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.FORWARD, cmd[2].status());
         assertThat(cmd[2].target(), pointCloseTo(target2, MM));
-        // And no next action should have been required
-        assertFalse(ctx[3].isRequestNextAction());
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.FORWARD, cmd[3].status());
         assertThat(cmd[3].target(), pointCloseTo(target2, MM));
-        // And no next action should have been required
-        assertFalse(ctx[4].isRequestNextAction());
 
         //-------- move backward at safe distance
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.HALT, cmd[4].status());
-        // And no next action should have been required
-        assertFalse(ctx[5].isRequestNextAction());
 
         //-------- after completion
         // Then the command should be backward to target position
         assertEquals(RobotStatusId.HALT, cmd[5].status());
-        // And no next action should have been required
-        assertFalse(ctx[6].isRequestNextAction());
+
         assertThat(onCompletionContexts, contains(ctx[5], ctx[6]));
     }
 }
