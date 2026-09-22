@@ -36,7 +36,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatusId;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
@@ -50,6 +49,8 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.Matchers.pointCloseTo;
+import static org.mmarini.wheelly.apis.RobotStatusId.FORWARD;
+import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
 import static org.mmarini.wheelly.apis.Utils.MM;
 
 class MovePathStateTest {
@@ -119,10 +120,10 @@ class MovePathStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Than 1st tick should return HALT
-        assertEquals(RobotStatusId.HALT, cmd[0].status());
+        assertEquals(HALT, cmd[0].status());
 
         // Than 2st tick should return HALT
-        assertEquals(RobotStatusId.HALT, cmd[1].status());
+        assertEquals(HALT, cmd[1].status());
 
         assertThat(onCompletionContexts, contains(ctx[1], ctx[2]));
         assertThat(onContactContexts, empty());
@@ -167,18 +168,18 @@ class MovePathStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Than 1st tick should return forward to target0
-        assertEquals(RobotStatusId.FORWARD, cmd[0].status());
+        assertEquals(FORWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(target0, MM));
 
         // Than 2nd tick should return forward to target1
-        assertEquals(RobotStatusId.FORWARD, cmd[1].status());
+        assertEquals(FORWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(target1, MM));
 
         // Than 3rd tick should return halt
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].status());
 
         // Than 4th tick should return halttarget2
-        assertEquals(RobotStatusId.HALT, cmd[3].status());
+        assertEquals(HALT, cmd[3].status());
 
         // Than completion should have been invoked twice
         assertThat(onCompletionContexts, contains(ctx[3], ctx[4]));
@@ -227,18 +228,18 @@ class MovePathStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Than 1st tick should return forward to target0
-        assertEquals(RobotStatusId.FORWARD, cmd[0].status());
+        assertEquals(FORWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(target0, MM));
 
         // Than 2nd tick should return forward to target1
-        assertEquals(RobotStatusId.FORWARD, cmd[1].status());
+        assertEquals(FORWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(target1, MM));
 
         // Than 3rd tick should return halt
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].status());
 
         // Than 3rd tick should return halt
-        assertEquals(RobotStatusId.HALT, cmd[3].status());
+        assertEquals(HALT, cmd[3].status());
 
         // Than contacts should have been invoked twice
         assertThat(onContactContexts, contains(ctx[3], ctx[4]));

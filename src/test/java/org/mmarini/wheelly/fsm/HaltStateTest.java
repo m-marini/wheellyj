@@ -31,7 +31,6 @@ package org.mmarini.wheelly.fsm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatusId;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.util.ArrayList;
@@ -41,6 +40,7 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
 
 class HaltStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -79,10 +79,10 @@ class HaltStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Then ...
-        assertEquals(RobotStatusId.HALT, cmd[0].status());
-        assertEquals(RobotStatusId.HALT, cmd[1].status());
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
-        assertEquals(RobotStatusId.HALT, cmd[3].status());
+        assertEquals(HALT, cmd[0].status());
+        assertEquals(HALT, cmd[1].status());
+        assertEquals(HALT, cmd[2].status());
+        assertEquals(HALT, cmd[3].status());
 
         assertThat(onCompletionContexts, contains(ctx[3], ctx[4]));
     }

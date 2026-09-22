@@ -34,48 +34,59 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class BaseHeadState implements EnvFSMState {
-    public static BaseHeadState create(long commitmentDuration) {
-        HaltState haltState1 = new HaltState(commitmentDuration);
-        LookStraightState lookStraightState1 = new LookStraightState(commitmentDuration);
-        return new BaseHeadState(haltState1, lookStraightState1);
+    public static BaseHeadState create(long commitmentDuration, long scanInterval, int[] headScanDeg) {
+        return new BaseHeadState(new HaltState(commitmentDuration),
+                new LookStraightState(commitmentDuration),
+                new HeadScanState(commitmentDuration, scanInterval), headScanDeg);
     }
 
     private final HaltState haltState;
     private final LookStraightState lookStraightState;
+    private final HeadScanState headScanState;
     private final Map<HeadActionId, Function<EnvFSMContext, AbstractCommitmentState>> headInitializers;
     private final Map<MoveActionId, Function<EnvFSMContext, AbstractCommitmentState>> baseInitializers;
     private AbstractCommitmentState baseState;
     private AbstractCommitmentState headState;
+    private final int[] headDeg;
 
-    protected BaseHeadState(HaltState haltState, LookStraightState lookStraightState) {
-        this.baseState = this.haltState = haltState;
-        this.headState = this.lookStraightState = lookStraightState;
+    protected BaseHeadState(HaltState haltState, LookStraightState lookStraightState, HeadScanState headScanState, int[] headDeg) {
+        this.haltState = haltState;
+        this.lookStraightState = lookStraightState;
+        this.headScanState = headScanState;
+        this.headDeg = headDeg;
         headInitializers = Map.of(
-                HeadActionId.CONTINUE_CURRENT_ACTION, ctx -> headState,
-                HeadActionId.LOOK_STRIGHT_ACTION, this::initLookStraight
+                HeadActionId.CONTINUE_HEAD_ACTION, ctx -> headState,
+                HeadActionId.LOOK_STRIGHT_ACTION, this::initLookStraight,
+                HeadActionId.SCAN_ACTION, this::initScan
         );
         baseInitializers = Map.of(
-                MoveActionId.CONTINUE_CURRENT_ACTION, ctx -> baseState,
+                MoveActionId.CONTINUE_MOVE_ACTION, ctx -> baseState,
                 MoveActionId.HALT_ACTION, this::initHalt
         );
     }
 
     private void changeActions(AgentAction actionId, EnvFSMContext context) {
-        if (headState.completed() || headState.expired(context)) {
+        if (headState == null || headState.completed() || headState.expired(context)) {
             // head can be changed
             Function<EnvFSMContext, AbstractCommitmentState> init = this.headInitializers.get(actionId.headId());
             if (init == null) {
                 throw new IllegalStateException("head action " + actionId.headId() + " not found");
             }
             headState = init.apply(context);
+            if (headState == null) {
+                headState = initLookStraight(context);
+            }
         }
-        if (baseState.completed() || baseState.expired(context)) {
+        if (baseState == null || baseState.completed() || baseState.expired(context)) {
             // head can be changed
             Function<EnvFSMContext, AbstractCommitmentState> init = this.baseInitializers.get(actionId.moveId());
             if (init == null) {
                 throw new IllegalStateException("base action " + actionId.moveId() + " not found");
             }
             baseState = init.apply(context);
+            if (baseState == null) {
+                baseState = initHalt(context);
+            }
         }
     }
 
@@ -85,8 +96,8 @@ public class BaseHeadState implements EnvFSMState {
     }
 
     public void init(EnvFSMContext context) {
-        baseState.init(context);
-        headState.init(context);
+        baseState = null;
+        headState = null;
     }
 
     private AbstractCommitmentState initHalt(EnvFSMContext context) {
@@ -99,9 +110,16 @@ public class BaseHeadState implements EnvFSMState {
         return lookStraightState;
     }
 
+    private AbstractCommitmentState initScan(EnvFSMContext envFSMContext) {
+        headScanState.init(envFSMContext, headDeg);
+        return headScanState;
+    }
+
     @Override
     public RobotCommands tick(EnvFSMContext context) {
-        if (baseState.completed()
+        if (baseState == null
+                || headState == null
+                || baseState.completed()
                 || baseState.expired(context)
                 || headState.completed()
                 || headState.expired(context)) {

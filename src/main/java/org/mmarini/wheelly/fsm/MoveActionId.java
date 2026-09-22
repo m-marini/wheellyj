@@ -29,6 +29,6 @@
 package org.mmarini.wheelly.fsm;
 
 public enum MoveActionId {
-    CONTINUE_CURRENT_ACTION,
+    CONTINUE_MOVE_ACTION,
     HALT_ACTION,
 }

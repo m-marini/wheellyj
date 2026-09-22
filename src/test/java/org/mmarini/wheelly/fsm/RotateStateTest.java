@@ -35,7 +35,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatusId;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
@@ -48,6 +47,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
+import static org.mmarini.wheelly.apis.RobotStatusId.ROTATE;
 
 class RotateStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -119,20 +120,20 @@ class RotateStateTest {
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.ROTATE, cmd[0].status());
+        assertEquals(ROTATE, cmd[0].status());
         assertEquals(targetDir.toIntDeg(), cmd[0].rotationDirection());
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.ROTATE, cmd[1].status());
+        assertEquals(ROTATE, cmd[1].status());
         assertEquals(targetDir.toIntDeg(), cmd[1].rotationDirection());
 
         //--------
         // Then the command should be halt
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].status());
 
         // And next action should have been required
-        assertEquals(RobotStatusId.HALT, cmd[3].status());
+        assertEquals(HALT, cmd[3].status());
         assertThat(onCompletionContexts, contains(ctx[3], ctx[4]));
         assertThat(onContactContexts, empty());
     }
@@ -172,19 +173,19 @@ class RotateStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.ROTATE, cmd[0].status());
+        assertEquals(ROTATE, cmd[0].status());
         assertEquals(targetDir.toIntDeg(), cmd[0].rotationDirection());
         // And no next action should have been required
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.ROTATE, cmd[1].status());
+        assertEquals(ROTATE, cmd[1].status());
         assertEquals(targetDir.toIntDeg(), cmd[1].rotationDirection());
         // And next action should have been required
 
         //--------
         // Then the command should be halt
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].status());
         // And next action should have been required
         assertThat(onContactContexts, contains(ctx[3]));
         assertThat(onCompletionContexts, empty());
@@ -223,17 +224,17 @@ class RotateStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.ROTATE, cmd[0].status());
+        assertEquals(ROTATE, cmd[0].status());
         assertEquals(targetDir.toIntDeg(), cmd[0].rotationDirection());
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.ROTATE, cmd[1].status());
+        assertEquals(ROTATE, cmd[1].status());
         assertEquals(targetDir.toIntDeg(), cmd[1].rotationDirection());
 
         //--------
         // Then the command should be halt
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].status());
 
         assertThat(onContactContexts, contains(ctx[3]));
         assertThat(onCompletionContexts, empty());

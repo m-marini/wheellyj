@@ -31,27 +31,27 @@ package org.mmarini.wheelly.fsm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatusId;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
+import static org.mmarini.wheelly.fsm.HeadScanStateTest.SCAN_HEAD_DEG;
+import static org.mmarini.wheelly.fsm.HeadScanStateTest.SCAN_INTERVAL;
+import static org.mmarini.wheelly.fsm.MoveActionId.HALT_ACTION;
 
-public class BaseHeadStateTest {
+public class HaltLookStraightStateTest {
     public static final int COMMITMENT_TIME = 1000;
 
     WorldModelBuilder worldBuilder;
     BaseHeadState state;
-    List<EnvFSMContext> onCompletionContexts;
 
     @BeforeEach
     void setUp() {
         this.worldBuilder = new WorldModelBuilder();
-        this.onCompletionContexts = new ArrayList<>();
-        this.state = BaseHeadState.create(COMMITMENT_TIME);
+        this.state = BaseHeadState.create(COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG);
     }
 
     @Test
@@ -59,7 +59,6 @@ public class BaseHeadStateTest {
         MockFSMContext[] ctx = MockFSMContext.builder()
                 .add(worldBuilder)
                 .add(worldBuilder)
-                .add(worldBuilder)
                 .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
                 .add(worldBuilder.addTime(1))
                 .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
@@ -74,30 +73,30 @@ public class BaseHeadStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Then
-        assertEquals(RobotStatusId.HALT, cmd[0].status());
-        assertEquals(0, ctx[1].nextActionCount());
+        assertEquals(HALT, cmd[0].status());
+        assertEquals(1, ctx[1].nextActionCount());
 
         // Then
-        assertEquals(RobotStatusId.HALT, cmd[1].status());
+        assertEquals(HALT, cmd[1].status());
         assertEquals(0, ctx[2].nextActionCount());
 
         // Then
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].status());
         assertEquals(1, ctx[3].nextActionCount());
 
         // Then
-        assertEquals(RobotStatusId.HALT, cmd[3].status());
+        assertEquals(HALT, cmd[3].status());
         assertEquals(1, ctx[4].nextActionCount());
 
         // Then
-        assertEquals(RobotStatusId.HALT, cmd[4].status());
+        assertEquals(HALT, cmd[4].status());
         assertEquals(1, ctx[5].nextActionCount());
     }
 
     @Test
     void testHaltStraightRepeat() {
         MockFSMContext[] ctx = MockFSMContext.builder()
-                .add(MoveActionId.HALT_ACTION, HeadActionId.LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(HALT_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 .add(worldBuilder)
                 .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
                 .add(worldBuilder.addTime(1))
@@ -113,23 +112,23 @@ public class BaseHeadStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Then
-        assertEquals(RobotStatusId.HALT, cmd[0].status());
-        assertEquals(0, ctx[1].nextActionCount());
+        assertEquals(HALT, cmd[0].status());
+        assertEquals(1, ctx[1].nextActionCount());
 
         // Then
-        assertEquals(RobotStatusId.HALT, cmd[1].status());
+        assertEquals(HALT, cmd[1].status());
         assertEquals(0, ctx[2].nextActionCount());
 
         // Then
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
-        assertEquals(0, ctx[3].nextActionCount());
+        assertEquals(HALT, cmd[2].status());
+        assertEquals(1, ctx[3].nextActionCount());
 
         // Then
-        assertEquals(RobotStatusId.HALT, cmd[3].status());
-        assertEquals(1, ctx[4].nextActionCount());
+        assertEquals(HALT, cmd[3].status());
+        assertEquals(0, ctx[4].nextActionCount());
 
         // Then
-        assertEquals(RobotStatusId.HALT, cmd[4].status());
+        assertEquals(HALT, cmd[4].status());
         assertEquals(1, ctx[5].nextActionCount());
     }
 }

@@ -35,6 +35,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.fsm.HeadActionId.CONTINUE_HEAD_ACTION;
+import static org.mmarini.wheelly.fsm.MoveActionId.CONTINUE_MOVE_ACTION;
 
 public class MockFSMContext implements EnvFSMContext {
     public static EnvFSMContextBuilder builder() {
@@ -72,7 +74,7 @@ public class MockFSMContext implements EnvFSMContext {
 
         protected EnvFSMContextBuilder(List<MockFSMContext> contexts) {
             this.contexts = contexts;
-            this.lastAgentAction = new AgentAction(MoveActionId.CONTINUE_CURRENT_ACTION, HeadActionId.CONTINUE_CURRENT_ACTION);
+            this.lastAgentAction = new AgentAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
         }
 
         public EnvFSMContextBuilder add(MockFSMContext context) {

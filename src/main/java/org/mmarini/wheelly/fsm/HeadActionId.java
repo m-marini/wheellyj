@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.fsm;
 
 public enum HeadActionId {
-    CONTINUE_CURRENT_ACTION,
+    CONTINUE_HEAD_ACTION,
     LOOK_STRIGHT_ACTION,
     SCAN_ACTION
 }

@@ -46,6 +46,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
+import static org.mmarini.wheelly.apis.RobotStatusId.*;
 import static org.mmarini.wheelly.apis.Utils.MM;
 
 class MoveStateTest {
@@ -134,19 +135,19 @@ class MoveStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.BACKWARD, cmd[0].status());
+        assertEquals(BACKWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
         // And no next action should have been required
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.BACKWARD, cmd[1].status());
+        assertEquals(BACKWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
         // And next action should have been required
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].status());
         // And action should not have been completed
         assertTrue(state.completed());
         // And action should not have been expired
@@ -201,24 +202,24 @@ class MoveStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.FORWARD, cmd[0].status());
+        assertEquals(FORWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
         // And no next action should have been required
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.FORWARD, cmd[1].status());
+        assertEquals(FORWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
         // And next action should have been required
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].status());
         // And no next action should have been required
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.HALT, cmd[3].status());
+        assertEquals(HALT, cmd[3].status());
         // And action should not have been completed
         assertTrue(state.completed());
         // And action should not have been expired
@@ -271,15 +272,15 @@ class MoveStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.FORWARD, cmd[0].status());
+        assertEquals(FORWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
 
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.FORWARD, cmd[1].status());
+        assertEquals(FORWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
 
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].status());
         // And action should not have been completed
         assertTrue(state.completed());
         // And action should not have been expired
@@ -330,15 +331,15 @@ class MoveStateTest {
                 .toArray(RobotCommands[]::new);
 
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.BACKWARD, cmd[0].status());
+        assertEquals(BACKWARD, cmd[0].status());
         assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
 
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.BACKWARD, cmd[1].status());
+        assertEquals(BACKWARD, cmd[1].status());
         assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
 
         // Then the command should be forward to target position
-        assertEquals(RobotStatusId.HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].status());
         // And action should not have been completed
         assertTrue(state.completed());
         // And action should not have been expired
