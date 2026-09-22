@@ -53,12 +53,12 @@ public class MoveState extends AbstractCommitmentState {
     /**
      * The callback function executed when the movement completion condition is met.
      */
-    private Function<EnvironmentFSMContext, RobotCommands> onCompletion;
+    private Function<EnvFSMContext, RobotCommands> onCompletion;
 
     /**
      * The callback function executed when the robot detects a contact or obstacle.
      */
-    private Function<EnvironmentFSMContext, RobotCommands> onContact;
+    private Function<EnvFSMContext, RobotCommands> onContact;
 
     /**
      * Initialises a new instance of {@code MoveState} with a specified commitment duration.
@@ -75,7 +75,7 @@ public class MoveState extends AbstractCommitmentState {
      * @param ctx            the environment finite state machine context
      * @param targetPosition the target coordinates to reach
      */
-    public void init(EnvironmentFSMContext ctx, Point2D targetPosition) {
+    public void init(EnvFSMContext ctx, Point2D targetPosition) {
         super.init(ctx);
         this.targetPosition = targetPosition;
     }
@@ -86,7 +86,7 @@ public class MoveState extends AbstractCommitmentState {
      * @param callback the function to execute upon reaching the destination
      * @return this state instance to allow method chaining
      */
-    public MoveState onCompletion(Function<EnvironmentFSMContext, RobotCommands> callback) {
+    public MoveState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
         this.onCompletion = callback;
         return this;
     }
@@ -97,7 +97,7 @@ public class MoveState extends AbstractCommitmentState {
      * @param callback the function to execute if a contact is detected
      * @return this state instance to allow method chaining
      */
-    public MoveState onContact(Function<EnvironmentFSMContext, RobotCommands> callback) {
+    public MoveState onContact(Function<EnvFSMContext, RobotCommands> callback) {
         this.onContact = callback;
         return this;
     }
@@ -113,7 +113,7 @@ public class MoveState extends AbstractCommitmentState {
      * @return the computed {@link RobotCommands} to guide the robot's behaviour
      */
     @Override
-    public RobotCommands tick(EnvironmentFSMContext context) {
+    public RobotCommands tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward()) {
             complete();

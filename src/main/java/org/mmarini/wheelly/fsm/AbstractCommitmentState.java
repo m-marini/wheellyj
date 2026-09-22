@@ -37,7 +37,7 @@ package org.mmarini.wheelly.fsm;
  * standardising temporal tracking to stabilise the robot's physical <b>behaviour</b>.
  * </p>
  */
-public abstract class AbstractCommitmentState implements EnvironmentFSMState {
+public abstract class AbstractCommitmentState implements EnvFSMState {
 
     /**
      * The temporal length in milliseconds for which the state remains locked in its commitment.
@@ -62,18 +62,20 @@ public abstract class AbstractCommitmentState implements EnvironmentFSMState {
     }
 
     /**
-     * Initialises the state by synchronous tracking with the current robot timeline.
+     * Indicates whether the minimum commitment time allocated to this state
+     * has elapsed within the provided execution context.
      * <p>
-     * This method captures the exact start timestamp from the execution context to anchor the
-     * future expiration calculation and <b>optimise</b> temporal tracking stability.
+     * This method ensures that the state machine remains locked within the current
+     * state for a required minimum duration, preventing premature transitions and
+     * stabilising the robot's overall <b>behaviour</b>.
      * </p>
      *
-     * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
+     * @param context the {@link EnvFSMContext} tracking the shared operational data
+     * @return true if the minimum commitment time has expired; false otherwise
      * @throws NullPointerException if the provided context is null
      */
-    public void init(EnvironmentFSMContext context) {
-        initTime = context.worldModel().robotStatus().robotTime();
-        completed = false;
+    public boolean expired(EnvFSMContext context) {
+        return context.worldModel().robotStatus().robotTime() >= initTime + commitmentDuration;
     }
 
     /**
@@ -97,20 +99,18 @@ public abstract class AbstractCommitmentState implements EnvironmentFSMState {
     }
 
     /**
-     * Indicates whether the minimum commitment time allocated to this state
-     * has elapsed within the provided execution context.
+     * Initialises the state by synchronous tracking with the current robot timeline.
      * <p>
-     * This method ensures that the state machine remains locked within the current
-     * state for a required minimum duration, preventing premature transitions and
-     * stabilising the robot's overall <b>behaviour</b>.
+     * This method captures the exact start timestamp from the execution context to anchor the
+     * future expiration calculation and <b>optimise</b> temporal tracking stability.
      * </p>
      *
-     * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
-     * @return true if the minimum commitment time has expired; false otherwise
+     * @param context the {@link EnvFSMContext} tracking the shared operational data
      * @throws NullPointerException if the provided context is null
      */
-     public boolean expired(EnvironmentFSMContext context) {
-        return context.worldModel().robotStatus().robotTime() >= initTime + commitmentDuration;
+    public void init(EnvFSMContext context) {
+        initTime = context.worldModel().robotStatus().robotTime();
+        completed = false;
     }
 
     /**

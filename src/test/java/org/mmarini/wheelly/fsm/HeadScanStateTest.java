@@ -31,7 +31,6 @@ package org.mmarini.wheelly.fsm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.util.ArrayList;
@@ -47,15 +46,9 @@ class HeadScanStateTest {
     public static final int SCAN_INTERVAL = 2000;
     public static final int[] SCAN_HEAD_DEG = {-45, 0, 45};
 
-    static MockFSMContext[] createContext(WorldModel... worldModel) {
-        return Arrays.stream(worldModel)
-                .map(MockFSMContext::new)
-                .toArray(MockFSMContext[]::new);
-    }
-
     WorldModelBuilder builder;
     HeadScanState state;
-    List<EnvironmentFSMContext> onCompletionContexts;
+    List<EnvFSMContext> onCompletionContexts;
 
     @BeforeEach
     void setUp() {
@@ -71,20 +64,15 @@ class HeadScanStateTest {
     @Test
     void testScan() {
         // Given ...
-        MockFSMContext[] ctx = createContext(
-                builder.build(),
-                builder.build(),
-                builder.addTime(COMMITMENT_TIME)
-                        .build(),
-                builder.addTime(SCAN_INTERVAL - COMMITMENT_TIME)
-                        .build(),
-                builder.addTime(SCAN_INTERVAL)
-                        .build(),
-                builder.addTime(SCAN_INTERVAL)
-                        .build(),
-                builder.addTime(SCAN_INTERVAL)
-                        .build()
-        );
+        MockFSMContext[] ctx = MockFSMContext.builder()
+                .add(builder)
+                .add(builder)
+                .add(builder.addTime(COMMITMENT_TIME))
+                .add(builder.addTime(SCAN_INTERVAL - COMMITMENT_TIME))
+                .add(builder.addTime(SCAN_INTERVAL))
+                .add(builder.addTime(SCAN_INTERVAL))
+                .add(builder.addTime(SCAN_INTERVAL))
+                .build();
 
         // When init
         state.init(ctx[0], SCAN_HEAD_DEG);

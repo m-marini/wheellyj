@@ -38,7 +38,7 @@ import org.mmarini.wheelly.apis.RobotCommands;
  * to coordinate reliable transition <b>behaviour</b>.
  * </p>
  */
-public interface EnvironmentFSMState {
+public interface EnvFSMState {
 
     /**
      * Processes a single periodic execution step within this state, producing
@@ -48,12 +48,12 @@ public interface EnvironmentFSMState {
      * and interact with the operational environment via the provided context.
      * </p>
      *
-     * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
+     * @param context the {@link EnvFSMContext} tracking the shared operational data
      *                and driving inference routines
      * @return the {@link RobotCommands} to be executed by the robot platform during this tick
      * @throws NullPointerException if the provided context is null
      */
-    RobotCommands tick(EnvironmentFSMContext context);
+    RobotCommands tick(EnvFSMContext context);
 
     /**
      * Indicates whether the internal routine or mission assigned to this state

@@ -62,7 +62,7 @@ public class DisengageState extends AbstractCommitmentState {
     /**
      * The callback function to execute upon successful completion of the manoeuvre.
      */
-    private Function<EnvironmentFSMContext, RobotCommands> onCompletion;
+    private Function<EnvFSMContext, RobotCommands> onCompletion;
 
     /**
      * The robot status recorded in the previous execution cycle (tick).
@@ -108,7 +108,7 @@ public class DisengageState extends AbstractCommitmentState {
      * @param context the current operational context of the finite state machine
      */
     @Override
-    public void init(EnvironmentFSMContext context) {
+    public void init(EnvFSMContext context) {
         super.init(context);
         this.prevStatus = context.worldModel().robotStatus();
         this.commands = RobotCommands.halt();
@@ -121,7 +121,7 @@ public class DisengageState extends AbstractCommitmentState {
      * @param callback the function that accepts the context and returns the next command
      * @return this {@code DisengageState} instance for method chaining
      */
-    public DisengageState onCompletion(Function<EnvironmentFSMContext, RobotCommands> callback) {
+    public DisengageState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
         this.onCompletion = callback;
         return this;
     }
@@ -134,7 +134,7 @@ public class DisengageState extends AbstractCommitmentState {
      * @return the action command to transmit to the robot for the current cycle
      */
     @Override
-    public RobotCommands tick(EnvironmentFSMContext context) {
+    public RobotCommands tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         double targetRange = robotStatus.robotSpec().targetRange();
         if (completed()) {

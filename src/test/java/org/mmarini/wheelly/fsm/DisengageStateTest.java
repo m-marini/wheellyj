@@ -49,7 +49,6 @@ import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.Utils.MM;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
 class DisengageStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -68,7 +67,7 @@ class DisengageStateTest {
 
     WorldModelBuilder builder;
     DisengageState state;
-    List<EnvironmentFSMContext> onCompletionContexts;
+    List<EnvFSMContext> onCompletionContexts;
 
     @BeforeEach
     void setUp() {
@@ -97,32 +96,28 @@ class DisengageStateTest {
                 .targetRange();
         Point2D target1 = robotDir.at(robotLocation, targetRange + SAFETY_DISTANCE);
         Point2D target2 = robotDir.at(robotLocation, targetRange + SAFETY_DISTANCE + MOVE_DISTANCE);
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // rear contact
-                builder.build(),
+                .add(builder)
                 // rear contact
-                builder.build(),
+                .add(builder)
                 // after half commitment
-                builder.addTime(COMMITMENT_TIME / 2)
-                        .canMoveForward(true)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME / 2)
+                        .canMoveForward(true))
                 // after commitment
-                builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(COMMITMENT_TIME)
                         // move forward MOVE_DISTANCE
                         .forward(MOVE_DISTANCE)
-                        .canMoveBackward(true)
-                        .build(),
+                        .canMoveBackward(true))
                 // move forward not at safe distance
-                builder.addTime(COMMITMENT_TIME)
-                        .forward(SAFETY_DISTANCE - MM)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME)
+                        .forward(SAFETY_DISTANCE - MM))
                 // move forward at safe distance
-                builder.addTime(COMMITMENT_TIME)
-                        .forward(2 * MM)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME)
+                        .forward(2 * MM))
                 // After completion
-                builder.addTime(COMMITMENT_TIME).build()
-        );
+                .add(builder.addTime(COMMITMENT_TIME))
+                .build();
 
         // When execute state
         state.init(ctx[0]);
@@ -175,31 +170,27 @@ class DisengageStateTest {
                 .targetRange();
         Point2D target1 = robotDir.opposite().at(robotLocation, targetRange + SAFETY_DISTANCE);
         Point2D target2 = robotDir.opposite().at(robotLocation, targetRange + SAFETY_DISTANCE + MOVE_DISTANCE);
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // front contact
-                builder.build(),
+                .add(builder)
                 // front contact
-                builder.build(),
+                .add(builder)
                 // after half commitment
-                builder.addTime(COMMITMENT_TIME / 2)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME / 2))
                 // after commitment
-                builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(COMMITMENT_TIME)
                         // move backward MOVE_DISTANCE
                         .backward(MOVE_DISTANCE)
-                        .canMoveForward(true)
-                        .build(),
+                        .canMoveForward(true))
                 // move backward not at safe distance
-                builder.addTime(COMMITMENT_TIME)
-                        .backward(SAFETY_DISTANCE - MM)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME)
+                        .backward(SAFETY_DISTANCE - MM))
                 // move backward at safe distance
-                builder.addTime(COMMITMENT_TIME)
-                        .backward(2 * MM)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME)
+                        .backward(2 * MM))
                 // After completion
-                builder.addTime(COMMITMENT_TIME).build()
-        );
+                .add(builder.addTime(COMMITMENT_TIME))
+                .build();
 
         // When execute state
         state.init(ctx[0]);
@@ -253,31 +244,27 @@ class DisengageStateTest {
                 .targetRange();
         Point2D target1 = robotDir.at(robotLocation, targetRange + SAFETY_DISTANCE);
         Point2D target2 = robotDir.at(robotLocation, targetRange + SAFETY_DISTANCE + MOVE_DISTANCE);
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // rear contact
-                builder.build(),
+                .add(builder)
                 // rear contact
-                builder.build(),
+                .add(builder)
                 // after half commitment
-                builder.addTime(COMMITMENT_TIME / 2)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME / 2))
                 // after commitment
-                builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(COMMITMENT_TIME)
                         // move forward MOVE_DISTANCE
                         .forward(MOVE_DISTANCE)
-                        .canMoveBackward(true)
-                        .build(),
+                        .canMoveBackward(true))
                 // move forward not at safe distance
-                builder.addTime(COMMITMENT_TIME)
-                        .forward(SAFETY_DISTANCE - MM)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME)
+                        .forward(SAFETY_DISTANCE - MM))
                 // move forward at safe distance
-                builder.addTime(COMMITMENT_TIME)
-                        .forward(2 * MM)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME)
+                        .forward(2 * MM))
                 // After completion
-                builder.addTime(COMMITMENT_TIME).build()
-        );
+                .add(builder.addTime(COMMITMENT_TIME))
+                .build();
 
         // When execute state
         state.init(ctx[0]);

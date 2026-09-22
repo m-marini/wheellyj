@@ -39,9 +39,9 @@ import org.mmarini.wheelly.apis.WorldModel;
  * the robot's physical <b>behaviour</b>.
  * </p>
  */
-public interface EnvironmentFSMContext {
+public interface EnvFSMContext {
 
-    AgentActionId nextAction();
+    AgentAction nextAction();
 
     /**
      * Returns the current model of the world containing sensory data and map features.

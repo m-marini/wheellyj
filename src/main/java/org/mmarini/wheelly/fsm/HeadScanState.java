@@ -65,7 +65,7 @@ public class HeadScanState extends AbstractCommitmentState {
      * The index pointing to the active target angle within the scan sequence.
      */
     private int currentStepIndex;
-    private Function<EnvironmentFSMContext, RobotCommands> onCompletion;
+    private Function<EnvFSMContext, RobotCommands> onCompletion;
 
     /**
      * Constructs a {@code HeadScanState} with the specified commitment duration
@@ -89,12 +89,12 @@ public class HeadScanState extends AbstractCommitmentState {
      * robot status to <b>optimise</b> sequencing steps.
      * </p>
      *
-     * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
+     * @param context the {@link EnvFSMContext} tracking the shared operational data
      * @param headDeg the sequence of target head directions in degrees, must contain at least one element
      * @throws NullPointerException     if the provided context or {@code headDeg} array is null
      * @throws IllegalArgumentException if the {@code headDeg} array contains no elements
      */
-    public void init(EnvironmentFSMContext context, int... headDeg) {
+    public void init(EnvFSMContext context, int... headDeg) {
         super.init(context);
         this.headDeg = requireNonNull(headDeg);
         if (headDeg.length < 1) {
@@ -110,7 +110,7 @@ public class HeadScanState extends AbstractCommitmentState {
      * @param callback the function to execute upon reaching the destination
      * @return this state instance to allow method chaining
      */
-    public HeadScanState onCompletion(Function<EnvironmentFSMContext, RobotCommands> callback) {
+    public HeadScanState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
         this.onCompletion = callback;
         return this;
     }
@@ -124,13 +124,13 @@ public class HeadScanState extends AbstractCommitmentState {
      * subsequent clock tick, and returns a general halt instruction.
      * </p>
      *
-     * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
+     * @param context the {@link EnvFSMContext} tracking the shared operational data
      * @return the {@link RobotCommands} restricting execution to the active head target angle,
      * or a stationary halt profile upon sequence completion
      * @throws NullPointerException if the provided context is null
      */
     @Override
-    public RobotCommands tick(EnvironmentFSMContext context) {
+    public RobotCommands tick(EnvFSMContext context) {
         if (completed()) {
             return onCompletion != null
                     ? onCompletion.apply(context)

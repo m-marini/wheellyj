@@ -29,25 +29,29 @@
 package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.WorldModelBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
-public class MockFSMContext implements EnvironmentFSMContext {
-    private final WorldModel model;
-    private final AgentActionId nextAction;
-    private int nextActionCount;
-
-    public MockFSMContext(WorldModel model) {
-        this(model, new AgentActionId(MoveActionId.CONTINUE_CURRENT_ACTION, HeadActionId.CONTINUE_CURRENT_ACTION));
+public class MockFSMContext implements EnvFSMContext {
+    public static EnvFSMContextBuilder builder() {
+        return new EnvFSMContextBuilder(new ArrayList<>());
     }
 
-    public MockFSMContext(WorldModel model, AgentActionId nextAction) {
+    private final WorldModel model;
+    private final AgentAction nextAction;
+    private int nextActionCount;
+
+    public MockFSMContext(WorldModel model, AgentAction nextAction) {
         this.model = requireNonNull(model);
         this.nextAction = requireNonNull(nextAction);
     }
 
     @Override
-    public AgentActionId nextAction() {
+    public AgentAction nextAction() {
         nextActionCount++;
         return nextAction;
     }
@@ -61,5 +65,36 @@ public class MockFSMContext implements EnvironmentFSMContext {
         return model;
     }
 
+    public static class EnvFSMContextBuilder {
 
+        private final List<MockFSMContext> contexts;
+        private AgentAction lastAgentAction;
+
+        protected EnvFSMContextBuilder(List<MockFSMContext> contexts) {
+            this.contexts = contexts;
+            this.lastAgentAction = new AgentAction(MoveActionId.CONTINUE_CURRENT_ACTION, HeadActionId.CONTINUE_CURRENT_ACTION);
+        }
+
+        public EnvFSMContextBuilder add(MockFSMContext context) {
+            contexts.add(context);
+            return this;
+        }
+
+        public EnvFSMContextBuilder add(WorldModelBuilder builder) {
+            return add(new MockFSMContext(builder.build(), lastAgentAction));
+        }
+
+        public EnvFSMContextBuilder add(AgentAction action, WorldModelBuilder builder) {
+            lastAgentAction = action;
+            return add(new MockFSMContext(builder.build(), action));
+        }
+
+        public EnvFSMContextBuilder add(MoveActionId moveId, HeadActionId headId, WorldModelBuilder builder) {
+            return add(new AgentAction(moveId, headId), builder);
+        }
+
+        public MockFSMContext[] build() {
+            return contexts.toArray(MockFSMContext[]::new);
+        }
+    }
 }

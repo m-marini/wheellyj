@@ -32,7 +32,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatusId;
-import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.util.ArrayList;
@@ -44,38 +43,28 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class BaseHeadStateTest {
     public static final int COMMITMENT_TIME = 1000;
 
-    WorldModelBuilder builder;
+    WorldModelBuilder worldBuilder;
     BaseHeadState state;
-    List<EnvironmentFSMContext> onCompletionContexts;
-
-    private MockFSMContext[] createContext(AgentActionId agentActionId, WorldModel... models) {
-        return Arrays.stream(models)
-                .map(model -> new MockFSMContext(model, agentActionId))
-                .toArray(MockFSMContext[]::new);
-    }
+    List<EnvFSMContext> onCompletionContexts;
 
     @BeforeEach
     void setUp() {
-        this.builder = new WorldModelBuilder();
+        this.worldBuilder = new WorldModelBuilder();
         this.onCompletionContexts = new ArrayList<>();
         this.state = BaseHeadState.create(COMMITMENT_TIME);
     }
 
     @Test
     void testHaltStraightContinue() {
-        MockFSMContext[] ctx = createContext(
-                new AgentActionId(MoveActionId.CONTINUE_CURRENT_ACTION, HeadActionId.CONTINUE_CURRENT_ACTION),
-                builder.build(),
-                builder.build(),
-                builder.addTime(COMMITMENT_TIME - 1)
-                        .build(),
-                builder.addTime(1)
-                        .build(),
-                builder.addTime(COMMITMENT_TIME - 1)
-                        .build(),
-                builder.addTime(1)
-                        .build()
-        );
+        MockFSMContext[] ctx = MockFSMContext.builder()
+                .add(worldBuilder)
+                .add(worldBuilder)
+                .add(worldBuilder)
+                .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
+                .add(worldBuilder.addTime(1))
+                .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
+                .add(worldBuilder.addTime(1))
+                .build();
 
         // When ...
         state.init(ctx[0]);
@@ -107,19 +96,14 @@ public class BaseHeadStateTest {
 
     @Test
     void testHaltStraightRepeat() {
-        MockFSMContext[] ctx = createContext(
-                new AgentActionId(MoveActionId.HALT_ACTION, HeadActionId.LOOK_STRIGHT_ACTION),
-                builder.build(),
-                builder.build(),
-                builder.addTime(COMMITMENT_TIME - 1)
-                        .build(),
-                builder.addTime(1)
-                        .build(),
-                builder.addTime(COMMITMENT_TIME - 1)
-                        .build(),
-                builder.addTime(1)
-                        .build()
-        );
+        MockFSMContext[] ctx = MockFSMContext.builder()
+                .add(MoveActionId.HALT_ACTION, HeadActionId.LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(worldBuilder)
+                .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
+                .add(worldBuilder.addTime(1))
+                .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
+                .add(worldBuilder.addTime(1))
+                .build();
 
         // When ...
         state.init(ctx[0]);

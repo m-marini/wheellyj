@@ -61,13 +61,13 @@ public class LookStraightState extends AbstractCommitmentState {
      * head aligned frontal to <b>optimise</b> sensory tracking.
      * </p>
      *
-     * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
+     * @param context the {@link EnvFSMContext} tracking the shared operational data
      *                and driving inference routines
      * @return the {@link RobotCommands} restricted exclusively to maintaining the head in a straight forward orientation
      * @throws NullPointerException if the provided context is null
      */
     @Override
-    public RobotCommands tick(EnvironmentFSMContext context) {
+    public RobotCommands tick(EnvFSMContext context) {
         return RobotCommands.halt(0);
     }
 }

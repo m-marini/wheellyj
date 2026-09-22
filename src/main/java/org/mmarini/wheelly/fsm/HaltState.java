@@ -44,7 +44,7 @@ import java.util.function.Function;
  */
 public class HaltState extends AbstractCommitmentState {
 
-    private Function<EnvironmentFSMContext, RobotCommands> onCompletion;
+    private Function<EnvFSMContext, RobotCommands> onCompletion;
 
     /**
      * Constructs a {@code HaltState} with a specified initial timestamp to anchor
@@ -63,7 +63,7 @@ public class HaltState extends AbstractCommitmentState {
      * @param callback the function to execute upon reaching the destination
      * @return this state instance to allow method chaining
      */
-    public HaltState onCompletion(Function<EnvironmentFSMContext, RobotCommands> callback) {
+    public HaltState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
         this.onCompletion = callback;
         return this;
     }
@@ -76,11 +76,11 @@ public class HaltState extends AbstractCommitmentState {
      * expiration, it triggers comprehensive halt parameters to <b>optimise</b> vehicle stabilisation.
      * </p>
      *
-     * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
+     * @param context the {@link EnvFSMContext} tracking the shared operational data
      * @return the {@link RobotCommands} commanding an immediate and complete standstill of the robot
      */
     @Override
-    public RobotCommands tick(EnvironmentFSMContext context) {
+    public RobotCommands tick(EnvFSMContext context) {
         if (expired(context)) {
             complete();
             return onCompletion != null

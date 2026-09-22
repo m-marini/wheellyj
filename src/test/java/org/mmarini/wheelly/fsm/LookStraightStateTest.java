@@ -36,7 +36,6 @@ import org.mmarini.wheelly.apis.WorldModelBuilder;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
 class LookStraightStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -54,14 +53,12 @@ class LookStraightStateTest {
     void testLookStraight() {
         // Given a look straight action
 
-        MockFSMContext[] ctx = createContext(
-                builder.build(),
-                builder.build(),
-                builder.addTime(COMMITMENT_TIME)
-                        .build(),
-                builder.addTime(COMMITMENT_TIME)
-                        .build()
-        );
+        MockFSMContext[] ctx = MockFSMContext.builder()
+                .add(builder)
+                .add(builder)
+                .add(builder.addTime(COMMITMENT_TIME))
+                .add(builder.addTime(COMMITMENT_TIME))
+                .build();
 
         // When executing the action for the first time
         state.init(ctx[0]);

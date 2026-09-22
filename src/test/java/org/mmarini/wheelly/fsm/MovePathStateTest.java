@@ -51,7 +51,6 @@ import static org.hamcrest.Matchers.empty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.Utils.MM;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
 class MovePathStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -72,8 +71,8 @@ class MovePathStateTest {
 
     WorldModelBuilder builder;
     MovePathState state;
-    List<EnvironmentFSMContext> onCompletionContexts;
-    List<EnvironmentFSMContext> onContactContexts;
+    List<EnvFSMContext> onCompletionContexts;
+    List<EnvFSMContext> onContactContexts;
     List<Point2D> path;
 
     @BeforeEach
@@ -101,17 +100,15 @@ class MovePathStateTest {
         // And empty path
         this.path = List.of();
         // And context
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // Init
-                builder.robotLocation(robotLocation)
-                        .robotDir(robotDeg)
-                        .build(),
+                .add(builder.robotLocation(robotLocation)
+                        .robotDir(robotDeg))
                 // First
-                builder.build(),
+                .add(builder)
                 // after complete
-                builder.build()
-        );
-
+                .add(builder)
+                .build();
         //--------
         // When init
         state.init(ctx[0], path);
@@ -144,24 +141,21 @@ class MovePathStateTest {
         Point2D target1 = heading1.at(target0, DISTANCE1);
         this.path = List.of(target0, target1);
         // And context
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // Init
-                builder.robotLocation(robotLocation)
-                        .robotDir(robotDeg)
-                        .build(),
+                .add(builder.robotLocation(robotLocation)
+                        .robotDir(robotDeg))
                 // First
-                builder.build(),
+                .add(builder)
                 // move to 1st point
-                builder.robotDir(heading0.toIntDeg())
-                        .forward(DISTANCE0)
-                        .build(),
+                .add(builder.robotDir(heading0.toIntDeg())
+                        .forward(DISTANCE0))
                 // move to 2nd point
-                builder.robotDir(heading1.toIntDeg())
-                        .forward(DISTANCE1)
-                        .build(),
+                .add(builder.robotDir(heading1.toIntDeg())
+                        .forward(DISTANCE1))
                 // after complete
-                builder.build()
-        );
+                .add(builder)
+                .build();
 
         //--------
         // When init
@@ -204,29 +198,24 @@ class MovePathStateTest {
         Point2D target1 = heading1.at(target0, DISTANCE1);
         this.path = List.of(target0, target1);
         // And context
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // Init
-                builder.robotLocation(robotLocation)
-                        .robotDir(robotDeg)
-                        .build(),
+                .add(builder.robotLocation(robotLocation)
+                        .robotDir(robotDeg))
                 // First
-                builder.build(),
+                .add(builder)
                 // move to 1st point
-                builder.robotDir(heading0.toIntDeg())
+                .add(builder.robotDir(heading0.toIntDeg())
                         .addTime(COMMITMENT_TIME)
-                        .forward(DISTANCE0)
-                        .build(),
+                        .forward(DISTANCE0))
                 // move to 2nd point
-                builder.robotDir(heading1.toIntDeg())
+                .add(builder.robotDir(heading1.toIntDeg())
                         .addTime(COMMITMENT_TIME)
                         .forward(DISTANCE1 - 0.5)
-                        .canMoveForward(false)
-                        .build(),
+                        .canMoveForward(false))
                 // after complete
-                builder
-                        .addTime(COMMITMENT_TIME)
-                        .build()
-        );
+                .add(builder.addTime(COMMITMENT_TIME))
+                .build();
 
         //--------
         // When init

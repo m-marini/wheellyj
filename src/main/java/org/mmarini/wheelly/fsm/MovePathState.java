@@ -46,11 +46,11 @@ import static java.util.Objects.requireNonNull;
  *
  * <p><b>Lifecycle &amp; Event Flow:</b></p>
  * <ul>
- *   <li><b>Initialisation:</b> The path reference is set in {@link #init(EnvironmentFSMContext, List)}.
+ *   <li><b>Initialisation:</b> The path reference is set in {@link #init(EnvFSMContext, List)}.
  *       If the path is empty, execution completes immediately.</li>
- *   <li><b>Nominal Flow:</b> As each segment completes, {@link #onMoveCompletion(EnvironmentFSMContext)}
+ *   <li><b>Nominal Flow:</b> As each segment completes, {@link #onMoveCompletion(EnvFSMContext)}
  *       advances the target index and chains execution to the next point.</li>
- *   <li><b>Exception Flow:</b> If a collision occurs, {@link #onContact(EnvironmentFSMContext)}
+ *   <li><b>Exception Flow:</b> If a collision occurs, {@link #onContact(EnvFSMContext)}
  *       marks the execution as completed and permanently halts or diverts the robot via a registered callback.</li>
  * </ul>
  *
@@ -59,8 +59,8 @@ import static java.util.Objects.requireNonNull;
  */
 public class MovePathState extends AbstractCommitmentState {
     private final MoveState moveState;
-    private Function<EnvironmentFSMContext, RobotCommands> onCompletion;
-    private Function<EnvironmentFSMContext, RobotCommands> onContact;
+    private Function<EnvFSMContext, RobotCommands> onCompletion;
+    private Function<EnvFSMContext, RobotCommands> onContact;
     private List<Point2D> path;
     private int currentTargetIdx;
     private boolean hasContact;
@@ -92,7 +92,7 @@ public class MovePathState extends AbstractCommitmentState {
      * @param path the ordered list of 2D waypoints defining the trajectory. Must not be null.
      * @throws NullPointerException if the path parameter is null
      */
-    public void init(EnvironmentFSMContext ctx, List<Point2D> path) {
+    public void init(EnvFSMContext ctx, List<Point2D> path) {
         super.init(ctx);
         this.path = requireNonNull(path);
         this.currentTargetIdx = 0;
@@ -110,7 +110,7 @@ public class MovePathState extends AbstractCommitmentState {
      * @param callback the function to execute upon reaching the destination
      * @return this state instance to allow method chaining
      */
-    public MovePathState onCompletion(Function<EnvironmentFSMContext, RobotCommands> callback) {
+    public MovePathState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
         this.onCompletion = callback;
         return this;
     }
@@ -125,7 +125,7 @@ public class MovePathState extends AbstractCommitmentState {
      * @param context the state machine environment context
      * @return the resulting robot commands to execution, defaulting to a halt command if no callback is registered
      */
-    private RobotCommands onContact(EnvironmentFSMContext context) {
+    private RobotCommands onContact(EnvFSMContext context) {
         complete();
         this.hasContact = true; // Line 79: Latches the contact state to trigger immediate abort procedures
         return onContact != null
@@ -139,7 +139,7 @@ public class MovePathState extends AbstractCommitmentState {
      * @param callback the function to execute if a contact is detected
      * @return this state instance to allow method chaining
      */
-    public MovePathState onContact(Function<EnvironmentFSMContext, RobotCommands> callback) {
+    public MovePathState onContact(Function<EnvFSMContext, RobotCommands> callback) {
         this.onContact = callback;
         return this;
     }
@@ -154,7 +154,7 @@ public class MovePathState extends AbstractCommitmentState {
      * @param context the state machine environment context
      * @return the robot commands issued by the next step or termination callback
      */
-    private RobotCommands onMoveCompletion(EnvironmentFSMContext context) {
+    private RobotCommands onMoveCompletion(EnvFSMContext context) {
         if (currentTargetIdx == path.size()) {
             // final target reached
             complete();
@@ -179,7 +179,7 @@ public class MovePathState extends AbstractCommitmentState {
      * @return the resulting action commands destined for the robot architecture
      */
     @Override
-    public RobotCommands tick(EnvironmentFSMContext context) {
+    public RobotCommands tick(EnvFSMContext context) {
         if (hasContact) { // Line 112: Intercepts active collision flags to short-circuit nominal execution
             return onContact != null
                     ? onContact.apply(context)

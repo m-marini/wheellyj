@@ -33,7 +33,7 @@ import org.mmarini.wheelly.apis.RobotCommands;
 import java.util.Map;
 import java.util.function.Function;
 
-public class BaseHeadState implements EnvironmentFSMState {
+public class BaseHeadState implements EnvFSMState {
     public static BaseHeadState create(long commitmentDuration) {
         HaltState haltState1 = new HaltState(commitmentDuration);
         LookStraightState lookStraightState1 = new LookStraightState(commitmentDuration);
@@ -42,8 +42,8 @@ public class BaseHeadState implements EnvironmentFSMState {
 
     private final HaltState haltState;
     private final LookStraightState lookStraightState;
-    private final Map<HeadActionId, Function<EnvironmentFSMContext, AbstractCommitmentState>> headInitializers;
-    private final Map<MoveActionId, Function<EnvironmentFSMContext, AbstractCommitmentState>> baseInitializers;
+    private final Map<HeadActionId, Function<EnvFSMContext, AbstractCommitmentState>> headInitializers;
+    private final Map<MoveActionId, Function<EnvFSMContext, AbstractCommitmentState>> baseInitializers;
     private AbstractCommitmentState baseState;
     private AbstractCommitmentState headState;
 
@@ -60,10 +60,10 @@ public class BaseHeadState implements EnvironmentFSMState {
         );
     }
 
-    private void changeActions(AgentActionId actionId, EnvironmentFSMContext context) {
+    private void changeActions(AgentAction actionId, EnvFSMContext context) {
         if (headState.completed() || headState.expired(context)) {
             // head can be changed
-            Function<EnvironmentFSMContext, AbstractCommitmentState> init = this.headInitializers.get(actionId.headId());
+            Function<EnvFSMContext, AbstractCommitmentState> init = this.headInitializers.get(actionId.headId());
             if (init == null) {
                 throw new IllegalStateException("head action " + actionId.headId() + " not found");
             }
@@ -71,7 +71,7 @@ public class BaseHeadState implements EnvironmentFSMState {
         }
         if (baseState.completed() || baseState.expired(context)) {
             // head can be changed
-            Function<EnvironmentFSMContext, AbstractCommitmentState> init = this.baseInitializers.get(actionId.moveId());
+            Function<EnvFSMContext, AbstractCommitmentState> init = this.baseInitializers.get(actionId.moveId());
             if (init == null) {
                 throw new IllegalStateException("base action " + actionId.moveId() + " not found");
             }
@@ -84,29 +84,29 @@ public class BaseHeadState implements EnvironmentFSMState {
         return false;
     }
 
-    public void init(EnvironmentFSMContext context) {
+    public void init(EnvFSMContext context) {
         baseState.init(context);
         headState.init(context);
     }
 
-    private AbstractCommitmentState initHalt(EnvironmentFSMContext context) {
+    private AbstractCommitmentState initHalt(EnvFSMContext context) {
         haltState.init(context);
         return haltState;
     }
 
-    private AbstractCommitmentState initLookStraight(EnvironmentFSMContext context) {
+    private AbstractCommitmentState initLookStraight(EnvFSMContext context) {
         lookStraightState.init(context);
         return lookStraightState;
     }
 
     @Override
-    public RobotCommands tick(EnvironmentFSMContext context) {
+    public RobotCommands tick(EnvFSMContext context) {
         if (baseState.completed()
                 || baseState.expired(context)
                 || headState.completed()
                 || headState.expired(context)) {
             // Handle call next action
-            AgentActionId actionId = context.nextAction();
+            AgentAction actionId = context.nextAction();
             changeActions(actionId, context);
         }
         RobotCommands baseCmd = baseState.tick(context);

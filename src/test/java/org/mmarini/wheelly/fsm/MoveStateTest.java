@@ -47,23 +47,12 @@ import static org.hamcrest.Matchers.empty;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.Utils.MM;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
 class MoveStateTest {
     public static final int COMMITMENT_TIME = 1000;
     public static final double MOVEMENT_DISTANCE = 0.5;
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 100;
-
-    static Stream<Arguments> dataTestForward() {
-        return RandomArgumentsGenerator.create(SEED)
-                .uniform(-3.0, 3.0, 100)
-                .uniform(-3.0, 3.0, 100)
-                .uniform(-180, 179)
-                .uniform(-90, 90)
-                .exponential(0.1, MOVEMENT_DISTANCE, 10)
-                .build(NUM_RANDOM_TEST_CASES);
-    }
 
     public static Stream<Arguments> dataTestBackward() {
         return RandomArgumentsGenerator.create(SEED)
@@ -75,10 +64,20 @@ class MoveStateTest {
                 .build(NUM_RANDOM_TEST_CASES);
     }
 
+    static Stream<Arguments> dataTestForward() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 100)
+                .uniform(-3.0, 3.0, 100)
+                .uniform(-180, 179)
+                .uniform(-90, 90)
+                .exponential(0.1, MOVEMENT_DISTANCE, 10)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
     WorldModelBuilder builder;
     MoveState state;
-    List<EnvironmentFSMContext> onCompletionContext;
-    List<EnvironmentFSMContext> onContactContext;
+    List<EnvFSMContext> onCompletionContext;
+    List<EnvFSMContext> onContactContext;
 
     @BeforeEach
     void setUp() {
@@ -109,24 +108,21 @@ class MoveStateTest {
         // and target location
         Point2D targetPosition = targetDir.at(robotLocation, distance);
         // And context
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // Init
-                builder.robotLocation(robotLocation)
-                        .robotDir(robotDeg)
-                        .build(),
+                .add(builder.robotLocation(robotLocation)
+                        .robotDir(robotDeg))
                 // tick
-                builder.build(),
+                .add(builder)
                 // tick after commitment
-                builder.addTime(COMMITMENT_TIME)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME))
                 // tick after next commitment
-                builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(COMMITMENT_TIME)
                         // and robot dir toward targetDir
                         .robotDir(targetDir.opposite().toIntDeg())
                         // and robot backward by movement distance + 1mm
-                        .backward(movementDistance + MM)
-                        .build()
-        );
+                        .backward(movementDistance + MM))
+                .build();
 
         //--------
         // When executing the action for the first time
@@ -176,26 +172,24 @@ class MoveStateTest {
         // and target location
         Point2D targetPosition = targetDir.at(robotLocation, distance);
         // And context
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // Init
-                builder.robotLocation(robotLocation)
-                        .robotDir(robotDeg)
-                        .build(),
+                .add(builder.robotLocation(robotLocation)
+                        .robotDir(robotDeg))
                 // tick
-                builder.build(),
+                .add(builder)
                 // tick after commitment
-                builder.addTime(COMMITMENT_TIME)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME))
                 // tick after next commitment
-                builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(COMMITMENT_TIME)
                         // and robot dir toward targetDir
                         .robotDir(targetDir.toIntDeg())
                         // and robot forward by movement distance + 1mm
-                        .forward(movementDistance + MM)
-                        .build(),
+                        .forward(movementDistance + MM))
                 // tick after completion
-                builder.addTime(COMMITMENT_TIME).build()
-        );
+                .add(builder.addTime(COMMITMENT_TIME))
+                .build();
+
 
         //--------
         // When init
@@ -249,26 +243,25 @@ class MoveStateTest {
         // and target location
         Point2D targetPosition = targetDir.at(robotLocation, distance);
         // And context
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // Init
-                builder.robotLocation(robotLocation)
-                        .robotDir(robotDeg)
-                        .build(),
+                .add(builder.robotLocation(robotLocation)
+                        .robotDir(robotDeg))
+
                 // tick
-                builder.build(),
+                .add(builder)
                 // tick before commitment
-                builder.addTime(COMMITMENT_TIME / 2)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME / 2))
+
                 // tick after commitment
-                builder.addTime(COMMITMENT_TIME / 2 - 1)
+                .add(builder.addTime(COMMITMENT_TIME / 2 - 1)
                         // and robot dir opposite targetDir
                         .robotDir(targetDir.toIntDeg())
                         // and robot forward by half movement
                         .forward(movementDistance / 2)
                         // and front contact
-                        .canMoveBackward(false)
-                        .build()
-             );
+                        .canMoveBackward(false))
+                .build();
 
         // When executing the action
         state.init(ctx[0], targetPosition);
@@ -309,26 +302,25 @@ class MoveStateTest {
         // and target location
         Point2D targetPosition = targetDir.at(robotLocation, distance);
         // And context
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // Init
-                builder.robotLocation(robotLocation)
-                        .robotDir(robotDeg)
-                        .build(),
+                .add(builder.robotLocation(robotLocation)
+                        .robotDir(robotDeg))
+
                 // tick
-                builder.build(),
+                .add(builder)
                 // tick before commitment
-                builder.addTime(COMMITMENT_TIME / 2)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME / 2))
+
                 // tick after commitment
-                builder.addTime(COMMITMENT_TIME / 2 - 1)
+                .add(builder.addTime(COMMITMENT_TIME / 2 - 1)
                         // and robot dir opposite targetDir
                         .robotDir(targetDir.opposite().toIntDeg())
                         // and robot backward by half movement
                         .backward(movementDistance / 2)
                         // and rear contact
-                        .canMoveBackward(false)
-                        .build()
-        );
+                        .canMoveBackward(false))
+                .build();
 
         // When executing the action
         state.init(ctx[0], targetPosition);

@@ -30,8 +30,8 @@ package org.mmarini.wheelly.fsm;
 
 import static java.util.Objects.requireNonNull;
 
-public record AgentActionId(MoveActionId moveId, HeadActionId headId) {
-    public AgentActionId(MoveActionId moveId, HeadActionId headId) {
+public record AgentAction(MoveActionId moveId, HeadActionId headId) {
+    public AgentAction(MoveActionId moveId, HeadActionId headId) {
         this.moveId = requireNonNull(moveId);
         this.headId = requireNonNull(headId);
     }

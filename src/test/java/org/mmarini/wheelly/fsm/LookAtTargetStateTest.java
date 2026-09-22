@@ -40,7 +40,6 @@ import java.awt.geom.Point2D;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
 class LookAtTargetStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -87,14 +86,14 @@ class LookAtTargetStateTest {
                           int expectedDir) {
         // Given a look at target action
         WorldModel world = builder.build();
-        MockFSMContext[] ctx = createContext(
-                builder.build(),
-                builder.build(),
-                builder.addTime(COMMITMENT_TIME)
-                        .build(),
-                builder.addTime(COMMITMENT_TIME)
-                        .build()
-        );
+        MockFSMContext[] ctx = MockFSMContext.builder()
+                .add(builder)
+                .add(builder)
+                .add(builder.addTime(COMMITMENT_TIME))
+
+                .add(builder.addTime(COMMITMENT_TIME))
+                .build();
+
         Complex targetDir = Complex.fromDeg(targetDeg);
         if (!frontFacing) {
             targetDir = targetDir.opposite();

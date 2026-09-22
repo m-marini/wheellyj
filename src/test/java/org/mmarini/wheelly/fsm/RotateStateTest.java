@@ -48,7 +48,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
 class RotateStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -66,8 +65,8 @@ class RotateStateTest {
 
     WorldModelBuilder builder;
     RotateState state;
-    List<EnvironmentFSMContext> onCompletionContexts;
-    List<EnvironmentFSMContext> onContactContexts;
+    List<EnvFSMContext> onCompletionContexts;
+    List<EnvFSMContext> onContactContexts;
 
     @BeforeEach
     void setUp() {
@@ -93,26 +92,22 @@ class RotateStateTest {
         // And a target direction
         Complex targetDir = Complex.fromDeg(targetDeg + robotDeg);
         // And context
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // Init
-                builder.robotLocation(robotLocation)
-                        .robotDir(robotDeg)
-                        .build(),
+                .add(builder.robotLocation(robotLocation)
+                        .robotDir(robotDeg))
                 // tick
-                builder.build(),
+                .add(builder)
                 // tick after commitment
-                builder.addTime(COMMITMENT_TIME)
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME))
                 // tick after next commitment
-                builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(COMMITMENT_TIME)
                         // and robot dir toward targetDir
-                        .robotDir(targetDir.toIntDeg())
-                        .build(),
+                        .robotDir(targetDir.toIntDeg()))
                 // tick after completion
-                builder.addTime(COMMITMENT_TIME)
-                        // and robot dir toward targetDir
-                        .build()
-        );
+                .add(builder.addTime(COMMITMENT_TIME))
+                .build();
+
         //--------
         // When init
         state.init(ctx[0], targetDir.toIntDeg());
@@ -150,23 +145,23 @@ class RotateStateTest {
         // And a target direction
         Complex targetDir = Complex.fromDeg(targetDeg + robotDeg);
         // And context
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // Init
-                builder.robotLocation(robotLocation)
-                        .robotDir(robotDeg)
-                        .build(),
+                .add(builder.robotLocation(robotLocation)
+                        .robotDir(robotDeg))
+
                 // tick
-                builder.build(),
+                .add(builder)
                 // tick after commitment
-                builder.addTime(COMMITMENT_TIME)
-                        .robotDir(targetDir.opposite().toIntDeg())
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME)
+                        .robotDir(targetDir.opposite().toIntDeg()))
+
                 // tick after next commitment
-                builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(COMMITMENT_TIME)
                         // and robot dir toward targetDir
-                        .canMoveForward(false)
-                        .build()
-        );
+                        .canMoveForward(false))
+                .build();
+
         //--------
         // When init
         state.init(ctx[0], targetDir.toIntDeg());
@@ -203,23 +198,21 @@ class RotateStateTest {
         // And a target direction
         Complex targetDir = Complex.fromDeg(targetDeg + robotDeg);
         // And context
-        MockFSMContext[] ctx = createContext(
+        MockFSMContext[] ctx = MockFSMContext.builder()
                 // Init
-                builder.robotLocation(robotLocation)
-                        .robotDir(robotDeg)
-                        .build(),
+                .add(builder.robotLocation(robotLocation)
+                        .robotDir(robotDeg))
                 // tick
-                builder.build(),
+                .add(builder)
                 // tick after commitment
-                builder.addTime(COMMITMENT_TIME)
-                        .robotDir(targetDir.opposite().toIntDeg())
-                        .build(),
+                .add(builder.addTime(COMMITMENT_TIME)
+                        .robotDir(targetDir.opposite().toIntDeg()))
                 // tick after next commitment
-                builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(COMMITMENT_TIME)
                         // and rear contact
-                        .canMoveBackward(false)
-                        .build()
-        );
+                        .canMoveBackward(false))
+                .build();
+
         //--------
         // When init
         state.init(ctx[0], targetDir.toIntDeg());

@@ -41,14 +41,13 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.createContext;
 
 class HaltStateTest {
     public static final int COMMITMENT_TIME = 1000;
 
     WorldModelBuilder builder;
     HaltState state;
-    List<EnvironmentFSMContext> onCompletionContexts;
+    List<EnvFSMContext> onCompletionContexts;
 
     @BeforeEach
     void setUp() {
@@ -63,16 +62,13 @@ class HaltStateTest {
 
     @Test
     void testTick() {
-        MockFSMContext[] ctx = createContext(
-                builder.build(),
-                builder.build(),
-                builder.addTime(COMMITMENT_TIME / 2)
-                        .build(),
-                builder.addTime(COMMITMENT_TIME / 2 + 1)
-                        .build(),
-                builder.addTime(COMMITMENT_TIME)
-                        .build()
-        );
+        MockFSMContext[] ctx = MockFSMContext.builder()
+                .add(builder)
+                .add(builder)
+                .add(builder.addTime(COMMITMENT_TIME / 2))
+                .add(builder.addTime(COMMITMENT_TIME / 2 + 1))
+                .add(builder.addTime(COMMITMENT_TIME))
+                .build();
 
         // When ...
         state.init(ctx[0]);

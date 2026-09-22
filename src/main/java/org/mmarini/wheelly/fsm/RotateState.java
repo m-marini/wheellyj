@@ -48,10 +48,10 @@ public class RotateState extends AbstractCommitmentState {
     private int targetDeg;
 
     /** The callback function executed when the rotation completion condition is met. */
-    private Function<EnvironmentFSMContext, RobotCommands> onCompletion;
+    private Function<EnvFSMContext, RobotCommands> onCompletion;
 
     /** The callback function executed when the robot detects a contact or obstacle. */
-    private Function<EnvironmentFSMContext, RobotCommands> onContact;
+    private Function<EnvFSMContext, RobotCommands> onContact;
 
     /**
      * Initialises a new instance of {@code RotateState} with a specified commitment duration.
@@ -68,7 +68,7 @@ public class RotateState extends AbstractCommitmentState {
      * @param context   the environment finite state machine context
      * @param targetDeg the target direction angle in degrees
      */
-    public void init(EnvironmentFSMContext context, int targetDeg) {
+    public void init(EnvFSMContext context, int targetDeg) {
         super.init(context);
         this.targetDeg = targetDeg;
     }
@@ -79,7 +79,7 @@ public class RotateState extends AbstractCommitmentState {
      * @param callback the function to execute upon reaching the target angle
      * @return this state instance to allow method chaining
      */
-    public RotateState onCompletion(Function<EnvironmentFSMContext, RobotCommands> callback) {
+    public RotateState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
         this.onCompletion = callback;
         return this;
     }
@@ -90,7 +90,7 @@ public class RotateState extends AbstractCommitmentState {
      * @param callback the function to execute if a contact is detected
      * @return this state instance to allow method chaining
      */
-    public RotateState onContact(Function<EnvironmentFSMContext, RobotCommands> callback) {
+    public RotateState onContact(Function<EnvFSMContext, RobotCommands> callback) {
         this.onContact = callback;
         return this;
     }
@@ -106,7 +106,7 @@ public class RotateState extends AbstractCommitmentState {
      * @return the computed {@link RobotCommands} to guide the robot's behaviour
      */
    @Override
-    public RobotCommands tick(EnvironmentFSMContext context) {
+   public RobotCommands tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward()) {
             complete();

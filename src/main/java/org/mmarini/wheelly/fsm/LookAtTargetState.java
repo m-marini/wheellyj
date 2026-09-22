@@ -79,12 +79,12 @@ public class LookAtTargetState extends AbstractCommitmentState {
      * objective coordinates and configuring the spatial orientation settings.
      * </p>
      *
-     * @param context     the {@link EnvironmentFSMContext} tracking the shared operational data
+     * @param context     the {@link EnvFSMContext} tracking the shared operational data
      * @param target      the {@link Point2D} coordinate of the target, must not be null
      * @param frontFacing true if front-facing tracking is required; false for rear-facing
      * @throws NullPointerException if the provided target is null
      */
-    public void init(EnvironmentFSMContext context, Point2D target, boolean frontFacing) {
+    public void init(EnvFSMContext context, Point2D target, boolean frontFacing) {
         super.init(context);
         this.target = requireNonNull(target);
         this.frontFacing = frontFacing;
@@ -98,12 +98,12 @@ public class LookAtTargetState extends AbstractCommitmentState {
      * if the destination is outside the specified range.
      * </p>
      *
-     * @param context the {@link EnvironmentFSMContext} tracking the shared operational data
+     * @param context the {@link EnvFSMContext} tracking the shared operational data
      * @return the {@link RobotCommands} enforcing the calculated head target angle orientation
      * @throws NullPointerException if the internal target or provided context is null
      */
     @Override
-    public RobotCommands tick(EnvironmentFSMContext context) {
+    public RobotCommands tick(EnvFSMContext context) {
         Complex direction = Complex.direction(context.worldModel().robotStatus().headLocation(), target);
         if (!frontFacing) {
             // Revert head direction if rear head required
