@@ -44,6 +44,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.RobotStatusId.*;
@@ -61,11 +62,11 @@ public class MicroActionTest {
     private static final int NUM_RANDOM_TEST_CASES = 100;
 
     public static Stream<Arguments> dataRobot() {
-            return RandomArgumentsGenerator.create(SEED)
-                    .uniform(-3.0, 3.0, 100)
-                    .uniform(-3.0, 3.0, 100)
-                    .uniform(-180, 179)
-                    .build(NUM_RANDOM_TEST_CASES);
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 100)
+                .uniform(-3.0, 3.0, 100)
+                .uniform(-180, 179)
+                .build(NUM_RANDOM_TEST_CASES);
     }
 
     WorldModelBuilder worldBuilder;
@@ -80,49 +81,6 @@ public class MicroActionTest {
     @ParameterizedTest
     @CsvSource({"0,0,0"})
     @MethodSource("dataRobot")
-    void testForward(double x, double y, int robotDeg) {
-        Point2D robotLocation = new Point2D.Double(x, y);
-        worldBuilder.robotLocation(robotLocation).robotDir(robotDeg);
-        Point2D target = Complex.fromDeg(robotDeg).at(robotLocation,
-                MICRO_DISTANCE + DEFAULT_ROBOT_SPEC.targetRange());
-        MockFSMContext[] ctx = MockFSMContext.builder()
-                .add(MICRO_FORWARD_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
-                .add(worldBuilder)
-                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
-                        worldBuilder.addTime(COMMITMENT_TIME)
-                                .forward(MICRO_DISTANCE / 2))
-                .add(worldBuilder.addTime(COMMITMENT_TIME)
-                        .forward(MICRO_DISTANCE / 2+MM))
-                .build();
-
-        // When ...
-        state.init(ctx[0]);
-        RobotCommands[] cmd = Arrays.stream(ctx)
-                .skip(1)
-                .map(state::tick)
-                .toArray(RobotCommands[]::new);
-
-        // Then
-        assertEquals(FORWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target, MM));
-        assertEquals(0, cmd[0].scanDirection());
-        assertEquals(1, ctx[1].nextActionCount());
-
-        // Then
-        assertEquals(FORWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target, MM));
-        assertEquals(0, cmd[1].scanDirection());
-        assertEquals(1, ctx[2].nextActionCount());
-
-        // Then
-        assertEquals(HALT, cmd[2].status());
-        assertEquals(0, cmd[2].scanDirection());
-        assertEquals(1, ctx[3].nextActionCount());
-    }
-
-    @ParameterizedTest
-    @CsvSource({"0,0,0"})
-    //@MethodSource("dataRobot")
     void testBackward(double x, double y, int robotDeg) {
         Point2D robotLocation = new Point2D.Double(x, y);
         worldBuilder.robotLocation(robotLocation).robotDir(robotDeg);
@@ -135,7 +93,7 @@ public class MicroActionTest {
                         worldBuilder.addTime(COMMITMENT_TIME)
                                 .backward(MICRO_DISTANCE / 2))
                 .add(worldBuilder.addTime(COMMITMENT_TIME)
-                        .backward(MICRO_DISTANCE / 2+MM))
+                        .backward(MICRO_DISTANCE / 2 + MM))
                 .build();
 
         // When ...
@@ -161,5 +119,142 @@ public class MicroActionTest {
         assertEquals(HALT, cmd[2].status());
         assertEquals(0, cmd[2].scanDirection());
         assertEquals(1, ctx[3].nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,0,0"})
+    @MethodSource("dataRobot")
+    void testBackwardContact(double x, double y, int robotDeg) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        worldBuilder.robotLocation(robotLocation).robotDir(robotDeg);
+        Point2D target = Complex.fromDeg(robotDeg)
+                .opposite()
+                .at(robotLocation,
+                        MICRO_DISTANCE + DEFAULT_ROBOT_SPEC.targetRange());
+        MockFSMContext[] ctx = MockFSMContext.builder()
+                .add(MICRO_BACKWARD_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(worldBuilder)
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
+                        worldBuilder.addTime(COMMITMENT_TIME)
+                                .backward(MICRO_DISTANCE / 2))
+                .add(worldBuilder.addTime(COMMITMENT_TIME)
+                        .backward(MM)
+                        .canMoveBackward(false))
+                .build();
+
+        // When ...
+        state.init(ctx[0]);
+        RobotCommands[] cmd = Arrays.stream(ctx)
+                .skip(1)
+                .map(state::tick)
+                .toArray(RobotCommands[]::new);
+
+        // Then
+        assertEquals(BACKWARD, cmd[0].status());
+        assertThat(cmd[0].target(), pointCloseTo(target, MM));
+        assertEquals(0, cmd[0].scanDirection());
+        assertEquals(1, ctx[1].nextActionCount());
+
+        // Then
+        assertEquals(BACKWARD, cmd[1].status());
+        assertThat(cmd[1].target(), pointCloseTo(target, MM));
+        assertEquals(0, cmd[1].scanDirection());
+        assertEquals(1, ctx[2].nextActionCount());
+
+        // Then
+        assertEquals(HALT, cmd[2].status());
+        assertEquals(0, cmd[2].scanDirection());
+        assertEquals(1, ctx[3].nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,0,0"})
+    @MethodSource("dataRobot")
+    void testForward(double x, double y, int robotDeg) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        worldBuilder.robotLocation(robotLocation).robotDir(robotDeg);
+        Point2D target = Complex.fromDeg(robotDeg).at(robotLocation,
+                MICRO_DISTANCE + DEFAULT_ROBOT_SPEC.targetRange());
+        MockFSMContext[] ctx = MockFSMContext.builder()
+                .add(MICRO_FORWARD_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(worldBuilder)
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
+                        worldBuilder.addTime(COMMITMENT_TIME)
+                                .forward(MICRO_DISTANCE / 2))
+                .add(worldBuilder.addTime(COMMITMENT_TIME)
+                        .forward(MICRO_DISTANCE / 2 + MM))
+                .build();
+
+        // When ...
+        state.init(ctx[0]);
+        RobotCommands[] cmd = Arrays.stream(ctx)
+                .skip(1)
+                .map(state::tick)
+                .toArray(RobotCommands[]::new);
+
+        // Then
+        assertEquals(FORWARD, cmd[0].status());
+        assertThat(cmd[0].target(), pointCloseTo(target, MM));
+        assertEquals(0, cmd[0].scanDirection());
+        assertEquals(1, ctx[1].nextActionCount());
+
+        // Then
+        assertEquals(FORWARD, cmd[1].status());
+        assertThat(cmd[1].target(), pointCloseTo(target, MM));
+        assertEquals(0, cmd[1].scanDirection());
+        assertEquals(1, ctx[2].nextActionCount());
+
+        // Then
+        assertEquals(HALT, cmd[2].status());
+        assertEquals(0, cmd[2].scanDirection());
+        assertEquals(1, ctx[3].nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,0,0"})
+    @MethodSource("dataRobot")
+    void testForwardContact(double x, double y, int robotDeg) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        worldBuilder.robotLocation(robotLocation).robotDir(robotDeg);
+        Point2D target = Complex.fromDeg(robotDeg).at(robotLocation,
+                MICRO_DISTANCE + DEFAULT_ROBOT_SPEC.targetRange());
+        MockFSMContext[] ctx = MockFSMContext.builder()
+                .add(MICRO_FORWARD_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(worldBuilder)
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
+                        worldBuilder.addTime(COMMITMENT_TIME)
+                                .forward(MICRO_DISTANCE / 2))
+                .add(worldBuilder.addTime(COMMITMENT_TIME)
+                        .forward(MM)
+                        .canMoveForward(false))
+                .build();
+
+        // When ...
+        state.init(ctx[0]);
+        RobotCommands[] cmd = Arrays.stream(ctx)
+                .skip(1)
+                .map(state::tick)
+                .toArray(RobotCommands[]::new);
+
+        // Then
+        assertEquals(FORWARD, cmd[0].status());
+        assertThat(cmd[0].target(), pointCloseTo(target, MM));
+        assertEquals(0, cmd[0].scanDirection());
+        assertEquals(1, ctx[1].nextActionCount());
+
+        // Then
+        assertEquals(FORWARD, cmd[1].status());
+        assertThat(cmd[1].target(), pointCloseTo(target, MM));
+        assertEquals(0, cmd[1].scanDirection());
+        assertEquals(1, ctx[2].nextActionCount());
+
+        // Then
+        assertEquals(HALT, cmd[2].status());
+        assertEquals(0, cmd[2].scanDirection());
+        assertEquals(1, ctx[3].nextActionCount());
+        assertTrue(state.isHalt());
     }
 }

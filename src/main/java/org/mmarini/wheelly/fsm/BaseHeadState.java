@@ -77,6 +77,8 @@ public class BaseHeadState implements EnvFSMState {
                 MICRO_FORWARD_ACTION, this::initMicroForward,
                 MICRO_BACKWARD_ACTION, this::initMicroBackward
         );
+        moveState.onCompletion(this::forceHalt)
+                .onContact(this::forceHalt);
     }
 
     private void changeActions(AgentAction actionId, EnvFSMContext context) {
@@ -107,6 +109,11 @@ public class BaseHeadState implements EnvFSMState {
     @Override
     public boolean completed() {
         return false;
+    }
+
+    private RobotCommands forceHalt(EnvFSMContext context) {
+        baseState = initHalt(context);
+        return baseState.tick(context);
     }
 
     public void init(EnvFSMContext context) {
@@ -145,6 +152,10 @@ public class BaseHeadState implements EnvFSMState {
     private AbstractCommitmentState initScan(EnvFSMContext envFSMContext) {
         headScanState.init(envFSMContext, headDeg);
         return headScanState;
+    }
+
+    boolean isHalt() {
+        return baseState == haltState;
     }
 
     @Override
