@@ -28,29 +28,11 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.WorldModel;
+import static java.util.Objects.requireNonNull;
 
-/**
- * Defines the execution context for the environment Finite State Machine (FSM).
- * <p>
- * This interface serves as the central repository for the state machine's operational
- * data, maintaining the current map and sensory status via the {@link WorldModel}.
- * It coordinates the execution lifecycle and handles sensory events to drive
- * the robot's physical <b>behaviour</b>.
- * </p>
- */
-public interface EnvironmentFSMContext {
-
-    AgentActionId nextAction();
-
-    /**
-     * Returns the current model of the world containing sensory data and map features.
-     * <p>
-     * Active states utilise this model to <b>analyse</b> environmental changes,
-     * process spatial coordinates, and calculate obstacles.
-     * </p>
-     *
-     * @return the current {@link WorldModel} instance
-     */
-    WorldModel worldModel();
+public record AgentActionId(MoveActionId moveId, HeadActionId headId) {
+    public AgentActionId(MoveActionId moveId, HeadActionId headId) {
+        this.moveId = requireNonNull(moveId);
+        this.headId = requireNonNull(headId);
+    }
 }

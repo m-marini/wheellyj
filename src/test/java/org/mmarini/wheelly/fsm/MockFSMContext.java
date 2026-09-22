@@ -34,13 +34,32 @@ import static java.util.Objects.requireNonNull;
 
 public class MockFSMContext implements EnvironmentFSMContext {
     private final WorldModel model;
+    private final AgentActionId nextAction;
+    private int nextActionCount;
 
     public MockFSMContext(WorldModel model) {
+        this(model, new AgentActionId(MoveActionId.CONTINUE_CURRENT_ACTION, HeadActionId.CONTINUE_CURRENT_ACTION));
+    }
+
+    public MockFSMContext(WorldModel model, AgentActionId nextAction) {
         this.model = requireNonNull(model);
+        this.nextAction = requireNonNull(nextAction);
+    }
+
+    @Override
+    public AgentActionId nextAction() {
+        nextActionCount++;
+        return nextAction;
+    }
+
+    public int nextActionCount() {
+        return nextActionCount;
     }
 
     @Override
     public WorldModel worldModel() {
         return model;
     }
+
+
 }
