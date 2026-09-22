@@ -40,6 +40,7 @@ import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
 import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
 import static org.mmarini.wheelly.fsm.HeadScanStateTest.SCAN_HEAD_DEG;
 import static org.mmarini.wheelly.fsm.HeadScanStateTest.SCAN_INTERVAL;
+import static org.mmarini.wheelly.fsm.MicroActionTest.MICRO_DISTANCE;
 import static org.mmarini.wheelly.fsm.MoveActionId.HALT_ACTION;
 
 public class HaltLookStraightStateTest {
@@ -51,7 +52,7 @@ public class HaltLookStraightStateTest {
     @BeforeEach
     void setUp() {
         this.worldBuilder = new WorldModelBuilder();
-        this.state = BaseHeadState.create(COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG);
+        this.state = BaseHeadState.create(COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG, MICRO_DISTANCE);
     }
 
     @Test

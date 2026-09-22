@@ -31,4 +31,6 @@ package org.mmarini.wheelly.fsm;
 public enum MoveActionId {
     CONTINUE_MOVE_ACTION,
     HALT_ACTION,
+    MICRO_FORWARD_ACTION,
+    MICRO_BACKWARD_ACTION,
 }

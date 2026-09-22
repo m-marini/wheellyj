@@ -29,39 +29,53 @@
 package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotStatus;
 
+import java.awt.geom.Point2D;
 import java.util.Map;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.fsm.HeadActionId.*;
+import static org.mmarini.wheelly.fsm.MoveActionId.*;
+
 public class BaseHeadState implements EnvFSMState {
-    public static BaseHeadState create(long commitmentDuration, long scanInterval, int[] headScanDeg) {
+    public static BaseHeadState create(long commitmentDuration, long scanInterval, int[] headScanDeg, double microDistance) {
         return new BaseHeadState(new HaltState(commitmentDuration),
+                new MoveState(commitmentDuration),
                 new LookStraightState(commitmentDuration),
-                new HeadScanState(commitmentDuration, scanInterval), headScanDeg);
+                new HeadScanState(commitmentDuration, scanInterval),
+                headScanDeg, microDistance);
     }
 
     private final HaltState haltState;
+    private final MoveState moveState;
     private final LookStraightState lookStraightState;
     private final HeadScanState headScanState;
+    private final int[] headDeg;
+    private final double microDistance;
     private final Map<HeadActionId, Function<EnvFSMContext, AbstractCommitmentState>> headInitializers;
     private final Map<MoveActionId, Function<EnvFSMContext, AbstractCommitmentState>> baseInitializers;
     private AbstractCommitmentState baseState;
     private AbstractCommitmentState headState;
-    private final int[] headDeg;
 
-    protected BaseHeadState(HaltState haltState, LookStraightState lookStraightState, HeadScanState headScanState, int[] headDeg) {
-        this.haltState = haltState;
-        this.lookStraightState = lookStraightState;
-        this.headScanState = headScanState;
-        this.headDeg = headDeg;
+    protected BaseHeadState(HaltState haltState, MoveState moveState, LookStraightState lookStraightState, HeadScanState headScanState, int[] headDeg, double microDistance) {
+        this.haltState = requireNonNull(haltState);
+        this.moveState = requireNonNull(moveState);
+        this.lookStraightState = requireNonNull(lookStraightState);
+        this.headScanState = requireNonNull(headScanState);
+        this.headDeg = requireNonNull(headDeg);
+        this.microDistance = microDistance;
         headInitializers = Map.of(
-                HeadActionId.CONTINUE_HEAD_ACTION, ctx -> headState,
-                HeadActionId.LOOK_STRIGHT_ACTION, this::initLookStraight,
-                HeadActionId.SCAN_ACTION, this::initScan
+                CONTINUE_HEAD_ACTION, ctx -> headState,
+                LOOK_STRIGHT_ACTION, this::initLookStraight,
+                SCAN_ACTION, this::initScan
         );
         baseInitializers = Map.of(
-                MoveActionId.CONTINUE_MOVE_ACTION, ctx -> baseState,
-                MoveActionId.HALT_ACTION, this::initHalt
+                CONTINUE_MOVE_ACTION, ctx -> baseState,
+                HALT_ACTION, this::initHalt,
+                MICRO_FORWARD_ACTION, this::initMicroForward,
+                MICRO_BACKWARD_ACTION, this::initMicroBackward
         );
     }
 
@@ -108,6 +122,24 @@ public class BaseHeadState implements EnvFSMState {
     private AbstractCommitmentState initLookStraight(EnvFSMContext context) {
         lookStraightState.init(context);
         return lookStraightState;
+    }
+
+    private AbstractCommitmentState initMicroBackward(EnvFSMContext context) {
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        Point2D target = robotStatus.direction()
+                .opposite()
+                .at(robotStatus.location(),
+                        microDistance + robotStatus.robotSpec().targetRange());
+        moveState.init(context, target);
+        return moveState;
+    }
+
+    private AbstractCommitmentState initMicroForward(EnvFSMContext context) {
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        Point2D target = robotStatus.direction().at(robotStatus.location(),
+                microDistance + robotStatus.robotSpec().targetRange());
+        moveState.init(context, target);
+        return moveState;
     }
 
     private AbstractCommitmentState initScan(EnvFSMContext envFSMContext) {

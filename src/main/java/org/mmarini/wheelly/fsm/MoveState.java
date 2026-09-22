@@ -65,7 +65,7 @@ public class MoveState extends AbstractCommitmentState {
      *
      * @param commitmentTime the maximum time duration for which this state remains active
      */
-    public MoveState(int commitmentTime) {
+    public MoveState(long commitmentTime) {
         super(commitmentTime);
     }
 
