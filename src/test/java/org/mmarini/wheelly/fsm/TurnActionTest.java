@@ -61,6 +61,14 @@ public class TurnActionTest {
     private static final long SEED = 1234;
     private static final int NUM_RANDOM_TEST_CASES = 30;
 
+    public static Stream<Arguments> dataRobot() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 100)
+                .uniform(-3.0, 3.0, 100)
+                .uniform(-180, 179)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
     public static Stream<Arguments> dataRobotWIthFaceTargetOutRange() {
         return RandomArgumentsGenerator.create(SEED)
                 .uniform(-3.0, 3.0, 100)
@@ -125,7 +133,7 @@ public class TurnActionTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_MARKER, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_MARKER_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate to obstacle
@@ -171,6 +179,230 @@ public class TurnActionTest {
 
     @ParameterizedTest
     @CsvSource({
+            "0,0,0"
+    })
+    @MethodSource("dataRobot")
+    void testTurnLeftScan(double x, double y, int robotDeg) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        Complex targetDir = Complex.fromDeg(robotDeg).sub(TURN_SCAN_ANGLE);
+        worldBuilder.robotLocation(robotLocation)
+                .robotDir(robotDeg);
+        MockFSMContext[] ctxs = MockFSMContext.builder()
+                // 0 - init
+                .add(TURN_LEFT_SCAN_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                // 1 - first
+                .add(worldBuilder)
+                // 2 - rotate left
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
+                        worldBuilder.addTime(COMMITMENT_TIME)
+                                .robotDir(targetDir.toIntDeg()))
+                // 3 - after completion
+                .add(worldBuilder.addTime(COMMITMENT_TIME))
+                .build();
+
+        // When init
+        int idx = 0;
+        state.init(ctxs[idx++]);
+
+        // When first tick
+        MockFSMContext ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
+        // Then
+        assertEquals(ROTATE, cmd.status());
+        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(targetDir));
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertFalse(state.isHalt());
+
+        // When rotate to obstacle
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+
+        // When after completion
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0,0"
+    })
+    @MethodSource("dataRobot")
+    void testTurnRightScan(double x, double y, int robotDeg) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        Complex targetDir = Complex.fromDeg(robotDeg).add(TURN_SCAN_ANGLE);
+        worldBuilder.robotLocation(robotLocation)
+                .robotDir(robotDeg);
+        MockFSMContext[] ctxs = MockFSMContext.builder()
+                // 0 - init
+                .add(TURN_RIGHT_SCAN_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                // 1 - first
+                .add(worldBuilder)
+                // 2 - rotate left
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
+                        worldBuilder.addTime(COMMITMENT_TIME)
+                                .robotDir(targetDir.toIntDeg()))
+                // 3 - after completion
+                .add(worldBuilder.addTime(COMMITMENT_TIME))
+                .build();
+
+        // When init
+        int idx = 0;
+        state.init(ctxs[idx++]);
+
+        // When first tick
+        MockFSMContext ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
+        // Then
+        assertEquals(ROTATE, cmd.status());
+        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(targetDir));
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertFalse(state.isHalt());
+
+        // When rotate to obstacle
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+
+        // When after completion
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0,0"
+    })
+    @MethodSource("dataRobot")
+    void testMicroRight(double x, double y, int robotDeg) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        Complex targetDir = Complex.fromDeg(robotDeg).add(MICRO_ANGLE);
+        worldBuilder.robotLocation(robotLocation)
+                .robotDir(robotDeg);
+        MockFSMContext[] ctxs = MockFSMContext.builder()
+                // 0 - init
+                .add(MICRO_RIGHT_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                // 1 - first
+                .add(worldBuilder)
+                // 2 - rotate left
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
+                        worldBuilder.addTime(COMMITMENT_TIME)
+                                .robotDir(targetDir.toIntDeg()))
+                // 3 - after completion
+                .add(worldBuilder.addTime(COMMITMENT_TIME))
+                .build();
+
+        // When init
+        int idx = 0;
+        state.init(ctxs[idx++]);
+
+        // When first tick
+        MockFSMContext ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
+        // Then
+        assertEquals(ROTATE, cmd.status());
+        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(targetDir));
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertFalse(state.isHalt());
+
+        // When rotate to obstacle
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+
+        // When after completion
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0,0"
+    })
+    @MethodSource("dataRobot")
+    void testMicroLeft(double x, double y, int robotDeg) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        Complex targetDir = Complex.fromDeg(robotDeg).sub(MICRO_ANGLE);
+        worldBuilder.robotLocation(robotLocation)
+                .robotDir(robotDeg);
+        MockFSMContext[] ctxs = MockFSMContext.builder()
+                // 0 - init
+                .add(MICRO_LEFT_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                // 1 - first
+                .add(worldBuilder)
+                // 2 - rotate left
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
+                        worldBuilder.addTime(COMMITMENT_TIME)
+                                .robotDir(targetDir.toIntDeg()))
+                // 3 - after completion
+                .add(worldBuilder.addTime(COMMITMENT_TIME))
+                .build();
+
+        // When init
+        int idx = 0;
+        state.init(ctxs[idx++]);
+
+        // When first tick
+        MockFSMContext ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
+        // Then
+        assertEquals(ROTATE, cmd.status());
+        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(targetDir));
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertFalse(state.isHalt());
+
+        // When rotate to obstacle
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+
+        // When after completion
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
             "0,0,0, 90, 1"
     })
     @MethodSource("dataRobotWithFaceTargetInRange")
@@ -189,7 +421,7 @@ public class TurnActionTest {
                 .orElseThrow();
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_MARKER, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_MARKER_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - contact
@@ -248,7 +480,7 @@ public class TurnActionTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_OBSTACLE, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - after completion
@@ -299,7 +531,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_OBSTACLE, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate to obstacle
@@ -364,7 +596,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_OBSTACLE, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - contact
@@ -429,7 +661,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_OBSTACLE, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - after completion
@@ -474,7 +706,7 @@ public class TurnActionTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_MARKER, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_MARKER_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - contact
@@ -533,7 +765,7 @@ public class TurnActionTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_MARKER, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_MARKER_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate to obstacle
@@ -592,7 +824,7 @@ public class TurnActionTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_MARKER, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_MARKER_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - after completion
@@ -643,7 +875,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_OBSTACLE, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate to obstacle
@@ -708,7 +940,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_OBSTACLE, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - after completion
@@ -759,7 +991,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_OBSTACLE, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - contact

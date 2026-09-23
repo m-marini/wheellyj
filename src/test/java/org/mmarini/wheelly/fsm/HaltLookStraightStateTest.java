@@ -30,6 +30,7 @@ package org.mmarini.wheelly.fsm;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
@@ -46,8 +47,11 @@ public class HaltLookStraightStateTest {
     public static final int[] SCAN_HEAD_DEG = {-45, 0, 45};
     public static final double MICRO_DISTANCE = 0.5;
     public static final double MIN_OBSTACLE_DISTANCE = 0.5;
+    public static final Complex TURN_SCAN_ANGLE = Complex.fromDeg(120);
+    public static final Complex MICRO_ANGLE = Complex.fromDeg(10);
     public static final BaseHeadState.BaseHeadConfig BASE_HEAD_CONFIG = new BaseHeadState.BaseHeadConfig(
-            COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG, MICRO_DISTANCE, MIN_OBSTACLE_DISTANCE);
+            COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG, MICRO_DISTANCE, MIN_OBSTACLE_DISTANCE,
+            TURN_SCAN_ANGLE, MICRO_ANGLE);
 
     WorldModelBuilder worldBuilder;
     BaseHeadState state;

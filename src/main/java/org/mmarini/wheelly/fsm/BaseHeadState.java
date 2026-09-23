@@ -70,16 +70,20 @@ public class BaseHeadState implements EnvFSMState {
                 LOOK_STRIGHT_ACTION, this::initLookStraight,
                 SCAN_ACTION, this::initScan
         );
-        baseInitializers = Map.of(
-                CONTINUE_MOVE_ACTION, ctx -> {
-                },
-                HALT_ACTION, this::initHalt,
-                MICRO_FORWARD_ACTION, this::initMicroForward,
-                MICRO_BACKWARD_ACTION, this::initMicroBackward,
-                TURN_FACE_NEAREST_OBSTACLE, this::initTurnFaceNearestObstacle,
-                TURN_REAR_NEAREST_OBSTACLE, this::initTurnRearNearestObstacle,
-                TURN_FACE_NEAREST_MARKER, this::initTurnFaceNearestMarker,
-                TURN_REAR_NEAREST_MARKER, this::initTurnRearNearestMarker
+        baseInitializers = Map.ofEntries(
+                Map.entry(CONTINUE_MOVE_ACTION, ctx -> {
+                }),
+                Map.entry(HALT_ACTION, this::initHalt),
+                Map.entry(MICRO_FORWARD_ACTION, this::initMicroForward),
+                Map.entry(MICRO_BACKWARD_ACTION, this::initMicroBackward),
+                Map.entry(MICRO_LEFT_ACTION, this::initMicroLeft),
+                Map.entry(MICRO_RIGHT_ACTION, this::initMicroRight),
+                Map.entry(TURN_FACE_NEAREST_OBSTACLE_ACTION, this::initTurnFaceNearestObstacle),
+                Map.entry(TURN_REAR_NEAREST_OBSTACLE_ACTION, this::initTurnRearNearestObstacle),
+                Map.entry(TURN_FACE_NEAREST_MARKER_ACTION, this::initTurnFaceNearestMarker),
+                Map.entry(TURN_REAR_NEAREST_MARKER_ACTION, this::initTurnRearNearestMarker),
+                Map.entry(TURN_RIGHT_SCAN_ACTION, this::initTurnRightScan),
+                Map.entry(TURN_LEFT_SCAN_ACTION, this::initTurnLeftScan)
         );
         moveState.onCompletion(this::forceHalt)
                 .onContact(this::forceHalt);
@@ -155,6 +159,22 @@ public class BaseHeadState implements EnvFSMState {
         baseState = moveState;
     }
 
+    private void initMicroLeft(EnvFSMContext context) {
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        rotateState.init(context,
+                robotStatus.direction()
+                        .sub(config.microAngle).toIntDeg());
+        baseState = rotateState;
+    }
+
+    private void initMicroRight(EnvFSMContext context) {
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        rotateState.init(context,
+                robotStatus.direction()
+                        .add(config.microAngle).toIntDeg());
+        baseState = rotateState;
+    }
+
     private void initScan(EnvFSMContext context) {
         headScanState.init(context, config.headScanDeg);
         headState = headScanState;
@@ -196,6 +216,15 @@ public class BaseHeadState implements EnvFSMState {
         }
     }
 
+    private void initTurnLeftScan(EnvFSMContext context) {
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        rotateState.init(context,
+                robotStatus.direction()
+                        .sub(config.turnScanAngle)
+                        .toIntDeg());
+        baseState = rotateState;
+    }
+
     private void initTurnRearNearestMarker(EnvFSMContext context) {
         Point2D robotLocation = context.worldModel().robotStatus().location();
         Point2D target = context.worldModel().markers()
@@ -232,6 +261,14 @@ public class BaseHeadState implements EnvFSMState {
         }
     }
 
+    private void initTurnRightScan(EnvFSMContext context) {
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        rotateState.init(context,
+                robotStatus.direction()
+                        .add(config.turnScanAngle).toIntDeg());
+        baseState = rotateState;
+    }
+
     boolean isHalt() {
         return baseState == haltState;
     }
@@ -254,13 +291,17 @@ public class BaseHeadState implements EnvFSMState {
     }
 
     public record BaseHeadConfig(long commitmentDuration, long scanInterval, int[] headScanDeg,
-                                 double microDistance, double minObstacleDistance) {
-        public BaseHeadConfig(long commitmentDuration, long scanInterval, int[] headScanDeg, double microDistance, double minObstacleDistance) {
+                                 double microDistance, double minObstacleDistance, Complex turnScanAngle,
+                                 Complex microAngle) {
+        public BaseHeadConfig(long commitmentDuration, long scanInterval, int[] headScanDeg, double microDistance,
+                              double minObstacleDistance, Complex turnScanAngle, Complex microAngle) {
             this.commitmentDuration = commitmentDuration;
             this.scanInterval = scanInterval;
             this.headScanDeg = requireNonNull(headScanDeg);
             this.microDistance = microDistance;
             this.minObstacleDistance = minObstacleDistance;
+            this.turnScanAngle = requireNonNull(turnScanAngle);
+            this.microAngle = requireNonNull(microAngle);
         }
     }
 }
