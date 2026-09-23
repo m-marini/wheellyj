@@ -40,11 +40,10 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.COMMITMENT_TIME;
+import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.SCAN_INTERVAL;
 
 class HeadScanStateTest {
-    public static final int COMMITMENT_TIME = 1000;
-    public static final int SCAN_INTERVAL = 2000;
-    public static final int[] SCAN_HEAD_DEG = {-45, 0, 45};
 
     WorldModelBuilder builder;
     HeadScanState state;
@@ -75,7 +74,7 @@ class HeadScanStateTest {
                 .build();
 
         // When init
-        state.init(ctx[0], SCAN_HEAD_DEG);
+        state.init(ctx[0], HaltLookStraightStateTest.SCAN_HEAD_DEG);
 
         //--------
         // When executing the action
@@ -86,22 +85,22 @@ class HeadScanStateTest {
 
 
         // Then command should scan at first direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd[0].scanDirection());
+        assertEquals(HaltLookStraightStateTest.SCAN_HEAD_DEG[0], cmd[0].scanDirection());
         // And no next action should have been required
 
         //--------
         // Then command should scan at first direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd[1].scanDirection());
+        assertEquals(HaltLookStraightStateTest.SCAN_HEAD_DEG[0], cmd[1].scanDirection());
         // And no next action should have been required
 
         //--------
         // Then command should scan at second direction
-        assertEquals(SCAN_HEAD_DEG[1], cmd[2].scanDirection());
+        assertEquals(HaltLookStraightStateTest.SCAN_HEAD_DEG[1], cmd[2].scanDirection());
         // And no next action should have been required
 
         //--------
         // Then command should scan at second direction
-        assertEquals(SCAN_HEAD_DEG[2], cmd[3].scanDirection());
+        assertEquals(HaltLookStraightStateTest.SCAN_HEAD_DEG[2], cmd[3].scanDirection());
         // And no next action should have been required
 
         //--------

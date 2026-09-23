@@ -37,17 +37,13 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
+import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.*;
 import static org.mmarini.wheelly.fsm.HeadActionId.CONTINUE_HEAD_ACTION;
 import static org.mmarini.wheelly.fsm.HeadActionId.SCAN_ACTION;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.SCAN_HEAD_DEG;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.SCAN_INTERVAL;
-import static org.mmarini.wheelly.fsm.MicroActionTest.MICRO_DISTANCE;
 import static org.mmarini.wheelly.fsm.MoveActionId.CONTINUE_MOVE_ACTION;
 import static org.mmarini.wheelly.fsm.MoveActionId.HALT_ACTION;
 
 public class HaltScanStateTest {
-    public static final int COMMITMENT_TIME = 1000;
-
 
     WorldModelBuilder worldBuilder;
     BaseHeadState state;
@@ -55,7 +51,7 @@ public class HaltScanStateTest {
     @BeforeEach
     void setUp() {
         this.worldBuilder = new WorldModelBuilder();
-        this.state = BaseHeadState.create(COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG, MICRO_DISTANCE);
+        this.state = BaseHeadState.create(BASE_HEAD_CONFIG);
     }
 
     @Test

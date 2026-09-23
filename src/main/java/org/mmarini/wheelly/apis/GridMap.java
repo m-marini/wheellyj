@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -58,9 +58,7 @@ public record GridMap(GridTopology topology, MapCell[] cells, Point2D center, Co
         GridTopology mapTopology = GridTopology.create(new Point2D.Float(), mapSize, mapSize, radarTopology.gridSize());
         int n = mapSize * mapSize;
         MapCell[] cells = new MapCell[n];
-        double dirRad = direction.toRad() + 2 * PI;
-        int dirIdx = ((int) round(dirRad / PI * 2)) % 4;
-        Complex mapDirection = Complex.fromRad(dirIdx * PI / 2);
+        Complex mapDirection = gridDirection(direction);
         AffineTransform trans = AffineTransform.getTranslateInstance(mapCenter.getX(), mapCenter.getY());
         trans.rotate(-mapDirection.toRad());
         for (int i = 0; i < n; i++) {
@@ -72,6 +70,17 @@ public record GridMap(GridTopology topology, MapCell[] cells, Point2D center, Co
                     : MapCell.unknown(mapLocation);
         }
         return new GridMap(mapTopology, cells, mapCenter, mapDirection);
+    }
+
+    /**
+     * Returns the grid direction from a direction
+     *
+     * @param direction the direction
+     */
+    public static Complex gridDirection(Complex direction) {
+        double dirRad = direction.toRad() + 2 * PI;
+        int dirIdx = ((int) round(dirRad / PI * 2)) % 4;
+        return Complex.fromRad(dirIdx * PI / 2);
     }
 
     /**

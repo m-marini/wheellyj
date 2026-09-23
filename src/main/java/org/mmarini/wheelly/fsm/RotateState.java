@@ -58,7 +58,7 @@ public class RotateState extends AbstractCommitmentState {
      *
      * @param commitmentTime the maximum time duration for which this state remains active
      */
-    public RotateState(int commitmentTime) {
+    public RotateState(long commitmentTime) {
         super(commitmentTime);
     }
 

@@ -49,15 +49,12 @@ import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.RobotStatusId.*;
 import static org.mmarini.wheelly.apis.Utils.MM;
+import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.*;
 import static org.mmarini.wheelly.fsm.HeadActionId.CONTINUE_HEAD_ACTION;
 import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.SCAN_HEAD_DEG;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.SCAN_INTERVAL;
 import static org.mmarini.wheelly.fsm.MoveActionId.*;
 
 public class MicroActionTest {
-    public static final int COMMITMENT_TIME = 1000;
-    public static final double MICRO_DISTANCE = 0.5;
     private static final long SEED = 1234;
     private static final int NUM_RANDOM_TEST_CASES = 100;
 
@@ -75,7 +72,7 @@ public class MicroActionTest {
     @BeforeEach
     void setUp() {
         this.worldBuilder = new WorldModelBuilder();
-        this.state = BaseHeadState.create(COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG, MICRO_DISTANCE);
+        this.state = BaseHeadState.create(BASE_HEAD_CONFIG);
     }
 
     @ParameterizedTest

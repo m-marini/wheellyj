@@ -28,80 +28,84 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.*;
 
 import java.awt.geom.Point2D;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.fsm.HeadActionId.*;
 import static org.mmarini.wheelly.fsm.MoveActionId.*;
 
 public class BaseHeadState implements EnvFSMState {
-    public static BaseHeadState create(long commitmentDuration, long scanInterval, int[] headScanDeg, double microDistance) {
-        return new BaseHeadState(new HaltState(commitmentDuration),
-                new MoveState(commitmentDuration),
-                new LookStraightState(commitmentDuration),
-                new HeadScanState(commitmentDuration, scanInterval),
-                headScanDeg, microDistance);
+    public static BaseHeadState create(BaseHeadConfig config) {
+        return new BaseHeadState(config);
     }
 
+    private final BaseHeadConfig config;
     private final HaltState haltState;
     private final MoveState moveState;
+    private final RotateState rotateState;
     private final LookStraightState lookStraightState;
     private final HeadScanState headScanState;
-    private final int[] headDeg;
-    private final double microDistance;
-    private final Map<HeadActionId, Function<EnvFSMContext, AbstractCommitmentState>> headInitializers;
-    private final Map<MoveActionId, Function<EnvFSMContext, AbstractCommitmentState>> baseInitializers;
+    private final Map<HeadActionId, Consumer<EnvFSMContext>> headInitializers;
+    private final Map<MoveActionId, Consumer<EnvFSMContext>> baseInitializers;
     private AbstractCommitmentState baseState;
     private AbstractCommitmentState headState;
 
-    protected BaseHeadState(HaltState haltState, MoveState moveState, LookStraightState lookStraightState, HeadScanState headScanState, int[] headDeg, double microDistance) {
-        this.haltState = requireNonNull(haltState);
-        this.moveState = requireNonNull(moveState);
-        this.lookStraightState = requireNonNull(lookStraightState);
-        this.headScanState = requireNonNull(headScanState);
-        this.headDeg = requireNonNull(headDeg);
-        this.microDistance = microDistance;
+    protected BaseHeadState(BaseHeadConfig config) {
+        this.config = requireNonNull(config);
+        this.haltState = new HaltState(config.commitmentDuration);
+        this.moveState = new MoveState(config.commitmentDuration);
+        this.rotateState = new RotateState(config.commitmentDuration);
+        this.lookStraightState = new LookStraightState(config.commitmentDuration);
+        this.headScanState = new HeadScanState(config.commitmentDuration, config.scanInterval);
+
         headInitializers = Map.of(
-                CONTINUE_HEAD_ACTION, ctx -> headState,
+                CONTINUE_HEAD_ACTION, ctx -> {
+                },
                 LOOK_STRIGHT_ACTION, this::initLookStraight,
                 SCAN_ACTION, this::initScan
         );
         baseInitializers = Map.of(
-                CONTINUE_MOVE_ACTION, ctx -> baseState,
+                CONTINUE_MOVE_ACTION, ctx -> {
+                },
                 HALT_ACTION, this::initHalt,
                 MICRO_FORWARD_ACTION, this::initMicroForward,
-                MICRO_BACKWARD_ACTION, this::initMicroBackward
+                MICRO_BACKWARD_ACTION, this::initMicroBackward,
+                TURN_FACE_NEAREST_OBSTACLE, this::initTurnFaceNearestObstacle,
+                TURN_REAR_NEAREST_OBSTACLE, this::initTurnRearNearestObstacle
         );
         moveState.onCompletion(this::forceHalt)
+                .onContact(this::forceHalt);
+        rotateState.onCompletion(this::forceHalt)
                 .onContact(this::forceHalt);
     }
 
     private void changeActions(AgentAction actionId, EnvFSMContext context) {
         if (headState == null || headState.completed() || headState.expired(context)) {
             // head can be changed
-            Function<EnvFSMContext, AbstractCommitmentState> init = this.headInitializers.get(actionId.headId());
+            Consumer<EnvFSMContext> init = this.headInitializers.get(actionId.headId());
             if (init == null) {
                 throw new IllegalStateException("head action " + actionId.headId() + " not found");
             }
-            headState = init.apply(context);
+            init.accept(context);
             if (headState == null) {
-                headState = initLookStraight(context);
+                initLookStraight(context);
             }
         }
         if (baseState == null || baseState.completed() || baseState.expired(context)) {
             // head can be changed
-            Function<EnvFSMContext, AbstractCommitmentState> init = this.baseInitializers.get(actionId.moveId());
+            Consumer<EnvFSMContext> init = this.baseInitializers.get(actionId.moveId());
             if (init == null) {
                 throw new IllegalStateException("base action " + actionId.moveId() + " not found");
             }
-            baseState = init.apply(context);
+            init.accept(context);
             if (baseState == null) {
-                baseState = initHalt(context);
+                initHalt(context);
             }
         }
     }
@@ -112,7 +116,7 @@ public class BaseHeadState implements EnvFSMState {
     }
 
     private RobotCommands forceHalt(EnvFSMContext context) {
-        baseState = initHalt(context);
+        initHalt(context);
         return baseState.tick(context);
     }
 
@@ -121,37 +125,73 @@ public class BaseHeadState implements EnvFSMState {
         headState = null;
     }
 
-    private AbstractCommitmentState initHalt(EnvFSMContext context) {
+    private void initHalt(EnvFSMContext context) {
         haltState.init(context);
-        return haltState;
+        baseState = haltState;
     }
 
-    private AbstractCommitmentState initLookStraight(EnvFSMContext context) {
+    private void initLookStraight(EnvFSMContext context) {
         lookStraightState.init(context);
-        return lookStraightState;
+        headState = lookStraightState;
     }
 
-    private AbstractCommitmentState initMicroBackward(EnvFSMContext context) {
+    private void initMicroBackward(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         Point2D target = robotStatus.direction()
                 .opposite()
                 .at(robotStatus.location(),
-                        microDistance + robotStatus.robotSpec().targetRange());
+                        config.microDistance + robotStatus.robotSpec().targetRange());
         moveState.init(context, target);
-        return moveState;
+        baseState = moveState;
     }
 
-    private AbstractCommitmentState initMicroForward(EnvFSMContext context) {
+    private void initMicroForward(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         Point2D target = robotStatus.direction().at(robotStatus.location(),
-                microDistance + robotStatus.robotSpec().targetRange());
+                config.microDistance + robotStatus.robotSpec().targetRange());
         moveState.init(context, target);
-        return moveState;
+        baseState = moveState;
     }
 
-    private AbstractCommitmentState initScan(EnvFSMContext envFSMContext) {
-        headScanState.init(envFSMContext, headDeg);
-        return headScanState;
+    private void initScan(EnvFSMContext context) {
+        headScanState.init(context, config.headScanDeg);
+        headState = headScanState;
+    }
+
+    private void initTurnFaceNearestObstacle(EnvFSMContext context) {
+        RadarMap map = context.worldModel().radarMap();
+        Point2D robotLocation = context.worldModel().robotStatus().location();
+        Point2D target = Arrays.stream(map.cells())
+                .filter(MapCell::hindered)
+                .map(MapCell::location)
+                .filter(p -> p.distance(robotLocation) >= config.minObstacleDistance)
+                .min(Comparator.comparingDouble(p -> p.distance(robotLocation)))
+                .orElse(null);
+        if (target == null) {
+            // No obstacle found
+            initHalt(context);
+        } else {
+            rotateState.init(context, Complex.direction(robotLocation, target).toIntDeg());
+            baseState = rotateState;
+        }
+    }
+
+    private void initTurnRearNearestObstacle(EnvFSMContext context) {
+        RadarMap map = context.worldModel().radarMap();
+        Point2D robotLocation = context.worldModel().robotStatus().location();
+        Point2D target = Arrays.stream(map.cells())
+                .filter(MapCell::hindered)
+                .map(MapCell::location)
+                .filter(p -> p.distance(robotLocation) >= config.minObstacleDistance)
+                .min(Comparator.comparingDouble(p -> p.distance(robotLocation)))
+                .orElse(null);
+        if (target == null) {
+            // No obstacle found
+            initHalt(context);
+        } else {
+            rotateState.init(context, Complex.direction(robotLocation, target).opposite().toIntDeg());
+            baseState = rotateState;
+        }
     }
 
     boolean isHalt() {
@@ -173,5 +213,16 @@ public class BaseHeadState implements EnvFSMState {
         RobotCommands baseCmd = baseState.tick(context);
         RobotCommands headCmd = headState.tick(context);
         return RobotCommands.merge(baseCmd, headCmd);
+    }
+
+    public record BaseHeadConfig(long commitmentDuration, long scanInterval, int[] headScanDeg,
+                                 double microDistance, double minObstacleDistance) {
+        public BaseHeadConfig(long commitmentDuration, long scanInterval, int[] headScanDeg, double microDistance, double minObstacleDistance) {
+            this.commitmentDuration = commitmentDuration;
+            this.scanInterval = scanInterval;
+            this.headScanDeg = requireNonNull(headScanDeg);
+            this.microDistance = microDistance;
+            this.minObstacleDistance = minObstacleDistance;
+        }
     }
 }

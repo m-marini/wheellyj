@@ -38,13 +38,16 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
 import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.SCAN_HEAD_DEG;
-import static org.mmarini.wheelly.fsm.HeadScanStateTest.SCAN_INTERVAL;
-import static org.mmarini.wheelly.fsm.MicroActionTest.MICRO_DISTANCE;
 import static org.mmarini.wheelly.fsm.MoveActionId.HALT_ACTION;
 
 public class HaltLookStraightStateTest {
     public static final int COMMITMENT_TIME = 1000;
+    public static final int SCAN_INTERVAL = 2000;
+    public static final int[] SCAN_HEAD_DEG = {-45, 0, 45};
+    public static final double MICRO_DISTANCE = 0.5;
+    public static final double MIN_OBSTACLE_DISTANCE = 0.5;
+    public static final BaseHeadState.BaseHeadConfig BASE_HEAD_CONFIG = new BaseHeadState.BaseHeadConfig(
+            COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG, MICRO_DISTANCE, MIN_OBSTACLE_DISTANCE);
 
     WorldModelBuilder worldBuilder;
     BaseHeadState state;
@@ -52,7 +55,7 @@ public class HaltLookStraightStateTest {
     @BeforeEach
     void setUp() {
         this.worldBuilder = new WorldModelBuilder();
-        this.state = BaseHeadState.create(COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG, MICRO_DISTANCE);
+        this.state = BaseHeadState.create(BASE_HEAD_CONFIG);
     }
 
     @Test
