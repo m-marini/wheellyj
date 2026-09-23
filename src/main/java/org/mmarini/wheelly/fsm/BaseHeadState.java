@@ -77,7 +77,9 @@ public class BaseHeadState implements EnvFSMState {
                 MICRO_FORWARD_ACTION, this::initMicroForward,
                 MICRO_BACKWARD_ACTION, this::initMicroBackward,
                 TURN_FACE_NEAREST_OBSTACLE, this::initTurnFaceNearestObstacle,
-                TURN_REAR_NEAREST_OBSTACLE, this::initTurnRearNearestObstacle
+                TURN_REAR_NEAREST_OBSTACLE, this::initTurnRearNearestObstacle,
+                TURN_FACE_NEAREST_MARKER, this::initTurnFaceNearestMarker,
+                TURN_REAR_NEAREST_MARKER, this::initTurnRearNearestMarker
         );
         moveState.onCompletion(this::forceHalt)
                 .onContact(this::forceHalt);
@@ -158,6 +160,24 @@ public class BaseHeadState implements EnvFSMState {
         headState = headScanState;
     }
 
+    private void initTurnFaceNearestMarker(EnvFSMContext context) {
+        Point2D robotLocation = context.worldModel().robotStatus().location();
+        Point2D target = context.worldModel().markers()
+                .values()
+                .stream()
+                .map(LabelMarker::location)
+                .filter(p -> p.distance(robotLocation) >= config.minObstacleDistance)
+                .min(Comparator.comparingDouble(p -> p.distance(robotLocation)))
+                .orElse(null);
+        if (target == null) {
+            // No obstacle found
+            initHalt(context);
+        } else {
+            rotateState.init(context, Complex.direction(robotLocation, target).toIntDeg());
+            baseState = rotateState;
+        }
+    }
+
     private void initTurnFaceNearestObstacle(EnvFSMContext context) {
         RadarMap map = context.worldModel().radarMap();
         Point2D robotLocation = context.worldModel().robotStatus().location();
@@ -172,6 +192,24 @@ public class BaseHeadState implements EnvFSMState {
             initHalt(context);
         } else {
             rotateState.init(context, Complex.direction(robotLocation, target).toIntDeg());
+            baseState = rotateState;
+        }
+    }
+
+    private void initTurnRearNearestMarker(EnvFSMContext context) {
+        Point2D robotLocation = context.worldModel().robotStatus().location();
+        Point2D target = context.worldModel().markers()
+                .values()
+                .stream()
+                .map(LabelMarker::location)
+                .filter(p -> p.distance(robotLocation) >= config.minObstacleDistance)
+                .min(Comparator.comparingDouble(p -> p.distance(robotLocation)))
+                .orElse(null);
+        if (target == null) {
+            // No obstacle found
+            initHalt(context);
+        } else {
+            rotateState.init(context, Complex.direction(robotLocation, target).opposite().toIntDeg());
             baseState = rotateState;
         }
     }
