@@ -57,10 +57,11 @@ import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
 import static org.mmarini.wheelly.fsm.MoveActionId.*;
 
 public class TurnActionTest {
+    public static final String MARKER_A = "A";
     private static final long SEED = 1234;
     private static final int NUM_RANDOM_TEST_CASES = 30;
 
-    public static Stream<Arguments> dataRobotNoObstacle() {
+    public static Stream<Arguments> dataRobotWIthFaceTargetOutRange() {
         return RandomArgumentsGenerator.create(SEED)
                 .uniform(-3.0, 3.0, 100)
                 .uniform(-3.0, 3.0, 100)
@@ -70,17 +71,7 @@ public class TurnActionTest {
                 .build(NUM_RANDOM_TEST_CASES);
     }
 
-    public static Stream<Arguments> dataRobotNoObstacleRear() {
-        return RandomArgumentsGenerator.create(SEED)
-                .uniform(-3.0, 3.0, 100)
-                .uniform(-3.0, 3.0, 100)
-                .uniform(-180, 179)
-                .uniform(-170, 170)
-                .exponential(0.1, MIN_OBSTACLE_DISTANCE - GRID_SIZE, 10)
-                .build(NUM_RANDOM_TEST_CASES);
-    }
-
-    public static Stream<Arguments> dataRobotObstacle() {
+    public static Stream<Arguments> dataRobotWithFaceTargetInRange() {
         return RandomArgumentsGenerator.create(SEED)
                 .uniform(-3.0, 3.0, 100)
                 .uniform(-3.0, 3.0, 100)
@@ -90,13 +81,23 @@ public class TurnActionTest {
                 .build(NUM_RANDOM_TEST_CASES);
     }
 
-    public static Stream<Arguments> dataRobotObstacleRear() {
+    public static Stream<Arguments> dataRobotWithRearTargetInRange() {
         return RandomArgumentsGenerator.create(SEED)
                 .uniform(-3.0, 3.0, 100)
                 .uniform(-3.0, 3.0, 100)
                 .uniform(-180, 179)
                 .uniform(-170, 170)
                 .exponential(MIN_OBSTACLE_DISTANCE + GRID_SIZE * sqrt(2) + MM, 1, 10)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataRobotWithRearTargetOutRange() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 100)
+                .uniform(-3.0, 3.0, 100)
+                .uniform(-180, 179)
+                .uniform(-170, 170)
+                .exponential(0.1, MIN_OBSTACLE_DISTANCE - GRID_SIZE, 10)
                 .build(NUM_RANDOM_TEST_CASES);
     }
 
@@ -113,7 +114,175 @@ public class TurnActionTest {
     @CsvSource({
             "0,0,0, 90, 1"
     })
-    @MethodSource("dataRobotObstacle")
+    @MethodSource("dataRobotWithFaceTargetInRange")
+    void testTurnFaceNearestMarker(double x, double y, int robotDeg, int markerDeg, double markerDistance) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        Complex markerDir = robotDir.add(Complex.fromDeg(markerDeg));
+        Point2D markerLocation = markerDir.at(robotLocation, markerDistance);
+        worldBuilder.robotLocation(robotLocation)
+                .robotDir(robotDeg)
+                .addMarker(MARKER_A, markerLocation);
+        MockFSMContext[] ctxs = MockFSMContext.builder()
+                // 0 - init
+                .add(TURN_FACE_NEAREST_MARKER, LOOK_STRIGHT_ACTION, worldBuilder)
+                // 1 - first
+                .add(worldBuilder)
+                // 2 - rotate to obstacle
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
+                        worldBuilder.addTime(COMMITMENT_TIME)
+                                .robotDir(markerDir.toIntDeg()))
+                // 3 - after completion
+                .add(worldBuilder.addTime(COMMITMENT_TIME))
+                .build();
+
+        // When init
+        int idx = 0;
+        state.init(ctxs[idx++]);
+
+        // When first tick
+        MockFSMContext ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
+        // Then
+        assertEquals(ROTATE, cmd.status());
+        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(markerDir));
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertFalse(state.isHalt());
+
+        // When rotate to obstacle
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+
+        // When after completion
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0,0, 90, 1"
+    })
+    @MethodSource("dataRobotWithFaceTargetInRange")
+    void testTurnFaceNearestMarkerContact(double x, double y, int robotDeg, int markerDeg, double markerDistance) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        Complex markerHead = robotDir.add(Complex.fromDeg(markerDeg));
+        Point2D markerLocation = markerHead.at(robotLocation, markerDistance);
+        worldBuilder.robotLocation(robotLocation)
+                .robotDir(robotDeg)
+                .addMarker(MARKER_A, markerLocation);
+        Point2D mapObstacleLocation = Arrays.stream(worldBuilder.build().radarMap().cells())
+                .filter(MapCell::hindered)
+                .findAny()
+                .map(MapCell::location)
+                .orElseThrow();
+        MockFSMContext[] ctxs = MockFSMContext.builder()
+                // 0 - init
+                .add(TURN_FACE_NEAREST_MARKER, LOOK_STRIGHT_ACTION, worldBuilder)
+                // 1 - first
+                .add(worldBuilder)
+                // 2 - contact
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
+                        worldBuilder.addTime(COMMITMENT_TIME)
+                                .canMoveForward(false))
+                // 3 - after completion
+                .add(worldBuilder.addTime(COMMITMENT_TIME))
+                .build();
+
+        // When init
+        int idx = 0;
+        state.init(ctxs[idx++]);
+
+        // When first tick
+        MockFSMContext ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
+        // Then
+        assertEquals(ROTATE, cmd.status());
+        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(markerHead));
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertFalse(state.isHalt());
+
+        // When contact
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+
+        // When after completion
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0,0, 90, 0.4"
+    })
+    @MethodSource("dataRobotWIthFaceTargetOutRange")
+    void testTurnFaceNearestMarkerNone(double x, double y, int robotDeg, int markerDeg, double markerDistance) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        Complex markerHead = robotDir.add(Complex.fromDeg(markerDeg));
+        Point2D markerLocation = markerHead.at(robotLocation, markerDistance);
+        worldBuilder.robotLocation(robotLocation)
+                .robotDir(robotDeg)
+                .addMarker(MARKER_A, markerLocation);
+        MockFSMContext[] ctxs = MockFSMContext.builder()
+                // 0 - init
+                .add(TURN_FACE_NEAREST_OBSTACLE, LOOK_STRIGHT_ACTION, worldBuilder)
+                // 1 - first
+                .add(worldBuilder)
+                // 2 - after completion
+                .add(worldBuilder.addTime(COMMITMENT_TIME))
+                .build();
+
+        // When init
+        int idx = 0;
+        state.init(ctxs[idx++]);
+
+        // When first tick
+        MockFSMContext ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+
+        // When after completion
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0,0, 90, 1"
+    })
+    @MethodSource("dataRobotWithFaceTargetInRange")
     void testTurnFaceNearestObstacle(double x, double y, int robotDeg, int obstacleDeg, double obstacleDistance) {
         Point2D robotLocation = new Point2D.Double(x, y);
         Complex robotDir = Complex.fromDeg(robotDeg);
@@ -178,7 +347,7 @@ public class TurnActionTest {
     @CsvSource({
             "0,0,0, 90, 1"
     })
-    @MethodSource("dataRobotObstacle")
+    @MethodSource("dataRobotWithFaceTargetInRange")
     void testTurnFaceNearestObstacleContact(double x, double y, int robotDeg, int obstacleDeg, double obstacleDistance) {
         Point2D robotLocation = new Point2D.Double(x, y);
         Complex robotDir = Complex.fromDeg(robotDeg);
@@ -243,7 +412,7 @@ public class TurnActionTest {
     @CsvSource({
             "0,0,0, 90, 0.4"
     })
-    @MethodSource("dataRobotNoObstacle")
+    @MethodSource("dataRobotWIthFaceTargetOutRange")
     void testTurnFaceNearestObstacleNone(double x, double y, int robotDeg, int obstacleDeg, double obstacleDistance) {
         Point2D robotLocation = new Point2D.Double(x, y);
         Complex robotDir = Complex.fromDeg(robotDeg);
@@ -294,7 +463,170 @@ public class TurnActionTest {
     @CsvSource({
             "0,0,0, 90, 1"
     })
-    @MethodSource("dataRobotObstacleRear")
+    @MethodSource("dataRobotWithRearTargetInRange")
+    void testTurnRearMarkerContact(double x, double y, int robotDeg, int markerDeg, double markerDistance) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        Complex markerHead = robotDir.add(Complex.fromDeg(markerDeg));
+        Point2D markerLocation = markerHead.at(robotLocation, markerDistance);
+        worldBuilder.robotLocation(robotLocation)
+                .robotDir(robotDeg)
+                .addMarker(MARKER_A, markerLocation);
+        MockFSMContext[] ctxs = MockFSMContext.builder()
+                // 0 - init
+                .add(TURN_REAR_NEAREST_MARKER, LOOK_STRIGHT_ACTION, worldBuilder)
+                // 1 - first
+                .add(worldBuilder)
+                // 2 - contact
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
+                        worldBuilder.addTime(COMMITMENT_TIME)
+                                .canMoveForward(false))
+                // 3 - after completion
+                .add(worldBuilder.addTime(COMMITMENT_TIME))
+                .build();
+
+        // When init
+        int idx = 0;
+        state.init(ctxs[idx++]);
+
+        // When first tick
+        MockFSMContext ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
+        // Then
+        assertEquals(ROTATE, cmd.status());
+        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(markerHead.opposite()));
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertFalse(state.isHalt());
+
+        // When contact
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+
+        // When after completion
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0,0, 90, 1"
+    })
+    @MethodSource("dataRobotWithRearTargetInRange")
+    void testTurnRearNearestMarker(double x, double y, int robotDeg, int markerDeg, double markerDistance) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        Complex markerHead = robotDir.add(Complex.fromDeg(markerDeg));
+        Point2D markerLocation = markerHead.at(robotLocation, markerDistance);
+        worldBuilder.robotLocation(robotLocation)
+                .robotDir(robotDeg)
+                .addMarker(MARKER_A, markerLocation);
+        MockFSMContext[] ctxs = MockFSMContext.builder()
+                // 0 - init
+                .add(TURN_REAR_NEAREST_MARKER, LOOK_STRIGHT_ACTION, worldBuilder)
+                // 1 - first
+                .add(worldBuilder)
+                // 2 - rotate to obstacle
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
+                        worldBuilder.addTime(COMMITMENT_TIME)
+                                .robotDir(markerHead.opposite().toIntDeg()))
+                // 3 - after completion
+                .add(worldBuilder.addTime(COMMITMENT_TIME))
+                .build();
+
+        // When init
+        int idx = 0;
+        state.init(ctxs[idx++]);
+
+        // When first tick
+        MockFSMContext ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
+        // Then
+        assertEquals(ROTATE, cmd.status());
+        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(markerHead.opposite()));
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertFalse(state.isHalt());
+
+        // When rotate to obstacle
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+
+        // When after completion
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0,0, 90, 0.4"
+    })
+    @MethodSource("dataRobotWithRearTargetOutRange")
+    void testTurnRearNearestMarkerNone(double x, double y, int robotDeg, int markerDeg, double markerDistance) {
+        Point2D robotLocation = new Point2D.Double(x, y);
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        Complex markerHead = robotDir.add(Complex.fromDeg(markerDeg));
+        Point2D markerLocation = markerHead.at(robotLocation, markerDistance);
+        worldBuilder.robotLocation(robotLocation)
+                .robotDir(robotDeg)
+                .addMarker(MARKER_A, markerLocation);
+        MockFSMContext[] ctxs = MockFSMContext.builder()
+                // 0 - init
+                .add(TURN_REAR_NEAREST_MARKER, LOOK_STRIGHT_ACTION, worldBuilder)
+                // 1 - first
+                .add(worldBuilder)
+                // 2 - after completion
+                .add(worldBuilder.addTime(COMMITMENT_TIME))
+                .build();
+
+        // When init
+        int idx = 0;
+        state.init(ctxs[idx++]);
+
+        // When first tick
+        MockFSMContext ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+
+        // When after completion
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+        assertTrue(state.isHalt());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0,0, 90, 1"
+    })
+    @MethodSource("dataRobotWithRearTargetInRange")
     void testTurnRearNearestObstacle(double x, double y, int robotDeg, int obstacleDeg, double obstacleDistance) {
         Point2D robotLocation = new Point2D.Double(x, y);
         Complex robotDir = Complex.fromDeg(robotDeg);
@@ -359,7 +691,7 @@ public class TurnActionTest {
     @CsvSource({
             "0,0,0, 90, 0.4"
     })
-    @MethodSource("dataRobotNoObstacleRear")
+    @MethodSource("dataRobotWithRearTargetOutRange")
     void testTurnRearNearestObstacleNone(double x, double y, int robotDeg, int obstacleDeg, double obstacleDistance) {
         Point2D robotLocation = new Point2D.Double(x, y);
         Complex robotDir = Complex.fromDeg(robotDeg);
@@ -410,7 +742,7 @@ public class TurnActionTest {
     @CsvSource({
             "0,0,0, 90, 1"
     })
-    @MethodSource("dataRobotObstacleRear")
+    @MethodSource("dataRobotWithRearTargetInRange")
     void testTurnRearObstacleContact(double x, double y, int robotDeg, int obstacleDeg, double obstacleDistance) {
         Point2D robotLocation = new Point2D.Double(x, y);
         Complex robotDir = Complex.fromDeg(robotDeg);
