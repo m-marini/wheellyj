@@ -31,5 +31,7 @@ package org.mmarini.wheelly.fsm;
 public enum HeadActionId {
     CONTINUE_HEAD_ACTION,
     LOOK_STRIGHT_ACTION,
-    SCAN_ACTION
+    SCAN_ACTION,
+    LOOK_FACE_AT_NEAREST_MARKER,
+    LOOK_REAR_AT_NEAREST_MARKER
 }

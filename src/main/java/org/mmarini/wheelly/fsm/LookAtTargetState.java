@@ -30,6 +30,7 @@ package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.geom.Point2D;
 
@@ -42,16 +43,18 @@ import static java.util.Objects.requireNonNull;
  * target. It allows configuring whether the look profile should be front-facing or rear-facing,
  * resetting the gaze forward if the required angle falls outside a specific tolerance range.
  * </p>
+ *
+ * @author Marco Marini
  */
 public class LookAtTargetState extends AbstractCommitmentState {
 
     /**
-     * The angular threshold in degrees within which the target direction is considered valid.
+     * The minimum distance from the target (in metres) required to actively track its direction.
      */
-    private final int directionRangeDeg;
+    private final double minTargetDistance;
 
     /**
-     * The coordinate point of the spatial target to track.
+     * The spatial co-ordinate point of the target to track.
      */
     private Point2D target;
 
@@ -62,25 +65,25 @@ public class LookAtTargetState extends AbstractCommitmentState {
 
     /**
      * Constructs a {@code LookAtTargetState} with the specified commitment duration
-     * and acceptable angular range tolerance.
+     * and the minimum target distance threshold.
      *
      * @param commitmentDuration the length of time in milliseconds that the state must remain active
-     * @param directionRangeDeg  the angular range tolerance expressed in degrees
+     * @param minTargetDistance  the minimum distance from the target to follow its direction (in metres)
      */
-    public LookAtTargetState(long commitmentDuration, int directionRangeDeg) {
+    public LookAtTargetState(long commitmentDuration, double minTargetDistance) {
         super(commitmentDuration);
-        this.directionRangeDeg = directionRangeDeg;
+        this.minTargetDistance = minTargetDistance;
     }
 
     /**
-     * Initialises the state by setting the target coordinates, alignment profile, and tracking timeline.
+     * Initialises the state by setting the target co-ordinates, alignment profile, and tracking timeline.
      * <p>
      * This method prepares the state parameters for ongoing execution ticks, registering the
-     * objective coordinates and configuring the spatial orientation settings.
+     * objective co-ordinates and configuring the spatial orientation settings.
      * </p>
      *
      * @param context     the {@link EnvFSMContext} tracking the shared operational data
-     * @param target      the {@link Point2D} coordinate of the target, must not be null
+     * @param target      the {@link Point2D} co-ordinate of the target, must not be null
      * @param frontFacing true if front-facing tracking is required; false for rear-facing
      * @throws NullPointerException if the provided target is null
      */
@@ -94,8 +97,8 @@ public class LookAtTargetState extends AbstractCommitmentState {
      * Executes the internal tracking logic for the current tick, generating a head-orienting command profile.
      * <p>
      * This method computes the absolute direction to the target based on the current head location.
-     * It reverses the direction if rear-looking is active and snaps to a frontal zero alignment
-     * if the destination is outside the specified range.
+     * It reverses the direction if rear-looking is active and issues a halt command if the target
+     * is too near or falls outside the head's field of view (FOV).
      * </p>
      *
      * @param context the {@link EnvFSMContext} tracking the shared operational data
@@ -104,13 +107,22 @@ public class LookAtTargetState extends AbstractCommitmentState {
      */
     @Override
     public RobotCommands tick(EnvFSMContext context) {
-        Complex direction = Complex.direction(context.worldModel().robotStatus().headLocation(), target);
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        Point2D headLocation = robotStatus.headLocation();
+        if (headLocation.distance(target) <= minTargetDistance) {
+            // Target too near
+            return RobotCommands.halt();
+        }
+        Complex robotDir = robotStatus.direction();
+        Complex headTargetDir = Complex.direction(headLocation, target).sub(robotDir);
         if (!frontFacing) {
             // Revert head direction if rear head required
-            direction = direction.opposite();
+            headTargetDir = headTargetDir.opposite();
         }
-        direction = direction.isClose0(directionRangeDeg)
-                ? direction : Complex.DEG0;
-        return RobotCommands.halt(direction.toIntDeg());
+        if (!headTargetDir.isClose0(robotStatus.robotSpec().headFOV().toRad() / 2)) {
+            // target not in head fov
+            return RobotCommands.halt();
+        }
+        return RobotCommands.halt(headTargetDir.toIntDeg());
     }
 }
