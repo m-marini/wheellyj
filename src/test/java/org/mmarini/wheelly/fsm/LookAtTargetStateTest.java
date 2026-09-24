@@ -49,9 +49,7 @@ import static org.mmarini.wheelly.apis.Utils.MM;
 
 class LookAtTargetStateTest {
     public static final int COMMITMENT_TIME = 1000;
-    public static final int TARGET_DISTANCE = 1;
     public static final double MIN_TARGET_DISTANCE = 0.4;
-    public static final Complex DEG_45 = Complex.fromDeg(45);
     public static final Complex DEG10 = Complex.fromDeg(10);
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
