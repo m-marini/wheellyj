@@ -53,7 +53,7 @@ import static org.mmarini.wheelly.apis.Utils.MM;
 class DisengageStateTest {
     public static final int COMMITMENT_TIME = 1000;
     public static final int SEED = 1234;
-    public static final int NUM_RANDOM_TEST_CASES = 1;
+    public static final int NUM_RANDOM_TEST_CASES = 30;
     public static final double SAFETY_DISTANCE = 0.5;
     private static final double MOVE_DISTANCE = 0.3;
 

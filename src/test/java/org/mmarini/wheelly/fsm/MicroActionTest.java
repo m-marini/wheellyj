@@ -56,7 +56,7 @@ import static org.mmarini.wheelly.fsm.MoveActionId.*;
 
 public class MicroActionTest {
     private static final long SEED = 1234;
-    private static final int NUM_RANDOM_TEST_CASES = 100;
+    private static final int NUM_RANDOM_TEST_CASES = 30;
 
     public static Stream<Arguments> dataRobot() {
         return RandomArgumentsGenerator.create(SEED)

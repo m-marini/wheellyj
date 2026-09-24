@@ -131,6 +131,17 @@ public class BaseHeadState implements EnvFSMState {
                 .orElse(null);
     }
 
+    private Point2D findNearestObstacle(EnvFSMContext context, double minDistance) {
+        RadarMap map = context.worldModel().radarMap();
+        Point2D robotLocation = context.worldModel().robotStatus().location();
+        return Arrays.stream(map.cells())
+                .filter(MapCell::hindered)
+                .map(MapCell::location)
+                .filter(p -> p.distance(robotLocation) >= minDistance)
+                .min(Comparator.comparingDouble(p -> p.distance(robotLocation)))
+                .orElse(null);
+    }
+
     private RobotCommands forceHalt(EnvFSMContext context) {
         initHalt(context);
         return baseState.tick(context);
@@ -238,18 +249,12 @@ public class BaseHeadState implements EnvFSMState {
     }
 
     private void initTurnFaceNearestObstacle(EnvFSMContext context) {
-        RadarMap map = context.worldModel().radarMap();
-        Point2D robotLocation = context.worldModel().robotStatus().location();
-        Point2D target = Arrays.stream(map.cells())
-                .filter(MapCell::hindered)
-                .map(MapCell::location)
-                .filter(p -> p.distance(robotLocation) >= config.minObstacleDistance)
-                .min(Comparator.comparingDouble(p -> p.distance(robotLocation)))
-                .orElse(null);
+        Point2D target = findNearestObstacle(context, config.minObstacleDistance);
         if (target == null) {
             // No obstacle found
             initHalt(context);
         } else {
+            Point2D robotLocation = context.worldModel().robotStatus().location();
             rotateState.init(context, Complex.direction(robotLocation, target).toIntDeg());
             baseState = rotateState;
             moveAction = TURN_FACE_NEAREST_OBSTACLE_ACTION;
@@ -280,18 +285,12 @@ public class BaseHeadState implements EnvFSMState {
     }
 
     private void initTurnRearNearestObstacle(EnvFSMContext context) {
-        RadarMap map = context.worldModel().radarMap();
-        Point2D robotLocation = context.worldModel().robotStatus().location();
-        Point2D target = Arrays.stream(map.cells())
-                .filter(MapCell::hindered)
-                .map(MapCell::location)
-                .filter(p -> p.distance(robotLocation) >= config.minObstacleDistance)
-                .min(Comparator.comparingDouble(p -> p.distance(robotLocation)))
-                .orElse(null);
+        Point2D target = findNearestObstacle(context, config.minObstacleDistance);
         if (target == null) {
             // No obstacle found
             initHalt(context);
         } else {
+            Point2D robotLocation = context.worldModel().robotStatus().location();
             rotateState.init(context, Complex.direction(robotLocation, target).opposite().toIntDeg());
             baseState = rotateState;
             moveAction = TURN_REAR_NEAREST_OBSTACLE_ACTION;

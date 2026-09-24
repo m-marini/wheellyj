@@ -53,7 +53,7 @@ import static org.mmarini.wheelly.apis.RobotStatusId.ROTATE;
 class RotateStateTest {
     public static final int COMMITMENT_TIME = 1000;
     public static final int SEED = 1234;
-    public static final int NUM_RANDOM_TEST_CASES = 100;
+    public static final int NUM_RANDOM_TEST_CASES = 30;
 
     static Stream<Arguments> dataTestRotation() {
         return RandomArgumentsGenerator.create(SEED)

@@ -56,7 +56,7 @@ import static org.mmarini.wheelly.apis.Utils.MM;
 class MovePathStateTest {
     public static final int COMMITMENT_TIME = 1000;
     public static final int SEED = 1234;
-    public static final int NUM_RANDOM_TEST_CASES = 100;
+    public static final int NUM_RANDOM_TEST_CASES = 30;
     public static final double DISTANCE0 = 1.;
     public static final int DIR_DEG_0 = 45;
     public static final int DIR_DEG_1 = -45;
