@@ -115,7 +115,7 @@ public class LookMarkerTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(HALT_ACTION, LOOK_FACE_AT_NEAREST_MARKER, worldBuilder)
+                .add(HALT_ACTION, LOOK_FACE_AT_NEAREST_MARKER_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 3 - after completion
@@ -130,7 +130,7 @@ public class LookMarkerTest {
         MockFSMContext ctx = ctxs[idx++];
         RobotCommands cmd = state.tick(ctx);
         // Then
-        assertEquals(LOOK_FACE_AT_NEAREST_MARKER, state.headAction());
+        assertEquals(LOOK_FACE_AT_NEAREST_MARKER_ACTION, state.headAction());
         assertEquals(HALT, cmd.status());
         assertThat(Complex.fromDeg(cmd.scanDirection()), angleCloseTo(markerDeg));
         assertEquals(markerDeg, cmd.scanDirection());
@@ -147,7 +147,7 @@ public class LookMarkerTest {
                 .robotDir(robotDeg);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(HALT_ACTION, LOOK_FACE_AT_NEAREST_MARKER, worldBuilder)
+                .add(HALT_ACTION, LOOK_FACE_AT_NEAREST_MARKER_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 3 - after completion
@@ -187,7 +187,7 @@ public class LookMarkerTest {
                 .robotDir(robotDeg);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(HALT_ACTION, LOOK_REAR_AT_NEAREST_MARKER, worldBuilder)
+                .add(HALT_ACTION, LOOK_REAR_AT_NEAREST_MARKER_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 3 - after completion
@@ -235,7 +235,7 @@ public class LookMarkerTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(HALT_ACTION, LOOK_REAR_AT_NEAREST_MARKER, worldBuilder)
+                .add(HALT_ACTION, LOOK_REAR_AT_NEAREST_MARKER_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 3 - after completion
@@ -250,7 +250,7 @@ public class LookMarkerTest {
         MockFSMContext ctx = ctxs[idx++];
         RobotCommands cmd = state.tick(ctx);
         // Then
-        assertEquals(LOOK_REAR_AT_NEAREST_MARKER, state.headAction());
+        assertEquals(LOOK_REAR_AT_NEAREST_MARKER_ACTION, state.headAction());
         assertEquals(HALT, cmd.status());
         assertEquals(Complex.fromDeg(markerDeg).opposite().toIntDeg(), cmd.scanDirection());
         assertEquals(1, ctx.nextActionCount());

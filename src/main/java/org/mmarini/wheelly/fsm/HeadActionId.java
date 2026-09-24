@@ -28,10 +28,56 @@
 
 package org.mmarini.wheelly.fsm;
 
+/**
+ * Defines the unique identifiers for the actions available to the robot's sensor head.
+ * <p>
+ * These constants represent specific visual and scanning behaviours executed by the head
+ * subsystem within the environmental Finite State Machine (FSM). They allow the agent to
+ * coordinate directional orientation, panoramic environmental scans, and targeted object
+ * tracking independently of the motile base's movement.
+ * </p>
+ */
 public enum HeadActionId {
+
+    /**
+     * Instructs the sensor head to persist with its currently active state or behaviour,
+     * bypassing any immediate directional changes or state transitions.
+     */
     CONTINUE_HEAD_ACTION,
+
+    /**
+     * Directs the sensor head to re-align itself forward, locking into a straight
+     * position parallel to the robot's primary forward driving axis.
+     */
     LOOK_STRIGHT_ACTION,
+
+    /**
+     * Initiates a periodic panoramic sensory sweep, driving the head to perform continuous
+     * scanning intervals to map the surrounding environment.
+     */
     SCAN_ACTION,
-    LOOK_FACE_AT_NEAREST_MARKER,
-    LOOK_REAR_AT_NEAREST_MARKER
+
+    /**
+     * Commands the sensor head to actively track and face the closest identified marker
+     * using a standard forward-looking orientation.
+     */
+    LOOK_FACE_AT_NEAREST_MARKER_ACTION,
+
+    /**
+     * Commands the sensor head to track the closest identified marker by reversing its
+     * primary gaze vector, resulting in a rear-looking alignment profile.
+     */
+    LOOK_REAR_AT_NEAREST_MARKER_ACTION,
+
+    /**
+     * Directs the sensor head to lock its focus directly onto the nearest detected physical
+     * obstacle to ensure real-time distance assessment.
+     */
+    LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION,
+
+    /**
+     * Directs the sensor head to monitor the nearest detected physical obstacle from a
+     * reversed perspective, using a rear-facing alignment.
+     */
+    LOOK_REAR_AT_NEAREST_OBSTACLE_ACTION
 }

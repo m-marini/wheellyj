@@ -84,8 +84,10 @@ public class BaseHeadState implements EnvFSMState {
             }
             case LOOK_STRIGHT_ACTION -> initLookStraight(context);
             case SCAN_ACTION -> initScan(context);
-            case LOOK_FACE_AT_NEAREST_MARKER -> initLookFaceMarker(context);
-            case LOOK_REAR_AT_NEAREST_MARKER -> initLookRearMarker(context);
+            case LOOK_FACE_AT_NEAREST_MARKER_ACTION -> initLookFaceMarker(context);
+            case LOOK_REAR_AT_NEAREST_MARKER_ACTION -> initLookRearMarker(context);
+            case LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION -> initLookFaceObstacle(context);
+            case LOOK_REAR_AT_NEAREST_OBSTACLE_ACTION -> initLookRearObstacle(context);
             default -> throw new IllegalStateException("head action " + actionId + " not found");
         }
         if (headState == null) {
@@ -169,7 +171,18 @@ public class BaseHeadState implements EnvFSMState {
         } else {
             lookAtTarget.init(context, target, true);
             headState = lookAtTarget;
-            headAction = LOOK_FACE_AT_NEAREST_MARKER;
+            headAction = LOOK_FACE_AT_NEAREST_MARKER_ACTION;
+        }
+    }
+
+    private void initLookFaceObstacle(EnvFSMContext context) {
+        Point2D target = findNearestObstacle(context, 0);
+        if (target == null) {
+            initLookStraight(context);
+        } else {
+            lookAtTarget.init(context, target, true);
+            headState = lookAtTarget;
+            headAction = LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION;
         }
     }
 
@@ -180,7 +193,18 @@ public class BaseHeadState implements EnvFSMState {
         } else {
             lookAtTarget.init(context, target, false);
             headState = lookAtTarget;
-            headAction = LOOK_REAR_AT_NEAREST_MARKER;
+            headAction = LOOK_REAR_AT_NEAREST_MARKER_ACTION;
+        }
+    }
+
+    private void initLookRearObstacle(EnvFSMContext context) {
+        Point2D target = findNearestObstacle(context, 0);
+        if (target == null) {
+            initLookStraight(context);
+        } else {
+            lookAtTarget.init(context, target, false);
+            headState = lookAtTarget;
+            headAction = LOOK_REAR_AT_NEAREST_OBSTACLE_ACTION;
         }
     }
 
