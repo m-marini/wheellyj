@@ -47,6 +47,7 @@ public class BaseHeadState implements EnvFSMState {
     private final HaltState haltState;
     private final MoveState moveState;
     private final RotateState rotateState;
+    private final DisengageState disengageState;
     private final LookStraightState lookStraightState;
     private final HeadScanState headScanState;
     private final LookAtTargetState lookAtTarget;
@@ -63,10 +64,12 @@ public class BaseHeadState implements EnvFSMState {
         this.lookStraightState = new LookStraightState(config.commitmentDuration);
         this.headScanState = new HeadScanState(config.commitmentDuration, config.scanInterval);
         this.lookAtTarget = new LookAtTargetState(config.commitmentDuration, config.minHeadTargetDistance);
+        this.disengageState = new DisengageState(config.commitmentDuration, config.safeDistance);
         moveState.onCompletion(this::forceHalt)
                 .onContact(this::forceHalt);
         rotateState.onCompletion(this::forceHalt)
                 .onContact(this::forceHalt);
+        disengageState.onCompletion(this::forceHalt);
     }
 
     private void changeActions(EnvFSMContext context, AgentAction actionId) {
@@ -110,6 +113,7 @@ public class BaseHeadState implements EnvFSMState {
             case TURN_REAR_NEAREST_MARKER_ACTION -> initTurnRearNearestMarker(context);
             case TURN_RIGHT_SCAN_ACTION -> initTurnRightScan(context);
             case TURN_LEFT_SCAN_ACTION -> initTurnLeftScan(context);
+            case DISENGAGE_ON_CONTACT_ACTION -> initDisengage(context);
             default -> throw new IllegalStateException("move action " + actionId + " not found");
         }
         if (baseState == null) {
@@ -156,6 +160,12 @@ public class BaseHeadState implements EnvFSMState {
     public void init(EnvFSMContext context) {
         baseState = null;
         headState = null;
+    }
+
+    private void initDisengage(EnvFSMContext context) {
+        disengageState.init(context);
+        baseState = disengageState;
+        moveAction = DISENGAGE_ON_CONTACT_ACTION;
     }
 
     private void initHalt(EnvFSMContext context) {
@@ -357,10 +367,10 @@ public class BaseHeadState implements EnvFSMState {
 
     public record BaseHeadConfig(long commitmentDuration, long scanInterval, int[] headScanDeg,
                                  double microDistance, double minMarkerDistance, double minObstacleDistance,
-                                 Complex turnScanAngle,
-                                 Complex microAngle, double minHeadTargetDistance) {
+                                 double minHeadTargetDistance, double safeDistance, Complex turnScanAngle,
+                                 Complex microAngle) {
         public BaseHeadConfig(long commitmentDuration, long scanInterval, int[] headScanDeg, double microDistance,
-                              double minMarkerDistance, double minObstacleDistance, Complex turnScanAngle, Complex microAngle, double minHeadTargetDistance) {
+                              double minMarkerDistance, double minObstacleDistance, double minHeadTargetDistance, double safeDistance, Complex turnScanAngle, Complex microAngle) {
             this.commitmentDuration = commitmentDuration;
             this.scanInterval = scanInterval;
             this.headScanDeg = requireNonNull(headScanDeg);
@@ -370,6 +380,7 @@ public class BaseHeadState implements EnvFSMState {
             this.microAngle = requireNonNull(microAngle);
             this.minMarkerDistance = minMarkerDistance;
             this.minHeadTargetDistance = minHeadTargetDistance;
+            this.safeDistance = safeDistance;
         }
     }
 }

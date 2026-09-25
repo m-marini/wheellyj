@@ -78,12 +78,12 @@ public class DisengageState extends AbstractCommitmentState {
      * Creates a new instance of {@code DisengageState} with the specified commitment time
      * and safety distance.
      *
-     * @param commitmentTime  the minimum duration forced to stay in this state (in milliseconds)
-     * @param safetyDistance  the safety clearance distance to guarantee (in metres)
+     * @param commitmentTime the minimum duration forced to stay in this state (in milliseconds)
+     * @param safeDistance   the safe clearance distance to guarantee (in metres)
      */
-    public DisengageState(int commitmentTime, double safetyDistance) {
+    public DisengageState(long commitmentTime, double safeDistance) {
         super(commitmentTime);
-        this.safetyDistance = safetyDistance;
+        this.safetyDistance = safeDistance;
     }
 
     /**

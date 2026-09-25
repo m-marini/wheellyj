@@ -51,9 +51,10 @@ public class HaltLookStraightStateTest {
     public static final Complex MICRO_ANGLE = Complex.fromDeg(10);
     public static final double MIN_MARKER_DISTANCE = 0.5;
     public static final double MIN_HEAD_TARGET_DISTANCE = 0.2;
+    public static final double SAFE_DISTANCE = 0.5;
     public static final BaseHeadState.BaseHeadConfig BASE_HEAD_CONFIG = new BaseHeadState.BaseHeadConfig(
             COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG, MICRO_DISTANCE, MIN_MARKER_DISTANCE, MIN_OBSTACLE_DISTANCE,
-            TURN_SCAN_ANGLE, MICRO_ANGLE, MIN_HEAD_TARGET_DISTANCE);
+            MIN_HEAD_TARGET_DISTANCE, SAFE_DISTANCE, TURN_SCAN_ANGLE, MICRO_ANGLE);
 
     WorldModelBuilder worldBuilder;
     BaseHeadState state;
