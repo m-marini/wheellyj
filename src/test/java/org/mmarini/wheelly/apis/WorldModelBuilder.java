@@ -201,6 +201,10 @@ public class WorldModelBuilder {
         return this;
     }
 
+    public WorldModelBuilder robotDir(Complex robotDirDeg) {
+        return robotDir(robotDirDeg.toIntDeg());
+    }
+
     public Complex robotDir() {
         return this.robotStatusBuilder.robotDir();
     }

@@ -28,19 +28,24 @@
 
 package org.mmarini.wheelly.fsm;
 
-import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.fsm.HeadActionId.CONTINUE_HEAD_ACTION;
 import static org.mmarini.wheelly.fsm.MoveActionId.CONTINUE_MOVE_ACTION;
 
 public class MockFSMContext implements EnvFSMContext {
+
+    public static final int PATH_TIME = 10;
+
     public static EnvFSMContextBuilder builder() {
         return new EnvFSMContextBuilder(new ArrayList<>());
     }
@@ -66,17 +71,19 @@ public class MockFSMContext implements EnvFSMContext {
         return nextActionCount;
     }
 
-    private Maybe<List<Point2D>> path() {
-        return (path == null ? Maybe.empty() : Maybe.just(path));
+    private Single<List<Point2D>> path() {
+        return Single.just(path)
+                .subscribeOn(Schedulers.io())
+                .delay(PATH_TIME, TimeUnit.MILLISECONDS);
     }
 
     @Override
-    public Maybe<List<Point2D>> pathToNearestMarker() {
+    public Single<List<Point2D>> pathToNearestMarker() {
         return path();
     }
 
     @Override
-    public Maybe<List<Point2D>> pathToNearestUnknownArea() {
+    public Single<List<Point2D>> pathToNearestUnknownArea() {
         return path();
     }
 

@@ -52,17 +52,17 @@ public class HaltLookStraightStateTest {
     public static final double MIN_MARKER_DISTANCE = 0.5;
     public static final double MIN_HEAD_TARGET_DISTANCE = 0.2;
     public static final double SAFE_DISTANCE = 0.5;
-    public static final BaseHeadState.BaseHeadConfig BASE_HEAD_CONFIG = new BaseHeadState.BaseHeadConfig(
+    public static final MacroActionConfig BASE_HEAD_CONFIG = new MacroActionConfig(
             COMMITMENT_TIME, SCAN_INTERVAL, SCAN_HEAD_DEG, MICRO_DISTANCE, MIN_MARKER_DISTANCE, MIN_OBSTACLE_DISTANCE,
             MIN_HEAD_TARGET_DISTANCE, SAFE_DISTANCE, TURN_SCAN_ANGLE, MICRO_ANGLE);
 
     WorldModelBuilder worldBuilder;
-    BaseHeadState state;
+    CoordinatedMotionState state;
 
     @BeforeEach
     void setUp() {
         this.worldBuilder = new WorldModelBuilder();
-        this.state = BaseHeadState.create(BASE_HEAD_CONFIG);
+        this.state = CoordinatedMotionState.create(BASE_HEAD_CONFIG);
     }
 
     @Test

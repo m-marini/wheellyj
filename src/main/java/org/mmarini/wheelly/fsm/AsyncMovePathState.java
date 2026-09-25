@@ -61,7 +61,7 @@ public class AsyncMovePathState extends AbstractContactEventState {
      *
      * @param commitmentTime the length of time in milliseconds that the state must remain active
      */
-    public AsyncMovePathState(int commitmentTime) {
+    public AsyncMovePathState(long commitmentTime) {
         super(commitmentTime);
         this.moveState = new MoveState(0)
                 .onContact(this::onContact)

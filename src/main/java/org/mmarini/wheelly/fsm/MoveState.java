@@ -34,6 +34,8 @@ import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.geom.Point2D;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Represents a finite state machine state that handles the movement
  * behaviour of the robot towards a specific target position.
@@ -66,7 +68,7 @@ public class MoveState extends AbstractContactEventState {
      */
     public void init(EnvFSMContext ctx, Point2D targetPosition) {
         super.init(ctx);
-        this.targetPosition = targetPosition;
+        this.targetPosition = requireNonNull(targetPosition);
     }
 
     /**

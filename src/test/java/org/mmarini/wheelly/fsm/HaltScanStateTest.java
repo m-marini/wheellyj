@@ -46,12 +46,12 @@ import static org.mmarini.wheelly.fsm.MoveActionId.HALT_ACTION;
 public class HaltScanStateTest {
 
     WorldModelBuilder worldBuilder;
-    BaseHeadState state;
+    CoordinatedMotionState state;
 
     @BeforeEach
     void setUp() {
         this.worldBuilder = new WorldModelBuilder();
-        this.state = BaseHeadState.create(BASE_HEAD_CONFIG);
+        this.state = CoordinatedMotionState.create(BASE_HEAD_CONFIG);
     }
 
     @Test

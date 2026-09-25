@@ -28,26 +28,29 @@
 
 package org.mmarini.wheelly.fsm;
 
+import io.reactivex.rxjava3.core.Single;
 import org.mmarini.wheelly.apis.*;
 
 import java.awt.geom.Point2D;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.fsm.HeadActionId.*;
 import static org.mmarini.wheelly.fsm.MoveActionId.*;
 
-public class BaseHeadState implements EnvFSMState {
-    public static BaseHeadState create(BaseHeadConfig config) {
-        return new BaseHeadState(config);
+public class CoordinatedMotionState implements EnvFSMState {
+    public static CoordinatedMotionState create(MacroActionConfig config) {
+        return new CoordinatedMotionState(config);
     }
 
-    private final BaseHeadConfig config;
+    private final MacroActionConfig config;
     private final HaltState haltState;
     private final MoveState moveState;
     private final RotateState rotateState;
     private final DisengageState disengageState;
+    private final AsyncMovePathState movePathState;
     private final LookStraightState lookStraightState;
     private final HeadScanState headScanState;
     private final LookAtTargetState lookAtTarget;
@@ -56,20 +59,23 @@ public class BaseHeadState implements EnvFSMState {
     private HeadActionId headAction;
     private MoveActionId moveAction;
 
-    protected BaseHeadState(BaseHeadConfig config) {
+    protected CoordinatedMotionState(MacroActionConfig config) {
         this.config = requireNonNull(config);
-        this.haltState = new HaltState(config.commitmentDuration);
-        this.moveState = new MoveState(config.commitmentDuration);
-        this.rotateState = new RotateState(config.commitmentDuration);
-        this.lookStraightState = new LookStraightState(config.commitmentDuration);
-        this.headScanState = new HeadScanState(config.commitmentDuration, config.scanInterval);
-        this.lookAtTarget = new LookAtTargetState(config.commitmentDuration, config.minHeadTargetDistance);
-        this.disengageState = new DisengageState(config.commitmentDuration, config.safeDistance);
+        this.haltState = new HaltState(config.commitmentDuration());
+        this.moveState = new MoveState(config.commitmentDuration());
+        this.rotateState = new RotateState(config.commitmentDuration());
+        this.lookStraightState = new LookStraightState(config.commitmentDuration());
+        this.headScanState = new HeadScanState(config.commitmentDuration(), config.scanInterval());
+        this.lookAtTarget = new LookAtTargetState(config.commitmentDuration(), config.minHeadTargetDistance());
+        this.disengageState = new DisengageState(config.commitmentDuration(), config.safeDistance());
+        this.movePathState = new AsyncMovePathState(config.commitmentDuration());
         moveState.onContact(this::forceHalt)
                 .onCompletion(this::forceHalt);
         rotateState.onContact(this::forceHalt)
                 .onCompletion(this::forceHalt);
         disengageState.onCompletion(this::forceHalt);
+        movePathState.onContact(this::forceHalt)
+                .onCompletion(this::forceHalt);
     }
 
     private void changeActions(EnvFSMContext context, AgentAction actionId) {
@@ -114,6 +120,7 @@ public class BaseHeadState implements EnvFSMState {
             case TURN_RIGHT_SCAN_ACTION -> initTurnRightScan(context);
             case TURN_LEFT_SCAN_ACTION -> initTurnLeftScan(context);
             case DISENGAGE_ON_CONTACT_ACTION -> initDisengage(context);
+            case TRACK_NEAREST_MARKER -> initTrackMarker(context);
             default -> throw new IllegalStateException("move action " + actionId + " not found");
         }
         if (baseState == null) {
@@ -224,7 +231,7 @@ public class BaseHeadState implements EnvFSMState {
         Point2D target = robotStatus.direction()
                 .opposite()
                 .at(robotStatus.location(),
-                        config.microDistance + robotStatus.robotSpec().targetRange());
+                        config.microDistance() + robotStatus.robotSpec().targetRange());
         moveState.init(context, target);
         baseState = moveState;
         moveAction = MICRO_BACKWARD_ACTION;
@@ -233,7 +240,7 @@ public class BaseHeadState implements EnvFSMState {
     private void initMicroForward(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         Point2D target = robotStatus.direction().at(robotStatus.location(),
-                config.microDistance + robotStatus.robotSpec().targetRange());
+                config.microDistance() + robotStatus.robotSpec().targetRange());
         moveState.init(context, target);
         baseState = moveState;
         moveAction = MICRO_FORWARD_ACTION;
@@ -244,7 +251,7 @@ public class BaseHeadState implements EnvFSMState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         rotateState.init(context,
                 robotStatus.direction()
-                        .sub(config.microAngle).toIntDeg());
+                        .sub(config.microAngle()).toIntDeg());
         baseState = rotateState;
         moveAction = MICRO_LEFT_ACTION;
     }
@@ -253,19 +260,26 @@ public class BaseHeadState implements EnvFSMState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         rotateState.init(context,
                 robotStatus.direction()
-                        .add(config.microAngle).toIntDeg());
+                        .add(config.microAngle()).toIntDeg());
         baseState = rotateState;
         moveAction = MICRO_RIGHT_ACTION;
     }
 
     private void initScan(EnvFSMContext context) {
-        headScanState.init(context, config.headScanDeg);
+        headScanState.init(context, config.headScanDeg());
         headState = headScanState;
         headAction = SCAN_ACTION;
     }
 
+    private void initTrackMarker(EnvFSMContext context) {
+        Single<List<Point2D>> path = context.pathToNearestMarker();
+        movePathState.init(context, path);
+        baseState = movePathState;
+        moveAction = TRACK_NEAREST_MARKER;
+    }
+
     private void initTurnFaceNearestMarker(EnvFSMContext context) {
-        Point2D target = findNearestMarker(context, config.minMarkerDistance);
+        Point2D target = findNearestMarker(context, config.minMarkerDistance());
         if (target == null) {
             // No obstacle found
             initHalt(context);
@@ -278,7 +292,7 @@ public class BaseHeadState implements EnvFSMState {
     }
 
     private void initTurnFaceNearestObstacle(EnvFSMContext context) {
-        Point2D target = findNearestObstacle(context, config.minObstacleDistance);
+        Point2D target = findNearestObstacle(context, config.minObstacleDistance());
         if (target == null) {
             // No obstacle found
             initHalt(context);
@@ -294,14 +308,14 @@ public class BaseHeadState implements EnvFSMState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         rotateState.init(context,
                 robotStatus.direction()
-                        .sub(config.turnScanAngle)
+                        .sub(config.turnScanAngle())
                         .toIntDeg());
         baseState = rotateState;
         moveAction = TURN_LEFT_SCAN_ACTION;
     }
 
     private void initTurnRearNearestMarker(EnvFSMContext context) {
-        Point2D target = findNearestMarker(context, config.minMarkerDistance);
+        Point2D target = findNearestMarker(context, config.minMarkerDistance());
         if (target == null) {
             // No obstacle found
             initHalt(context);
@@ -314,7 +328,7 @@ public class BaseHeadState implements EnvFSMState {
     }
 
     private void initTurnRearNearestObstacle(EnvFSMContext context) {
-        Point2D target = findNearestObstacle(context, config.minObstacleDistance);
+        Point2D target = findNearestObstacle(context, config.minObstacleDistance());
         if (target == null) {
             // No obstacle found
             initHalt(context);
@@ -330,7 +344,7 @@ public class BaseHeadState implements EnvFSMState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         rotateState.init(context,
                 robotStatus.direction()
-                        .add(config.turnScanAngle).toIntDeg());
+                        .add(config.turnScanAngle()).toIntDeg());
         baseState = rotateState;
         moveAction = TURN_RIGHT_SCAN_ACTION;
     }
@@ -358,24 +372,5 @@ public class BaseHeadState implements EnvFSMState {
         RobotCommands baseCmd = baseState.tick(context);
         RobotCommands headCmd = headState.tick(context);
         return RobotCommands.merge(baseCmd, headCmd);
-    }
-
-    public record BaseHeadConfig(long commitmentDuration, long scanInterval, int[] headScanDeg,
-                                 double microDistance, double minMarkerDistance, double minObstacleDistance,
-                                 double minHeadTargetDistance, double safeDistance, Complex turnScanAngle,
-                                 Complex microAngle) {
-        public BaseHeadConfig(long commitmentDuration, long scanInterval, int[] headScanDeg, double microDistance,
-                              double minMarkerDistance, double minObstacleDistance, double minHeadTargetDistance, double safeDistance, Complex turnScanAngle, Complex microAngle) {
-            this.commitmentDuration = commitmentDuration;
-            this.scanInterval = scanInterval;
-            this.headScanDeg = requireNonNull(headScanDeg);
-            this.microDistance = microDistance;
-            this.minObstacleDistance = minObstacleDistance;
-            this.turnScanAngle = requireNonNull(turnScanAngle);
-            this.microAngle = requireNonNull(microAngle);
-            this.minMarkerDistance = minMarkerDistance;
-            this.minHeadTargetDistance = minHeadTargetDistance;
-            this.safeDistance = safeDistance;
-        }
     }
 }

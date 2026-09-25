@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.fsm;
 
 import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.core.Single;
 import org.mmarini.wheelly.apis.WorldModel;
 
 import java.awt.geom.Point2D;
@@ -45,9 +46,9 @@ import java.util.List;
  */
 public interface EnvFSMContext {
 
-    Maybe<List<Point2D>> pathToNearestMarker();
+    Single<List<Point2D>> pathToNearestMarker();
 
-    Maybe<List<Point2D>> pathToNearestUnknownArea();
+    Single<List<Point2D>> pathToNearestUnknownArea();
 
     AgentAction nextAction();
 
