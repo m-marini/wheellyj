@@ -33,7 +33,6 @@ import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.geom.Point2D;
-import java.util.function.Function;
 
 /**
  * Represents a finite state machine state that handles the movement
@@ -43,22 +42,12 @@ import java.util.function.Function;
  * optimises the transition upon reaching the target or triggering a callback.
  * </p>
  */
-public class MoveState extends AbstractCommitmentState {
+public class MoveState extends AbstractContactEventState {
 
     /**
-     * The target coordinates towards which the robot is travelling.
+     * The target co-ordinates towards which the robot is travelling.
      */
     private Point2D targetPosition;
-
-    /**
-     * The callback function executed when the movement completion condition is met.
-     */
-    private Function<EnvFSMContext, RobotCommands> onCompletion;
-
-    /**
-     * The callback function executed when the robot detects a contact or obstacle.
-     */
-    private Function<EnvFSMContext, RobotCommands> onContact;
 
     /**
      * Initialises a new instance of {@code MoveState} with a specified commitment duration.
@@ -73,33 +62,11 @@ public class MoveState extends AbstractCommitmentState {
      * Initialises the state context and sets the target position for the robot.
      *
      * @param ctx            the environment finite state machine context
-     * @param targetPosition the target coordinates to reach
+     * @param targetPosition the target co-ordinates to reach
      */
     public void init(EnvFSMContext ctx, Point2D targetPosition) {
         super.init(ctx);
         this.targetPosition = targetPosition;
-    }
-
-    /**
-     * Customises the state by assigning a callback function for successful completion.
-     *
-     * @param callback the function to execute upon reaching the destination
-     * @return this state instance to allow method chaining
-     */
-    public MoveState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
-        this.onCompletion = callback;
-        return this;
-    }
-
-    /**
-     * Customises the state by assigning a callback function for contact or obstacle events.
-     *
-     * @param callback the function to execute if a contact is detected
-     * @return this state instance to allow method chaining
-     */
-    public MoveState onContact(Function<EnvFSMContext, RobotCommands> callback) {
-        this.onContact = callback;
-        return this;
     }
 
     /**
@@ -115,30 +82,20 @@ public class MoveState extends AbstractCommitmentState {
     @Override
     public RobotCommands tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
-        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward()) {
-            complete();
-            return onContact != null
-                    ? onContact.apply(context)
-                    : RobotCommands.halt();
+        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward() || contacted()) {
+            return triggerContact(context);
         }
         if (completed()) {
-            return onCompletion != null
-                    ? onCompletion.apply(context)
-                    : RobotCommands.halt();
+            return complete(context);
         }
         double targetRange = robotStatus.robotSpec().targetRange();
         if (robotStatus.location().distance(targetPosition) <= targetRange) {
-            complete();
-            return onCompletion != null
-                    ? onCompletion.apply(context)
-                    : RobotCommands.halt();
+            return complete(context);
         }
         // Compute movement
         Complex egocentricTargetDir = Complex.direction(robotStatus.location(), targetPosition).sub(robotStatus.direction());
-        if (egocentricTargetDir.isClose0(90)) {
-            return RobotCommands.forward(0, targetPosition);
-        } else {
-            return RobotCommands.backward(0, targetPosition);
-        }
+        return egocentricTargetDir.isClose0(90)
+                ? RobotCommands.forward(0, targetPosition)
+                : RobotCommands.backward(0, targetPosition);
     }
 }

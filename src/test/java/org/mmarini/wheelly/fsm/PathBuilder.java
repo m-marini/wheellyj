@@ -28,19 +28,48 @@
 
 package org.mmarini.wheelly.fsm;
 
-public enum MoveActionId {
-    CONTINUE_MOVE_ACTION,
-    HALT_ACTION,
-    MICRO_FORWARD_ACTION,
-    MICRO_BACKWARD_ACTION,
-    MICRO_LEFT_ACTION,
-    MICRO_RIGHT_ACTION,
-    TURN_FACE_NEAREST_OBSTACLE_ACTION,
-    TURN_REAR_NEAREST_OBSTACLE_ACTION,
-    TURN_FACE_NEAREST_MARKER_ACTION,
-    TURN_REAR_NEAREST_MARKER_ACTION,
-    TURN_LEFT_SCAN_ACTION,
-    TURN_RIGHT_SCAN_ACTION,
-    DISENGAGE_ON_CONTACT_ACTION,
-    TRACK_NEAREST_MARKER
+import org.mmarini.wheelly.apis.Complex;
+
+import java.awt.geom.Point2D;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PathBuilder {
+
+    public static PathBuilder builder(Point2D location, double robotDeg) {
+        return new PathBuilder(new ArrayList<>(), location, Complex.fromDeg(robotDeg));
+    }
+
+    private final List<Point2D> path;
+    private Point2D location;
+    private Complex direction;
+
+    protected PathBuilder(List<Point2D> path, Point2D location, Complex direction) {
+        this.path = path;
+        this.location = location;
+        this.direction = direction;
+    }
+
+    public PathBuilder add() {
+        path.add(location);
+        return this;
+    }
+
+    public List<Point2D> build() {
+        return path;
+    }
+
+    public PathBuilder move(double distance) {
+        location = direction.at(location, distance);
+        return this;
+    }
+
+    public PathBuilder turn(Complex deltaDeg) {
+        direction = direction.add(deltaDeg);
+        return this;
+    }
+
+    public PathBuilder turn(double deltaDeg) {
+        return turn(Complex.fromDeg(deltaDeg));
+    }
 }

@@ -28,7 +28,11 @@
 
 package org.mmarini.wheelly.fsm;
 
+import io.reactivex.rxjava3.core.Maybe;
 import org.mmarini.wheelly.apis.WorldModel;
+
+import java.awt.geom.Point2D;
+import java.util.List;
 
 /**
  * Defines the execution context for the environment Finite State Machine (FSM).
@@ -40,6 +44,10 @@ import org.mmarini.wheelly.apis.WorldModel;
  * </p>
  */
 public interface EnvFSMContext {
+
+    Maybe<List<Point2D>> pathToNearestMarker();
+
+    Maybe<List<Point2D>> pathToNearestUnknownArea();
 
     AgentAction nextAction();
 

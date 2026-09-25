@@ -40,7 +40,7 @@ import org.mmarini.wheelly.apis.RobotCommands;
  * the inference engine, scheduling it to generate the next macro-action at the subsequent execution tick.
  * </p>
  */
-public class LookStraightState extends AbstractCommitmentState {
+public class LookStraightState extends AbstractCommitmentState implements EnvFSMCompletableState {
 
     /**
      * Constructs a {@code LookStraightState} with a specified commitment duration window.
@@ -52,13 +52,27 @@ public class LookStraightState extends AbstractCommitmentState {
     }
 
     /**
+     * Indicates whether the front-looking macro-action has successfully completed.
+     * <p>
+     * For continuous structural alignment profiles, this baseline remains active
+     * indefinitely across execution cycles and defaults to returning {@code false}.
+     * </p>
+     *
+     * @return {@code false} as continuous fixed alignment behaviour does not implicitly trigger an end state
+     */
+    @Override
+    public boolean completed() {
+        return false;
+    }
+
+    /**
      * Processes a single periodic execution step within this state, producing the necessary
      * head-fixing command profile.
      * <p>
      * If the minimum commitment time has elapsed, this method updates the internal completion flag
      * and requests the context to schedule inference for a new macro-action on the next clock tick.
      * Regardless of expiration, it returns the required commands solely intended to keep the robot's
-     * head aligned frontal to <b>optimise</b> sensory tracking.
+     * head aligned frontal to optimise sensory tracking.
      * </p>
      *
      * @param context the {@link EnvFSMContext} tracking the shared operational data

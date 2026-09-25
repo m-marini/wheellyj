@@ -30,8 +30,6 @@ package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.RobotCommands;
 
-import java.util.function.Function;
-
 /**
  * Represents a concrete FSM state where the robot platform is brought to a complete halt.
  * <p>
@@ -42,10 +40,7 @@ import java.util.function.Function;
  * inference for the subsequent execution tick.
  * </p>
  */
-public class HaltState extends AbstractCommitmentState {
-
-    private Function<EnvFSMContext, RobotCommands> onCompletion;
-
+public class HaltState extends AbstractCompletableState {
     /**
      * Constructs a {@code HaltState} with a specified initial timestamp to anchor
      * its minimum commitment duration.
@@ -55,17 +50,6 @@ public class HaltState extends AbstractCommitmentState {
      */
     public HaltState(long commitmentDuration) {
         super(commitmentDuration);
-    }
-
-    /**
-     * Customises the state by assigning a callback function for successful completion.
-     *
-     * @param callback the function to execute upon reaching the destination
-     * @return this state instance to allow method chaining
-     */
-    public HaltState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
-        this.onCompletion = callback;
-        return this;
     }
 
     /**
@@ -81,12 +65,8 @@ public class HaltState extends AbstractCommitmentState {
      */
     @Override
     public RobotCommands tick(EnvFSMContext context) {
-        if (expired(context)) {
-            complete();
-            return onCompletion != null
-                    ? onCompletion.apply(context)
-                    : RobotCommands.halt();
-        }
-        return RobotCommands.halt();
+        return expired(context)
+                ? complete(context)
+                : RobotCommands.halt();
     }
 }

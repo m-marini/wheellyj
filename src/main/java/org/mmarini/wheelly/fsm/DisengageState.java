@@ -32,7 +32,6 @@ import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.geom.Point2D;
-import java.util.function.Function;
 
 /**
  * The {@code DisengageState} class manages the robot's disengagement (release) manoeuvre
@@ -44,25 +43,20 @@ import java.util.function.Function;
  * </p>
  * <p>
  * <b>Transition Behaviour:</b>
+ * </p>
  * <ul>
  *   <li>If the robot is completely blocked, it commands an immediate halt.</li>
  *   <li>If a contact is active, it computes a target in space to move towards.</li>
  *   <li>Once the contact is cleared, the robot continues driving towards the calculated target.</li>
  *   <li>Upon reaching the target (within the robot's specific {@code targetRange}), the state is marked as completed and the completion callback is triggered.</li>
  * </ul>
- * </p>
  */
-public class DisengageState extends AbstractCommitmentState {
+public class DisengageState extends AbstractCompletableState {
 
     /**
      * The minimum safety distance to maintain between the robot and the detected obstacle.
      */
     private final double safetyDistance;
-
-    /**
-     * The callback function to execute upon successful completion of the manoeuvre.
-     */
-    private Function<EnvFSMContext, RobotCommands> onCompletion;
 
     /**
      * The robot status recorded in the previous execution cycle (tick).
@@ -115,18 +109,6 @@ public class DisengageState extends AbstractCommitmentState {
     }
 
     /**
-     * Configures the callback to be invoked when the disengagement manoeuvre completes successfully.
-     * Enables a fluent API interface for state configuration.
-     *
-     * @param callback the function that accepts the context and returns the next command
-     * @return this {@code DisengageState} instance for method chaining
-     */
-    public DisengageState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
-        this.onCompletion = callback;
-        return this;
-    }
-
-    /**
      * Executes the periodic control logic (tick) to monitor contact sensors,
      * compute or maintain the geometric escape target, and determine the completion of the manoeuvre.
      *
@@ -138,10 +120,7 @@ public class DisengageState extends AbstractCommitmentState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         double targetRange = robotStatus.robotSpec().targetRange();
         if (completed()) {
-            // Action completed
-            this.commands = onCompletion != null
-                    ? onCompletion.apply(context)
-                    : RobotCommands.halt();
+            return complete(context);
         } else if (!robotStatus.canMoveForward() && !robotStatus.canMoveBackward()) {
             // Robot blocked
             this.commands = RobotCommands.halt();
@@ -163,10 +142,7 @@ public class DisengageState extends AbstractCommitmentState {
             if (distance <= targetRange) {
                 // disengaged at safe distance
                 // Action completed
-                complete();
-                this.commands = onCompletion != null
-                        ? onCompletion.apply(context)
-                        : RobotCommands.halt();
+                return complete(context);
             }
         }
         prevStatus = robotStatus;

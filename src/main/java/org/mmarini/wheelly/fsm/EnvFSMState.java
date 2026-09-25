@@ -31,39 +31,27 @@ package org.mmarini.wheelly.fsm;
 import org.mmarini.wheelly.apis.RobotCommands;
 
 /**
- * Defines a state within the environment Finite State Machine (FSM).
+ * Represents an abstract state within the Finite State Machine (FSM)
+ * that governs the behaviour of the Wheelly robot in the environment.
  * <p>
- * This interface encapsulates the operational lifecycle of the robot's states,
- * driving periodic execution and monitoring task fulfillment alongside temporal thresholds
- * to coordinate reliable transition <b>behaviour</b>.
+ * Each class implementing this interface defines the specific logic for a state,
+ * determining how the robot reacts to changes in the operational context and which commands
+ * must be issued to the motors and perception modules at each clock cycle.
  * </p>
  */
 public interface EnvFSMState {
 
     /**
-     * Processes a single periodic execution step within this state, producing
-     * the necessary robot commands.
+     * Executes a single processing cycle (tick) for the current state of the FSM.
      * <p>
-     * This method is invoked on every clock cycle to update state-specific logic
-     * and interact with the operational environment via the provided context.
+     * This method analyses the sensory information and internal state stored within the
+     * provided context, handles the necessary logical transitions, and returns the set
+     * of commands to be sent to the robot hardware for the current execution step.
      * </p>
      *
-     * @param context the {@link EnvFSMContext} tracking the shared operational data
-     *                and driving inference routines
-     * @return the {@link RobotCommands} to be executed by the robot platform during this tick
-     * @throws NullPointerException if the provided context is null
+     * @param context the operational context of the FSM containing telemetry, contact
+     *                sensor states (lifecycle features), and environmental data
+     * @return the {@link RobotCommands} to be executed concurrently for the robot base and head
      */
     RobotCommands tick(EnvFSMContext context);
-
-    /**
-     * Indicates whether the internal routine or mission assigned to this state
-     * has successfully reached completion.
-     * <p>
-     * This flag helps the state machine <b>organise</b> internal workflow
-     * transitions without relying solely on external event triggers.
-     * </p>
-     *
-     * @return true if the state's operations are complete; false otherwise
-     */
-    boolean completed();
 }

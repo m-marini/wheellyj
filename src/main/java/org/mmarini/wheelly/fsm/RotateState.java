@@ -32,8 +32,6 @@ import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
-import java.util.function.Function;
-
 /**
  * Represents a finite state machine state that handles the rotational
  * behaviour of the robot towards a specific target direction.
@@ -42,16 +40,12 @@ import java.util.function.Function;
  * optimises transitions upon completion or when an obstacle contact occurs.
  * </p>
  */
-public class RotateState extends AbstractCommitmentState {
+public class RotateState extends AbstractContactEventState {
 
-    /** The target orientation in degrees. */
+    /**
+     * The target orientation in degrees.
+     */
     private int targetDeg;
-
-    /** The callback function executed when the rotation completion condition is met. */
-    private Function<EnvFSMContext, RobotCommands> onCompletion;
-
-    /** The callback function executed when the robot detects a contact or obstacle. */
-    private Function<EnvFSMContext, RobotCommands> onContact;
 
     /**
      * Initialises a new instance of {@code RotateState} with a specified commitment duration.
@@ -74,28 +68,6 @@ public class RotateState extends AbstractCommitmentState {
     }
 
     /**
-     * Customises the state by assigning a callback function for successful completion.
-     *
-     * @param callback the function to execute upon reaching the target angle
-     * @return this state instance to allow method chaining
-     */
-    public RotateState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
-        this.onCompletion = callback;
-        return this;
-    }
-
-    /**
-     * Customises the state by assigning a callback function for contact or obstacle events.
-     *
-     * @param callback the function to execute if a contact is detected
-     * @return this state instance to allow method chaining
-     */
-    public RotateState onContact(Function<EnvFSMContext, RobotCommands> callback) {
-        this.onContact = callback;
-        return this;
-    }
-
-    /**
      * Evaluates the environment state on each clock tick and produces the next robot command.
      * <p>
      * This method verifies if the robot can safely turn, checks whether the orientation
@@ -105,27 +77,19 @@ public class RotateState extends AbstractCommitmentState {
      * @param context the current finite state machine context containing the world model
      * @return the computed {@link RobotCommands} to guide the robot's behaviour
      */
-   @Override
-   public RobotCommands tick(EnvFSMContext context) {
+    @Override
+    public RobotCommands tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
-        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward()) {
-            complete();
-            return onContact != null
-                    ? onContact.apply(context)
-                    : RobotCommands.halt();
+        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward() || contacted()) {
+            return triggerContact(context);
         }
         if (completed()) {
-            return onCompletion != null
-                    ? onCompletion.apply(context)
-                    : RobotCommands.halt();
+            return complete(context);
         }
 
         Complex directionRange = robotStatus.robotSpec().directionRange();
         if (robotStatus.direction().isCloseTo(targetDeg, directionRange.toIntDeg())) {
-            complete();
-            return onCompletion != null
-                    ? onCompletion.apply(context)
-                    : RobotCommands.halt();
+            return complete(context);
         }
         return RobotCommands.rotate(targetDeg);
     }

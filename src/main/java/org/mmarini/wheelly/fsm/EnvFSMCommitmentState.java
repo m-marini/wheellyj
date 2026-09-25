@@ -28,19 +28,27 @@
 
 package org.mmarini.wheelly.fsm;
 
-public enum MoveActionId {
-    CONTINUE_MOVE_ACTION,
-    HALT_ACTION,
-    MICRO_FORWARD_ACTION,
-    MICRO_BACKWARD_ACTION,
-    MICRO_LEFT_ACTION,
-    MICRO_RIGHT_ACTION,
-    TURN_FACE_NEAREST_OBSTACLE_ACTION,
-    TURN_REAR_NEAREST_OBSTACLE_ACTION,
-    TURN_FACE_NEAREST_MARKER_ACTION,
-    TURN_REAR_NEAREST_MARKER_ACTION,
-    TURN_LEFT_SCAN_ACTION,
-    TURN_RIGHT_SCAN_ACTION,
-    DISENGAGE_ON_CONTACT_ACTION,
-    TRACK_NEAREST_MARKER
+/**
+ * Represents a specialised state within the Finite State Machine (FSM) that features
+ * an action commitment duration.
+ * <p>
+ * This interface extends {@link EnvFSMState} to support behaviour that requires
+ * continuous execution over a minimum period, preventing rapid oscillations or early decision switching.
+ * </p>
+ */
+public interface EnvFSMCommitmentState extends EnvFSMState {
+
+    /**
+     * Checks whether the current action commitment duration for this state has expired.
+     * <p>
+     * This method evaluates the operational context to determine if the state has met
+     * its temporal limits (e.g. minimum commitment steps).
+     * </p>
+     *
+     * @param context the operational context of the FSM containing telemetry,
+     *                commitment timers, and sensory information
+     * @return {@code true} if the commitment threshold has been reached or expired,
+     * {@code false} if the state must maintain its current active behaviour
+     */
+    boolean expired(EnvFSMContext context);
 }

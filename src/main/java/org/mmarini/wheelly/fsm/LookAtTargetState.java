@@ -43,10 +43,8 @@ import static java.util.Objects.requireNonNull;
  * target. It allows configuring whether the look profile should be front-facing or rear-facing,
  * resetting the gaze forward if the required angle falls outside a specific tolerance range.
  * </p>
- *
- * @author Marco Marini
  */
-public class LookAtTargetState extends AbstractCommitmentState {
+public class LookAtTargetState extends AbstractCommitmentState implements EnvFSMCompletableState {
 
     /**
      * The minimum distance from the target (in metres) required to actively track its direction.
@@ -76,6 +74,20 @@ public class LookAtTargetState extends AbstractCommitmentState {
     }
 
     /**
+     * Indicates whether the gaze tracking macro-action has successfully completed.
+     * <p>
+     * For continuous sensory observation profiles, this tracking baseline remains active
+     * indefinitely across execution cycles and defaults to returning {@code false}.
+     * </p>
+     *
+     * @return {@code false} as continuous tracking behaviour does not implicitly trigger an end state
+     */
+    @Override
+    public boolean completed() {
+        return false;
+    }
+
+    /**
      * Initialises the state by setting the target co-ordinates, alignment profile, and tracking timeline.
      * <p>
      * This method prepares the state parameters for ongoing execution ticks, registering the
@@ -84,7 +96,7 @@ public class LookAtTargetState extends AbstractCommitmentState {
      *
      * @param context     the {@link EnvFSMContext} tracking the shared operational data
      * @param target      the {@link Point2D} co-ordinate of the target, must not be null
-     * @param frontFacing true if front-facing tracking is required; false for rear-facing
+     * @param frontFacing {@code true} if front-facing tracking is required; {@code false} for rear-facing
      * @throws NullPointerException if the provided target is null
      */
     public void init(EnvFSMContext context, Point2D target, boolean frontFacing) {

@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.fsm;
 
+import io.reactivex.rxjava3.core.Single;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -53,7 +54,7 @@ import static org.mmarini.wheelly.apis.RobotStatusId.FORWARD;
 import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
 import static org.mmarini.wheelly.apis.Utils.MM;
 
-class MovePathStateTest {
+class AsyncMovePathStateTest {
     public static final int COMMITMENT_TIME = 1000;
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
@@ -71,7 +72,7 @@ class MovePathStateTest {
     }
 
     WorldModelBuilder builder;
-    MovePathState state;
+    AsyncMovePathState state;
     List<EnvFSMContext> onCompletionContexts;
     List<EnvFSMContext> onContactContexts;
     List<Point2D> path;
@@ -81,15 +82,16 @@ class MovePathStateTest {
         this.builder = new WorldModelBuilder();
         this.onCompletionContexts = new ArrayList<>();
         this.onContactContexts = new ArrayList<>();
-        this.state = new MovePathState(COMMITMENT_TIME)
+        this.state = new AsyncMovePathState(COMMITMENT_TIME)
+                .onContact(ctx1 -> {
+                    onContactContexts.add(ctx1);
+                    return RobotCommands.halt();
+                })
                 .onCompletion(ctx1 -> {
                     onCompletionContexts.add(ctx1);
                     return RobotCommands.halt();
                 })
-                .onContact(ctx1 -> {
-                    onContactContexts.add(ctx1);
-                    return RobotCommands.halt();
-                });
+        ;
     }
 
     @ParameterizedTest
@@ -112,7 +114,7 @@ class MovePathStateTest {
                 .build();
         //--------
         // When init
-        state.init(ctx[0], path);
+        state.init(ctx[0], Single.just(path));
         // And ticks
         RobotCommands[] cmd = Arrays.stream(ctx)
                 .skip(1)
@@ -160,7 +162,7 @@ class MovePathStateTest {
 
         //--------
         // When init
-        state.init(ctx[0], path);
+        state.init(ctx[0], Single.just(path));
         // And ticks
         RobotCommands[] cmd = Arrays.stream(ctx)
                 .skip(1)
@@ -220,7 +222,7 @@ class MovePathStateTest {
 
         //--------
         // When init
-        state.init(ctx[0], path);
+        state.init(ctx[0], Single.just(path));
         // And ticks
         RobotCommands[] cmd = Arrays.stream(ctx)
                 .skip(1)

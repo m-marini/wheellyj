@@ -28,42 +28,19 @@
 
 package org.mmarini.wheelly.fsm;
 
+import io.reactivex.rxjava3.core.Single;
 import org.mmarini.wheelly.apis.RobotCommands;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.List;
-import java.util.function.Function;
 
-import static java.util.Objects.requireNonNull;
-
-/**
- * State that manages the movement of the robot along a multipoint path trajectory.
- * <p>
- * This state coordinates a sequential trajectory using a nested {@link MoveState}
- * to handle individual path segments. The path is injected and bound directly
- * during the state initialisation phase.
- * </p>
- *
- * <p><b>Lifecycle &amp; Event Flow:</b></p>
- * <ul>
- *   <li><b>Initialisation:</b> The path reference is set in {@link #init(EnvFSMContext, List)}.
- *       If the path is empty, execution completes immediately.</li>
- *   <li><b>Nominal Flow:</b> As each segment completes, {@link #onMoveCompletion(EnvFSMContext)}
- *       advances the target index and chains execution to the next point.</li>
- *   <li><b>Exception Flow:</b> If a collision occurs, {@link #onContact(EnvFSMContext)}
- *       marks the execution as completed and permanently halts or diverts the robot via a registered callback.</li>
- * </ul>
- *
- * @see MoveState
- * @see AbstractCommitmentState
- */
-public class MovePathState extends AbstractCommitmentState {
+public class AsyncMovePathState extends AbstractContactEventState {
+    private static final Logger logger = LoggerFactory.getLogger(AsyncMovePathState.class);
     private final MoveState moveState;
-    private Function<EnvFSMContext, RobotCommands> onCompletion;
-    private Function<EnvFSMContext, RobotCommands> onContact;
-    private List<Point2D> path;
-    private int currentTargetIdx;
-    private boolean hasContact;
+    private volatile List<Point2D> path;
+    private volatile int currentTargetIdx;
 
     /**
      * Constructs a new {@code MovePathState} with a defined commitment duration.
@@ -74,11 +51,11 @@ public class MovePathState extends AbstractCommitmentState {
      *
      * @param commitmentTime the maximum time execution threshold allotted for this state
      */
-    public MovePathState(int commitmentTime) {
+    public AsyncMovePathState(int commitmentTime) {
         super(commitmentTime);
         this.moveState = new MoveState(0)
-                .onCompletion(this::onMoveCompletion)
-                .onContact(this::onContact);
+                .onContact(this::onContact)
+                .onCompletion(this::onMoveCompletion);
     }
 
     /**
@@ -92,27 +69,14 @@ public class MovePathState extends AbstractCommitmentState {
      * @param path the ordered list of 2D waypoints defining the trajectory. Must not be null.
      * @throws NullPointerException if the path parameter is null
      */
-    public void init(EnvFSMContext ctx, List<Point2D> path) {
+    public void init(EnvFSMContext ctx, Single<List<Point2D>> path) {
         super.init(ctx);
-        this.path = requireNonNull(path);
         this.currentTargetIdx = 0;
-        this.hasContact = false; // Line 58: Resets contact flag for the new execution cycle
-        if (path.isEmpty()) {
-            complete();
-        } else {
-            moveState.init(ctx, path.getFirst());
-        }
-    }
-
-    /**
-     * Customises the state by assigning a callback function for successful completion.
-     *
-     * @param callback the function to execute upon reaching the destination
-     * @return this state instance to allow method chaining
-     */
-    public MovePathState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
-        this.onCompletion = callback;
-        return this;
+        this.path = null;
+        path.subscribe(path1 ->
+                        onPath(ctx, path1),
+                err ->
+                        onError(ctx, err));
     }
 
     /**
@@ -126,46 +90,28 @@ public class MovePathState extends AbstractCommitmentState {
      * @return the resulting robot commands to execution, defaulting to a halt command if no callback is registered
      */
     private RobotCommands onContact(EnvFSMContext context) {
-        complete();
-        this.hasContact = true; // Line 79: Latches the contact state to trigger immediate abort procedures
-        return onContact != null
-                ? onContact.apply(context)
-                : RobotCommands.halt();
+        return triggerContact(context);
     }
 
-    /**
-     * Customises the state by assigning a callback function for contact or obstacle events.
-     *
-     * @param callback the function to execute if a contact is detected
-     * @return this state instance to allow method chaining
-     */
-    public MovePathState onContact(Function<EnvFSMContext, RobotCommands> callback) {
-        this.onContact = callback;
-        return this;
+    private void onError(EnvFSMContext ctx, Throwable error) {
+        logger.atError().setCause(error).log("Error computing path");
+        complete(ctx);
     }
 
-    /**
-     * Internally processes segment transitions triggered by the underlying {@link MoveState}.
-     * <p>
-     * Increments the path index to route toward successive coordinates. If all targets
-     * have been exhausted, finalises the entire trajectory.
-     * </p>
-     *
-     * @param context the state machine environment context
-     * @return the robot commands issued by the next step or termination callback
-     */
     private RobotCommands onMoveCompletion(EnvFSMContext context) {
         if (currentTargetIdx == path.size()) {
             // final target reached
-            complete();
-            return onCompletion != null
-                    ? onCompletion.apply(context)
-                    : RobotCommands.halt();
+            return complete(context);
         } else {
             // go to next point
             moveState.init(context, path.get(currentTargetIdx++));
             return moveState.tick(context);
         }
+    }
+
+    private void onPath(EnvFSMContext context, List<Point2D> point2DS) {
+        this.currentTargetIdx = 0;
+        moveState.init(context, path.getFirst());
     }
 
     /**
@@ -180,16 +126,16 @@ public class MovePathState extends AbstractCommitmentState {
      */
     @Override
     public RobotCommands tick(EnvFSMContext context) {
-        if (hasContact) { // Line 112: Intercepts active collision flags to short-circuit nominal execution
-            return onContact != null
-                    ? onContact.apply(context)
-                    : RobotCommands.halt();
+        if (contacted()) { // Line 112: Intercepts active collision flags to short-circuit nominal execution
+            return triggerContact(context);
         }
-        if (path.isEmpty() || completed()) {
-            complete();
-            return onCompletion != null
-                    ? onCompletion.apply(context)
-                    : RobotCommands.halt();
+        if (completed()) {
+            return complete(context);
+        }
+        List<Point2D> path = this.path;
+        if (path == null) {
+            // Waiting for path
+            return RobotCommands.halt();
         }
         return moveState.tick(context);
     }

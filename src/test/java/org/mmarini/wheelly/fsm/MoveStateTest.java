@@ -33,7 +33,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -86,12 +89,12 @@ class MoveStateTest {
         this.onCompletionContext = new ArrayList<>();
         this.onContactContext = new ArrayList<>();
         this.state = new MoveState(COMMITMENT_TIME)
-                .onCompletion(ctx1 -> {
-                    onCompletionContext.add(ctx1);
-                    return RobotCommands.halt();
-                })
                 .onContact(ctx1 -> {
                     onContactContext.add(ctx1);
+                    return RobotCommands.halt();
+                })
+                .onCompletion(ctx1 -> {
+                    onCompletionContext.add(ctx1);
                     return RobotCommands.halt();
                 });
     }
@@ -244,18 +247,18 @@ class MoveStateTest {
         // and target location
         Point2D targetPosition = targetDir.at(robotLocation, distance);
         // And context
-        MockFSMContext[] ctx = MockFSMContext.builder()
+        MockFSMContext[] ctxs = MockFSMContext.builder()
                 // Init
                 .add(builder.robotLocation(robotLocation)
                         .robotDir(robotDeg))
 
                 // tick
                 .add(builder)
-                // tick before commitment
+                // tick before 2ms commitment
                 .add(builder.addTime(COMMITMENT_TIME / 2))
 
-                // tick after commitment
-                .add(builder.addTime(COMMITMENT_TIME / 2 - 1)
+                // tick before 1ms commitment and robot opposite target and forward  by half movement and front contact
+                .add(builder.addTime(1)
                         // and robot dir opposite targetDir
                         .robotDir(targetDir.toIntDeg())
                         // and robot forward by half movement
@@ -264,29 +267,38 @@ class MoveStateTest {
                         .canMoveBackward(false))
                 .build();
 
-        // When executing the action
-        state.init(ctx[0], targetPosition);
-        RobotCommands[] cmd = Arrays.stream(ctx)
-                .skip(1)
-                .map(state::tick)
-                .toArray(RobotCommands[]::new);
+        // When init
+        int idx = 0;
+        MockFSMContext ctx = ctxs[idx++];
+        state.init(ctx, targetPosition);
 
+        // When first tick
+        ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(FORWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
+        assertEquals(FORWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
 
+        // When tick before 2ms commitment
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(FORWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
+        assertEquals(FORWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
 
+        // When tick before 1ms commitment and robot opposite target and forward  by half movement and front contact
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(HALT, cmd[2].status());
+        assertEquals(HALT, cmd.status());
         // And action should not have been completed
-        assertTrue(state.completed());
+        assertTrue(state.contacted());
+        // And action should not have been completed
+        assertFalse(state.completed());
         // And action should not have been expired
-        assertFalse(state.expired(ctx[3]));
+        assertFalse(state.expired(ctx));
         // And on contact context should be the last one
-        assertThat(onContactContext, contains(ctx[3]));
+        assertThat(onContactContext, contains(ctx));
         assertThat(onCompletionContext, empty());
     }
 
@@ -303,18 +315,17 @@ class MoveStateTest {
         // and target location
         Point2D targetPosition = targetDir.at(robotLocation, distance);
         // And context
-        MockFSMContext[] ctx = MockFSMContext.builder()
+        MockFSMContext[] ctxs = MockFSMContext.builder()
                 // Init
                 .add(builder.robotLocation(robotLocation)
                         .robotDir(robotDeg))
 
                 // tick
                 .add(builder)
-                // tick before commitment
-                .add(builder.addTime(COMMITMENT_TIME / 2))
-
-                // tick after commitment
-                .add(builder.addTime(COMMITMENT_TIME / 2 - 1)
+                // tick before 2 ms commitment
+                .add(builder.addTime(COMMITMENT_TIME - 2))
+                // tick before 1 ms commitment robot at opposite target and backward and rear contact
+                .add(builder.addTime(1)
                         // and robot dir opposite targetDir
                         .robotDir(targetDir.opposite().toIntDeg())
                         // and robot backward by half movement
@@ -323,29 +334,38 @@ class MoveStateTest {
                         .canMoveBackward(false))
                 .build();
 
-        // When executing the action
-        state.init(ctx[0], targetPosition);
-        RobotCommands[] cmd = Arrays.stream(ctx)
-                .skip(1)
-                .map(state::tick)
-                .toArray(RobotCommands[]::new);
+        // When init
+        int idx = 0;
+        MockFSMContext ctx = ctxs[idx++];
+        state.init(ctxs[0], targetPosition);
 
+        // When first tick
+        ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(BACKWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
+        assertEquals(BACKWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
 
+        // When tick before commitment
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(BACKWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
+        assertEquals(BACKWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
 
+        // When tick after commitment robot at opposite target and backward and rear contact
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(HALT, cmd[2].status());
+        assertEquals(HALT, cmd.status());
         // And action should not have been completed
-        assertTrue(state.completed());
+        assertTrue(state.contacted());
+        // And action should not have been completed
+        assertFalse(state.completed());
         // And action should not have been expired
-        assertFalse(state.expired(ctx[3]));
+        assertFalse(state.expired(ctx));
         // And on contact context should be the last one
-        assertThat(onContactContext, contains(ctx[3]));
+        assertThat(onContactContext, contains(ctx));
         assertThat(onCompletionContext, empty());
     }
 }

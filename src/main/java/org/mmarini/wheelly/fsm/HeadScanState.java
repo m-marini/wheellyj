@@ -30,8 +30,6 @@ package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.RobotCommands;
 
-import java.util.function.Function;
-
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -41,10 +39,10 @@ import static java.util.Objects.requireNonNull;
  * This state transitions the head through multiple predefined angles, holding each
  * orientation for a fixed scan interval. It tracks the step execution and, upon
  * completion of the final angular target, flags itself as complete and requests
- * the next macro-action from the inference framework to coordinate subsequent <b>behaviour</b>.
+ * the next macro-action from the inference framework to coordinate subsequent behaviour.
  * </p>
  */
-public class HeadScanState extends AbstractCommitmentState {
+public class HeadScanState extends AbstractCompletableState {
 
     /**
      * The temporal duration in milliseconds allocated to each individual scan step.
@@ -65,7 +63,6 @@ public class HeadScanState extends AbstractCommitmentState {
      * The index pointing to the active target angle within the scan sequence.
      */
     private int currentStepIndex;
-    private Function<EnvFSMContext, RobotCommands> onCompletion;
 
     /**
      * Constructs a {@code HeadScanState} with the specified commitment duration
@@ -86,7 +83,7 @@ public class HeadScanState extends AbstractCommitmentState {
      * <p>
      * This method resets the operational tracking markers, validates the target orientation
      * parameters, and anchors the initial step timestamp using the current timeline of the
-     * robot status to <b>optimise</b> sequencing steps.
+     * robot status to optimise sequencing steps.
      * </p>
      *
      * @param context the {@link EnvFSMContext} tracking the shared operational data
@@ -105,36 +102,16 @@ public class HeadScanState extends AbstractCommitmentState {
     }
 
     /**
-     * Customises the state by assigning a callback function for successful completion.
-     *
-     * @param callback the function to execute upon reaching the destination
-     * @return this state instance to allow method chaining
-     */
-    public HeadScanState onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
-        this.onCompletion = callback;
-        return this;
-    }
-
-    /**
-     * Executes the sequential scanning logic for the current execution tick.
-     * <p>
-     * This method monitors the elapsed robot time against the active step marker. When the interval
-     * elapses, it shifts the array index to the subsequent target angle. Once the final step expires,
-     * it invokes {@link #complete()}, flags a request to trigger macro-action inference at the
-     * subsequent clock tick, and returns a general halt instruction.
-     * </p>
+     * Executes the periodic control logic (tick) to advance through the angular scanning steps,
+     * track time-based interval expiry, and handle macro-action finalisation upon sequencing completion.
      *
      * @param context the {@link EnvFSMContext} tracking the shared operational data
-     * @return the {@link RobotCommands} restricting execution to the active head target angle,
-     * or a stationary halt profile upon sequence completion
-     * @throws NullPointerException if the provided context is null
+     * @return the {@link RobotCommands} to be processed by the robot hardware during this cycle
      */
     @Override
     public RobotCommands tick(EnvFSMContext context) {
         if (completed()) {
-            return onCompletion != null
-                    ? onCompletion.apply(context)
-                    : RobotCommands.halt();
+            return complete(context);
         }
         long time = context.worldModel().robotStatus().robotTime();
         if (time >= startStepTime + scanInterval) {
@@ -144,14 +121,10 @@ public class HeadScanState extends AbstractCommitmentState {
                 currentStepIndex++;
                 startStepTime = time;
             } else {
-                complete();
-                return onCompletion != null
-                        ? onCompletion.apply(context)
-                        : RobotCommands.halt();
+                return complete(context);
             }
         }
         // Handles commitment interval
         return RobotCommands.halt(headDeg[currentStepIndex]);
     }
-
 }

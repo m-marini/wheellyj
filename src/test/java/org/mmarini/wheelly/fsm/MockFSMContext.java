@@ -28,9 +28,11 @@
 
 package org.mmarini.wheelly.fsm;
 
+import io.reactivex.rxjava3.core.Maybe;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,11 +47,13 @@ public class MockFSMContext implements EnvFSMContext {
 
     private final WorldModel model;
     private final AgentAction nextAction;
+    private final List<Point2D> path;
     private int nextActionCount;
 
-    public MockFSMContext(WorldModel model, AgentAction nextAction) {
+    public MockFSMContext(WorldModel model, AgentAction nextAction, List<Point2D> path) {
         this.model = requireNonNull(model);
         this.nextAction = requireNonNull(nextAction);
+        this.path = path;
     }
 
     @Override
@@ -62,6 +66,20 @@ public class MockFSMContext implements EnvFSMContext {
         return nextActionCount;
     }
 
+    private Maybe<List<Point2D>> path() {
+        return (path == null ? Maybe.empty() : Maybe.just(path));
+    }
+
+    @Override
+    public Maybe<List<Point2D>> pathToNearestMarker() {
+        return path();
+    }
+
+    @Override
+    public Maybe<List<Point2D>> pathToNearestUnknownArea() {
+        return path();
+    }
+
     @Override
     public WorldModel worldModel() {
         return model;
@@ -70,33 +88,68 @@ public class MockFSMContext implements EnvFSMContext {
     public static class EnvFSMContextBuilder {
 
         private final List<MockFSMContext> contexts;
-        private AgentAction lastAgentAction;
+        private AgentAction agentAction;
+        private List<Point2D> path;
+        private WorldModelBuilder builder;
 
         protected EnvFSMContextBuilder(List<MockFSMContext> contexts) {
-            this.contexts = contexts;
-            this.lastAgentAction = new AgentAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
+            this.contexts = requireNonNull(contexts);
+            this.agentAction = new AgentAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
+            this.path = List.of();
         }
 
-        public EnvFSMContextBuilder add(MockFSMContext context) {
-            contexts.add(context);
+        public EnvFSMContextBuilder action(AgentAction agentAction) {
+            this.agentAction = requireNonNull(agentAction);
+            return this;
+        }
+
+        public EnvFSMContextBuilder action(MoveActionId moveActionId) {
+            agentAction = agentAction.moveId(moveActionId);
+            return this;
+        }
+
+        public EnvFSMContextBuilder action(HeadActionId headActionId) {
+            agentAction = agentAction.headId(headActionId);
+            return this;
+        }
+
+        public EnvFSMContextBuilder action(MoveActionId moveActionId, HeadActionId headActionId) {
+            return action(new AgentAction(moveActionId, headActionId));
+        }
+
+        public EnvFSMContextBuilder add() {
+            contexts.add(new MockFSMContext(builder.build(), agentAction, path));
             return this;
         }
 
         public EnvFSMContextBuilder add(WorldModelBuilder builder) {
-            return add(new MockFSMContext(builder.build(), lastAgentAction));
+            return world(builder).add();
         }
 
         public EnvFSMContextBuilder add(AgentAction action, WorldModelBuilder builder) {
-            lastAgentAction = action;
-            return add(new MockFSMContext(builder.build(), action));
+            return action(action).world(builder).add();
         }
 
         public EnvFSMContextBuilder add(MoveActionId moveId, HeadActionId headId, WorldModelBuilder builder) {
-            return add(new AgentAction(moveId, headId), builder);
+            return action(moveId, headId).world(builder).add();
+        }
+
+        public EnvFSMContextBuilder add(MoveActionId moveId, HeadActionId headId, List<Point2D> path, WorldModelBuilder builder) {
+            return action(moveId, headId).path(path).world(builder).add();
         }
 
         public MockFSMContext[] build() {
             return contexts.toArray(MockFSMContext[]::new);
+        }
+
+        public EnvFSMContextBuilder path(List<Point2D> path) {
+            this.path = requireNonNull(path);
+            return this;
+        }
+
+        public EnvFSMContextBuilder world(WorldModelBuilder builder) {
+            this.builder = requireNonNull(builder);
+            return this;
         }
     }
 }

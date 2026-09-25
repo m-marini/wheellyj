@@ -51,8 +51,8 @@ public class BaseHeadState implements EnvFSMState {
     private final LookStraightState lookStraightState;
     private final HeadScanState headScanState;
     private final LookAtTargetState lookAtTarget;
-    private AbstractCommitmentState baseState;
-    private AbstractCommitmentState headState;
+    private EnvFSMCompletableState baseState;
+    private EnvFSMCompletableState headState;
     private HeadActionId headAction;
     private MoveActionId moveAction;
 
@@ -65,10 +65,10 @@ public class BaseHeadState implements EnvFSMState {
         this.headScanState = new HeadScanState(config.commitmentDuration, config.scanInterval);
         this.lookAtTarget = new LookAtTargetState(config.commitmentDuration, config.minHeadTargetDistance);
         this.disengageState = new DisengageState(config.commitmentDuration, config.safeDistance);
-        moveState.onCompletion(this::forceHalt)
-                .onContact(this::forceHalt);
-        rotateState.onCompletion(this::forceHalt)
-                .onContact(this::forceHalt);
+        moveState.onContact(this::forceHalt)
+                .onCompletion(this::forceHalt);
+        rotateState.onContact(this::forceHalt)
+                .onCompletion(this::forceHalt);
         disengageState.onCompletion(this::forceHalt);
     }
 
@@ -119,11 +119,6 @@ public class BaseHeadState implements EnvFSMState {
         if (baseState == null) {
             initHalt(context);
         }
-    }
-
-    @Override
-    public boolean completed() {
-        return false;
     }
 
     Point2D findNearestMarker(EnvFSMContext context, double minDistance) {

@@ -28,19 +28,29 @@
 
 package org.mmarini.wheelly.fsm;
 
-public enum MoveActionId {
-    CONTINUE_MOVE_ACTION,
-    HALT_ACTION,
-    MICRO_FORWARD_ACTION,
-    MICRO_BACKWARD_ACTION,
-    MICRO_LEFT_ACTION,
-    MICRO_RIGHT_ACTION,
-    TURN_FACE_NEAREST_OBSTACLE_ACTION,
-    TURN_REAR_NEAREST_OBSTACLE_ACTION,
-    TURN_FACE_NEAREST_MARKER_ACTION,
-    TURN_REAR_NEAREST_MARKER_ACTION,
-    TURN_LEFT_SCAN_ACTION,
-    TURN_RIGHT_SCAN_ACTION,
-    DISENGAGE_ON_CONTACT_ACTION,
-    TRACK_NEAREST_MARKER
+/**
+ * Represents a specialised FSM state that can explicitly signal the successful
+ * completion of its tactical goal or macro-action.
+ * <p>
+ * This interface extends {@link EnvFSMCommitmentState} to provide an explicit feedback
+ * loop for actions whose termination depends on achieving a specific physical or
+ * structural target (such as a robot base reaching its safety distance or a head sensor
+ * entering its angular target deadband).
+ * </p>
+ */
+public interface EnvFSMCompletableState extends EnvFSMCommitmentState {
+
+    /**
+     * Checks whether the macro-action or tactical goal associated with this state
+     * has been successfully completed.
+     * <p>
+     * This termination signal acts independently of time-based constraints, ensuring
+     * that dependent higher-level behaviours or reinforcement learning wrappers are
+     * notified precisely when the physical criteria of the execution lifecycle have been met.
+     * </p>
+     *
+     * @return {@code true} if the objective of this state has been fully achieved,
+     * {@code false} if the execution lifecycle is still active
+     */
+    boolean completed();
 }
