@@ -63,7 +63,7 @@ public class HaltScanStateTest {
                 .add(worldBuilder.addTime(SCAN_INTERVAL - COMMITMENT_TIME + 1))
                 .add(worldBuilder.addTime(SCAN_INTERVAL))
                 .add(worldBuilder.addTime(SCAN_INTERVAL))
-                .build();
+                .buildArray();
 
         // When ...
         state.init(ctx[0]);
@@ -113,7 +113,7 @@ public class HaltScanStateTest {
                 .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION, worldBuilder.addTime(SCAN_INTERVAL))
                 // 45
                 .add(worldBuilder.addTime(SCAN_INTERVAL))
-                .build();
+                .buildArray();
 
         // When ...
         state.init(ctx[0]);

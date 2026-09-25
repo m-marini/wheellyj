@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.fsm;
 
 import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.disposables.Disposable;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,20 +37,29 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.List;
 
+
+/**
+ * Represents a concrete FSM state that handles the asynchronous navigation of the robot
+ * along a computed path of sequential co-ordinates.
+ * <p>
+ * This state subscribes to a reactive stream supplying a list of target waypoints.
+ * It delegates individual waypoint traversal to an internal {@link MoveState} instance, advancing the target
+ * index upon each waypoint completion and monitoring tactile contact sensors to safely intercept
+ * and handle collisions during the movement lifecycle.
+ * </p>
+ */
 public class AsyncMovePathState extends AbstractContactEventState {
     private static final Logger logger = LoggerFactory.getLogger(AsyncMovePathState.class);
     private final MoveState moveState;
     private volatile List<Point2D> path;
-    private volatile int currentTargetIdx;
+    private int currentTargetIdx;
+    private volatile Throwable error;
+    private Disposable disposable;
 
     /**
-     * Constructs a new {@code MovePathState} with a defined commitment duration.
-     * <p>
-     * Internally configures the substate {@link MoveState} by linking its completion
-     * and contact event listeners to this state's internal handlers.
-     * </p>
+     * Constructs an {@code AsyncMovePathState} with a specified commitment duration window.
      *
-     * @param commitmentTime the maximum time execution threshold allotted for this state
+     * @param commitmentTime the length of time in milliseconds that the state must remain active
      */
     public AsyncMovePathState(int commitmentTime) {
         super(commitmentTime);
@@ -59,45 +69,59 @@ public class AsyncMovePathState extends AbstractContactEventState {
     }
 
     /**
-     * Initialises the state with the current execution context and a static trajectory path.
-     * <p>
-     * <b>Warning:</b> No defensive deep copy of the path list is created. External mutations
-     * to the injected list will alter subsequent target coordinate lookups in real-time.
-     * </p>
+     * Initialises the state context, resetting the path tracking pointers, disposing of
+     * any stale streams, and subscribing to the reactive path computation provider.
      *
-     * @param ctx  the state machine environment context
-     * @param path the ordered list of 2D waypoints defining the trajectory. Must not be null.
-     * @throws NullPointerException if the path parameter is null
+     * @param ctx  the current operational context of the finite state machine
+     * @param path the reactive {@link Single} stream emitting the computed list of co-ordinates
+     * @throws NullPointerException if the provided context or path stream is null
      */
     public void init(EnvFSMContext ctx, Single<List<Point2D>> path) {
         super.init(ctx);
         this.currentTargetIdx = 0;
+        if (disposable != null) {
+            disposable.dispose();
+        }
         this.path = null;
-        path.subscribe(path1 ->
-                        onPath(ctx, path1),
-                err ->
-                        onError(ctx, err));
+        this.error = null;
+        this.currentTargetIdx = -1;
+        this.disposable = path.subscribe(this::onPath,
+                this::onError);
     }
 
     /**
-     * Internally handles contact or collision events intercepted from the underlying {@link MoveState}.
-     * <p>
-     * Forces immediate path completion, flags the failure state via {@code hasContact} to short-circuit
-     * further processing, and delegates control to the configured contact handler callback.
-     * </p>
+     * Internal callback that intercepts a contact or collision event from the nested
+     * move state and propagates it to this state container.
      *
-     * @param context the state machine environment context
-     * @return the resulting robot commands to execution, defaulting to a halt command if no callback is registered
+     * @param context the current finite state machine context
+     * @return the reactive {@link RobotCommands} triggered by the contact event
      */
     private RobotCommands onContact(EnvFSMContext context) {
         return triggerContact(context);
     }
 
-    private void onError(EnvFSMContext ctx, Throwable error) {
+    /**
+     * Reactive callback invoked when the path processing stream throws an error.
+     *
+     * @param error the exception encountered during path calculation
+     */
+    private void onError(Throwable error) {
         logger.atError().setCause(error).log("Error computing path");
-        complete(ctx);
+        this.error = error;
     }
 
+    /**
+     * Internal callback triggered when the delegated {@link MoveState} successfully reaches
+     * the current waypoint target.
+     * <p>
+     * If the final point in the path sequence has been touched, the macro-action finishes
+     * and flags completion.
+     * Otherwise, it initialises the next waypoint and processes its tick.
+     * </p>
+     *
+     * @param context the current finite state machine context
+     * @return the next set of execution {@link RobotCommands}
+     */
     private RobotCommands onMoveCompletion(EnvFSMContext context) {
         if (currentTargetIdx == path.size()) {
             // final target reached
@@ -109,34 +133,47 @@ public class AsyncMovePathState extends AbstractContactEventState {
         }
     }
 
-    private void onPath(EnvFSMContext context, List<Point2D> point2DS) {
-        this.currentTargetIdx = 0;
-        moveState.init(context, path.getFirst());
+    /**
+     * Reactive callback invoked when the path sequence is successfully computed and emitted.
+     *
+     * @param path the ordered list of spatial waypoint co-ordinates
+     */
+    private void onPath(List<Point2D> path) {
+        logger.atDebug().log("Moving path {}", path);
+        this.path = path;
     }
 
     /**
-     * Executes cyclic periodic processing logic for the path state machine.
-     * <p>
-     * Checks for short-circuit conditions (prior contact triggers or empty/completed configurations)
-     * before delegating cyclic ticks downstream to the current segment worker.
-     * </p>
+     * Processes a single periodic execution step within this state, coordinating asynchronous
+     * stream readiness, path sequencing tracking, and goal termination boundaries.
      *
-     * @param context the state machine environment context
-     * @return the resulting action commands destined for the robot architecture
+     * @param context the {@link EnvFSMContext} tracking the shared operational data
+     * @return the {@link RobotCommands} to be dispatched to the robot hardware during this cycle
+     * @throws NullPointerException if the provided context is null
      */
     @Override
     public RobotCommands tick(EnvFSMContext context) {
-        if (contacted()) { // Line 112: Intercepts active collision flags to short-circuit nominal execution
+        if (contacted()) {
             return triggerContact(context);
         }
         if (completed()) {
+            return complete(context);
+        }
+        if (error != null) {
             return complete(context);
         }
         List<Point2D> path = this.path;
         if (path == null) {
             // Waiting for path
             return RobotCommands.halt();
+        } else if (path.isEmpty()) {
+            return complete(context);
+        } else if (currentTargetIdx >= 0) {
+            return moveState.tick(context);
+        } else {
+            currentTargetIdx = 0;
+            moveState.init(context, path.getFirst());
+            return moveState.tick(context);
         }
-        return moveState.tick(context);
     }
 }

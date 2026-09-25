@@ -68,7 +68,7 @@ class HaltStateTest {
                 .add(builder.addTime(COMMITMENT_TIME / 2))
                 .add(builder.addTime(COMMITMENT_TIME / 2 + 1))
                 .add(builder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When ...
         state.init(ctx[0]);

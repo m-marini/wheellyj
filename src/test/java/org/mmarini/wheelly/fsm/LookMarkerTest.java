@@ -120,7 +120,7 @@ public class LookMarkerTest {
                 .add(worldBuilder)
                 // 3 - after completion
                 .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION, worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -152,47 +152,7 @@ public class LookMarkerTest {
                 .add(worldBuilder)
                 // 3 - after completion
                 .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION, worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
-
-        // When init
-        int idx = 0;
-        state.init(ctxs[idx++]);
-
-        // When first tick
-        MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
-        // Then
-        assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
-        assertEquals(1, ctx.nextActionCount());
-
-        // When tick after completion
-        ctx = ctxs[idx++];
-        cmd = state.tick(ctx);
-        // Then
-        assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
-        assertEquals(1, ctx.nextActionCount());
-    }
-
-    @ParameterizedTest
-    @CsvSource({"0,0,0"})
-    @MethodSource("dataRobot")
-    void testLookRearMarkerEmpty(double x, double y, int robotDeg) {
-        // Give the robot at location and direction
-        Point2D robotLocation = new Point2D.Double(x, y);
-        worldBuilder.robotLocation(robotLocation)
-                .robotDir(robotDeg);
-        MockFSMContext[] ctxs = MockFSMContext.builder()
-                // 0 - init
-                .add(HALT_ACTION, LOOK_REAR_AT_NEAREST_MARKER_ACTION, worldBuilder)
-                // 1 - first
-                .add(worldBuilder)
-                // 3 - after completion
-                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION, worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -240,7 +200,7 @@ public class LookMarkerTest {
                 .add(worldBuilder)
                 // 3 - after completion
                 .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION, worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -253,6 +213,46 @@ public class LookMarkerTest {
         assertEquals(LOOK_REAR_AT_NEAREST_MARKER_ACTION, state.headAction());
         assertEquals(HALT, cmd.status());
         assertEquals(Complex.fromDeg(markerDeg).opposite().toIntDeg(), cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,0,0"})
+    @MethodSource("dataRobot")
+    void testLookRearMarkerEmpty(double x, double y, int robotDeg) {
+        // Give the robot at location and direction
+        Point2D robotLocation = new Point2D.Double(x, y);
+        worldBuilder.robotLocation(robotLocation)
+                .robotDir(robotDeg);
+        MockFSMContext[] ctxs = MockFSMContext.builder()
+                // 0 - init
+                .add(HALT_ACTION, LOOK_REAR_AT_NEAREST_MARKER_ACTION, worldBuilder)
+                // 1 - first
+                .add(worldBuilder)
+                // 3 - after completion
+                .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION, worldBuilder.addTime(COMMITMENT_TIME))
+                .buildArray();
+
+        // When init
+        int idx = 0;
+        state.init(ctxs[idx++]);
+
+        // When first tick
+        MockFSMContext ctx = ctxs[idx++];
+        RobotCommands cmd = state.tick(ctx);
+        // Then
+        assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
+        assertEquals(1, ctx.nextActionCount());
+
+        // When tick after completion
+        ctx = ctxs[idx++];
+        cmd = state.tick(ctx);
+        // Then
+        assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
+        assertEquals(HALT, cmd.status());
+        assertEquals(0, cmd.scanDirection());
         assertEquals(1, ctx.nextActionCount());
     }
 }

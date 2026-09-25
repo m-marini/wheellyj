@@ -113,7 +113,7 @@ public class DisengageOnContactTest {
                 .add(worldBuilder.addTime(COMMITMENT_TIME)
                         .canMoveForward(true)
                         .backward(SAFE_DISTANCE + MM))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -207,7 +207,7 @@ public class DisengageOnContactTest {
                 .add(worldBuilder.addTime(COMMITMENT_TIME)
                         .canMoveForward(true)
                         .forward(SAFE_DISTANCE + MM))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;

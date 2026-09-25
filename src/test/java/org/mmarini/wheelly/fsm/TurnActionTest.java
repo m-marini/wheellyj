@@ -139,7 +139,7 @@ public class TurnActionTest {
                                 .robotDir(targetDir.toIntDeg()))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -195,7 +195,7 @@ public class TurnActionTest {
                                 .robotDir(targetDir.toIntDeg()))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -254,7 +254,7 @@ public class TurnActionTest {
                                 .robotDir(markerDir.toIntDeg()))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -318,7 +318,7 @@ public class TurnActionTest {
                                 .canMoveForward(false))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -373,7 +373,7 @@ public class TurnActionTest {
                 .add(worldBuilder)
                 // 2 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -428,7 +428,7 @@ public class TurnActionTest {
                                 .robotDir(mapObstacleDir.toIntDeg()))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -493,7 +493,7 @@ public class TurnActionTest {
                                 .canMoveForward(false))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -554,7 +554,7 @@ public class TurnActionTest {
                 .add(worldBuilder)
                 // 2 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -600,7 +600,7 @@ public class TurnActionTest {
                                 .robotDir(targetDir.toIntDeg()))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -659,7 +659,7 @@ public class TurnActionTest {
                                 .canMoveForward(false))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -718,7 +718,7 @@ public class TurnActionTest {
                                 .robotDir(markerHead.opposite().toIntDeg()))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -773,7 +773,7 @@ public class TurnActionTest {
                 .add(worldBuilder)
                 // 2 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -828,7 +828,7 @@ public class TurnActionTest {
                                 .robotDir(mapObstacleDir.opposite().toIntDeg()))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -889,7 +889,7 @@ public class TurnActionTest {
                 .add(worldBuilder)
                 // 2 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -944,7 +944,7 @@ public class TurnActionTest {
                                 .canMoveForward(false))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -1000,7 +1000,7 @@ public class TurnActionTest {
                                 .robotDir(targetDir.toIntDeg()))
                 // 3 - after completion
                 .add(worldBuilder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;

@@ -58,7 +58,7 @@ class LookStraightStateTest {
                 .add(builder)
                 .add(builder.addTime(COMMITMENT_TIME))
                 .add(builder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When executing the action for the first time
         state.init(ctx[0]);

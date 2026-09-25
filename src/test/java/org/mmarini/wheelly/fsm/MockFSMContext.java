@@ -138,7 +138,11 @@ public class MockFSMContext implements EnvFSMContext {
             return action(moveId, headId).path(path).world(builder).add();
         }
 
-        public MockFSMContext[] build() {
+        public List<MockFSMContext> build() {
+            return contexts;
+        }
+
+        public MockFSMContext[] buildArray() {
             return contexts.toArray(MockFSMContext[]::new);
         }
 

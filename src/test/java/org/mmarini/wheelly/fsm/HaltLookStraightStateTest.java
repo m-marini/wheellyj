@@ -74,7 +74,7 @@ public class HaltLookStraightStateTest {
                 .add(worldBuilder.addTime(1))
                 .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
                 .add(worldBuilder.addTime(1))
-                .build();
+                .buildArray();
 
         // When ...
         state.init(ctx[0]);
@@ -113,7 +113,7 @@ public class HaltLookStraightStateTest {
                 .add(worldBuilder.addTime(1))
                 .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
                 .add(worldBuilder.addTime(1))
-                .build();
+                .buildArray();
 
         // When ...
         state.init(ctx[0]);

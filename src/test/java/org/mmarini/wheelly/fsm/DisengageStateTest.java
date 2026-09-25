@@ -117,7 +117,7 @@ class DisengageStateTest {
                         .forward(2 * MM))
                 // After completion
                 .add(builder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When execute state
         state.init(ctx[0]);
@@ -190,7 +190,7 @@ class DisengageStateTest {
                         .backward(2 * MM))
                 // After completion
                 .add(builder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When execute state
         state.init(ctx[0]);
@@ -264,7 +264,7 @@ class DisengageStateTest {
                         .forward(2 * MM))
                 // After completion
                 .add(builder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When execute state
         state.init(ctx[0]);

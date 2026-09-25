@@ -126,7 +126,7 @@ class MoveStateTest {
                         .robotDir(targetDir.opposite().toIntDeg())
                         // and robot backward by movement distance + 1mm
                         .backward(movementDistance + MM))
-                .build();
+                .buildArray();
 
         //--------
         // When executing the action for the first time
@@ -192,7 +192,7 @@ class MoveStateTest {
                         .forward(movementDistance + MM))
                 // tick after completion
                 .add(builder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
 
         //--------
@@ -265,7 +265,7 @@ class MoveStateTest {
                         .forward(movementDistance / 2)
                         // and front contact
                         .canMoveBackward(false))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;
@@ -332,7 +332,7 @@ class MoveStateTest {
                         .backward(movementDistance / 2)
                         // and rear contact
                         .canMoveBackward(false))
-                .build();
+                .buildArray();
 
         // When init
         int idx = 0;

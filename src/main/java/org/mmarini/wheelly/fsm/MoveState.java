@@ -89,11 +89,12 @@ public class MoveState extends AbstractContactEventState {
             return complete(context);
         }
         double targetRange = robotStatus.robotSpec().targetRange();
-        if (robotStatus.location().distance(targetPosition) <= targetRange) {
+        Point2D robotLocation = robotStatus.location();
+        if (robotLocation.distance(targetPosition) <= targetRange) {
             return complete(context);
         }
         // Compute movement
-        Complex egocentricTargetDir = Complex.direction(robotStatus.location(), targetPosition).sub(robotStatus.direction());
+        Complex egocentricTargetDir = Complex.direction(robotLocation, targetPosition).sub(robotStatus.direction());
         return egocentricTargetDir.isClose0(90)
                 ? RobotCommands.forward(0, targetPosition)
                 : RobotCommands.backward(0, targetPosition);

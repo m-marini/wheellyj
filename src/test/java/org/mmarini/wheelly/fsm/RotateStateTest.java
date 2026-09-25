@@ -108,7 +108,7 @@ class RotateStateTest {
                         .robotDir(targetDir.toIntDeg()))
                 // tick after completion
                 .add(builder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         //--------
         // When init
@@ -174,7 +174,7 @@ class RotateStateTest {
                 .add(builder.addTime(COMMITMENT_TIME)
                         // and robot dir toward targetDir
                         .canMoveForward(false))
-                .build();
+                .buildArray();
 
         //--------
         // When init
@@ -225,7 +225,7 @@ class RotateStateTest {
                 .add(builder.addTime(COMMITMENT_TIME)
                         // and rear contact
                         .canMoveBackward(false))
-                .build();
+                .buildArray();
 
         //--------
         // When init

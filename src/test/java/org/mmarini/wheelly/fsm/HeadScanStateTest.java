@@ -71,7 +71,7 @@ class HeadScanStateTest {
                 .add(builder.addTime(SCAN_INTERVAL))
                 .add(builder.addTime(SCAN_INTERVAL))
                 .add(builder.addTime(SCAN_INTERVAL))
-                .build();
+                .buildArray();
 
         // When init
         state.init(ctx[0], HaltLookStraightStateTest.SCAN_HEAD_DEG);

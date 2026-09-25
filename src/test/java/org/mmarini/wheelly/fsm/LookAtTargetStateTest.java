@@ -135,7 +135,7 @@ class LookAtTargetStateTest {
                 // rotate out of head fov
                 .add(builder.addTime(COMMITMENT_TIME)
                         .robotDir(targetHead0.add(Complex.DEG90).toIntDeg()))
-                .build();
+                .buildArray();
 
         // When initialise
         int idx = 0;
@@ -201,7 +201,7 @@ class LookAtTargetStateTest {
                 .add(builder)
                 .add(builder)
                 .add(builder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When initialise
         int idx = 0;
@@ -272,7 +272,7 @@ class LookAtTargetStateTest {
                 // rotate out of head fov
                 .add(builder.addTime(COMMITMENT_TIME)
                         .robotDir(targetHead0.opposite().add(Complex.DEG90).toIntDeg()))
-                .build();
+                .buildArray();
 
         // When initialise
         int idx = 0;
@@ -338,7 +338,7 @@ class LookAtTargetStateTest {
                 .add(builder)
                 .add(builder)
                 .add(builder.addTime(COMMITMENT_TIME))
-                .build();
+                .buildArray();
 
         // When initialise
         int idx = 0;

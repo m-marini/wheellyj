@@ -91,7 +91,7 @@ public class MicroActionTest {
                                 .backward(MICRO_DISTANCE / 2))
                 .add(worldBuilder.addTime(COMMITMENT_TIME)
                         .backward(MICRO_DISTANCE / 2 + MM))
-                .build();
+                .buildArray();
 
         // When ...
         state.init(ctx[0]);
@@ -138,7 +138,7 @@ public class MicroActionTest {
                 .add(worldBuilder.addTime(COMMITMENT_TIME)
                         .backward(MM)
                         .canMoveBackward(false))
-                .build();
+                .buildArray();
 
         // When ...
         state.init(ctx[0]);
@@ -182,7 +182,7 @@ public class MicroActionTest {
                                 .forward(MICRO_DISTANCE / 2))
                 .add(worldBuilder.addTime(COMMITMENT_TIME)
                         .forward(MICRO_DISTANCE / 2 + MM))
-                .build();
+                .buildArray();
 
         // When ...
         state.init(ctx[0]);
@@ -227,7 +227,7 @@ public class MicroActionTest {
                 .add(worldBuilder.addTime(COMMITMENT_TIME)
                         .forward(MM)
                         .canMoveForward(false))
-                .build();
+                .buildArray();
 
         // When ...
         state.init(ctx[0]);
