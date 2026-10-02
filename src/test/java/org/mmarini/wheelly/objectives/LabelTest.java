@@ -33,8 +33,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
+import org.mmarini.wheelly.envs.BasicEnvState;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -47,14 +47,14 @@ import static org.hamcrest.Matchers.closeTo;
 
 class LabelTest {
 
-    static WorldModel createState(int robotDeg, int headDeg, double leftPps, double rightPps, int obstacleDir, double distance) {
+    static BasicEnvState createState(int robotDeg, int headDeg, double leftPps, double rightPps, int obstacleDir, double distance) {
         Point2D marker = Complex.fromDeg(obstacleDir).at(new Point2D.Double(0, 0), distance);
-        return new WorldModelBuilder()
+        return new BasicEnvState(new WorldModelBuilder()
                 .robotDir(robotDeg)
                 .headAngle(headDeg)
                 .robotSpeed(leftPps, rightPps)
                 .addMarker("A", marker)
-                .build();
+                .build());
     }
 
     @ParameterizedTest(
@@ -107,7 +107,7 @@ class LabelTest {
         ));
         RewardFunction f = Label.create(root, Locator.root());
 
-        WorldModel state = createState(robotDir,
+        BasicEnvState state = createState(robotDir,
                 sensorDir,
                 leftPps, rightPps,
                 obstacleDir, distance);

@@ -28,6 +28,8 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.mmarini.wheelly.envs.EnvAction;
+
 import java.awt.geom.Point2D;
 
 import static java.util.Objects.requireNonNull;
@@ -41,7 +43,7 @@ import static java.util.Objects.requireNonNull;
  * @param target            the target location
  */
 public record RobotCommands(RobotStatusId status, int scanDirection, int rotationDirection,
-                            Point2D target) {
+                            Point2D target) implements EnvAction {
 
     static RobotCommands HALT = new RobotCommands(RobotStatusId.HALT, 0, 0, null);
 
@@ -169,6 +171,16 @@ public record RobotCommands(RobotStatusId status, int scanDirection, int rotatio
     }
 
     /**
+     * Returns the commands by merging motion command and head command
+     *
+     * @param motionCommands the motion command
+     * @param headCommands   the head command
+     */
+    public static RobotCommands merge(RobotCommands motionCommands, RobotCommands headCommands) {
+        return new RobotCommands(motionCommands.status, headCommands.scanDirection, motionCommands.rotationDirection, motionCommands.target);
+    }
+
+    /**
      * Creates the robot status command
      *
      * @param status            the status
@@ -215,5 +227,4 @@ public record RobotCommands(RobotStatusId status, int scanDirection, int rotatio
         return scanDirection == this.scanDirection ? this
                 : new RobotCommands(status, scanDirection, rotationDirection, target);
     }
-
 }

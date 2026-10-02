@@ -1,0 +1,146 @@
+/*
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
+package org.mmarini.wheelly.fsm;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.WorldModelBuilder;
+
+import java.util.Arrays;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
+import static org.mmarini.wheelly.fsm.MoveActionId.HALT_ACTION;
+
+public class HaltLookStraightStateTest {
+    public static final int COMMITMENT_TIME = 1000;
+    public static final int SCAN_INTERVAL = 2000;
+    public static final int[] SCAN_HEAD_DEG = {-45, 0, 45};
+    public static final double MICRO_DISTANCE = 0.5;
+    public static final double MIN_OBSTACLE_DISTANCE = 0.5;
+    public static final Complex TURN_SCAN_ANGLE = Complex.fromDeg(120);
+    public static final Complex MICRO_ANGLE = Complex.fromDeg(10);
+    public static final double MIN_MARKER_DISTANCE = 0.5;
+    public static final double MIN_HEAD_TARGET_DISTANCE = 0.2;
+    public static final double SAFE_DISTANCE = 0.5;
+    public static final int SCAN_ANGLE_INTERVAL_DEG = 45;
+    public static final MacroActionConfig BASE_HEAD_CONFIG = new MacroActionConfig(
+            COMMITMENT_TIME, SCAN_INTERVAL, SCAN_ANGLE_INTERVAL_DEG, MICRO_DISTANCE, MIN_MARKER_DISTANCE, MIN_OBSTACLE_DISTANCE,
+            MIN_HEAD_TARGET_DISTANCE, SAFE_DISTANCE, TURN_SCAN_ANGLE, MICRO_ANGLE);
+
+    WorldModelBuilder worldBuilder;
+    CoordinatedMotionState state;
+
+    @BeforeEach
+    void setUp() {
+        this.worldBuilder = new WorldModelBuilder();
+        this.state = CoordinatedMotionState.create(BASE_HEAD_CONFIG);
+    }
+
+    @Test
+    void testHaltStraightContinue() {
+        MockFSMContext[] ctx = MockFSMContext.builder()
+                .add(worldBuilder)
+                .add(worldBuilder)
+                .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
+                .add(worldBuilder.addTime(1))
+                .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
+                .add(worldBuilder.addTime(1))
+                .buildArray();
+
+        // When ...
+        state.init(ctx[0]);
+        RobotCommands[] cmd = Arrays.stream(ctx)
+                .skip(1)
+                .map(state::tick)
+                .toArray(RobotCommands[]::new);
+
+        // Then
+        assertEquals(HALT, cmd[0].status());
+        assertEquals(1, ctx[1].nextActionCount());
+
+        // Then
+        assertEquals(HALT, cmd[1].status());
+        assertEquals(0, ctx[2].nextActionCount());
+
+        // Then
+        assertEquals(HALT, cmd[2].status());
+        assertEquals(1, ctx[3].nextActionCount());
+
+        // Then
+        assertEquals(HALT, cmd[3].status());
+        assertEquals(1, ctx[4].nextActionCount());
+
+        // Then
+        assertEquals(HALT, cmd[4].status());
+        assertEquals(1, ctx[5].nextActionCount());
+    }
+
+    @Test
+    void testHaltStraightRepeat() {
+        MockFSMContext[] ctx = MockFSMContext.builder()
+                .add(HALT_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(worldBuilder)
+                .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
+                .add(worldBuilder.addTime(1))
+                .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
+                .add(worldBuilder.addTime(1))
+                .buildArray();
+
+        // When ...
+        state.init(ctx[0]);
+        RobotCommands[] cmd = Arrays.stream(ctx)
+                .skip(1)
+                .map(state::tick)
+                .toArray(RobotCommands[]::new);
+
+        // Then
+        assertEquals(HALT, cmd[0].status());
+        assertEquals(1, ctx[1].nextActionCount());
+
+        // Then
+        assertEquals(HALT, cmd[1].status());
+        assertEquals(0, ctx[2].nextActionCount());
+
+        // Then
+        assertEquals(HALT, cmd[2].status());
+        assertEquals(1, ctx[3].nextActionCount());
+
+        // Then
+        assertEquals(HALT, cmd[3].status());
+        assertEquals(0, ctx[4].nextActionCount());
+
+        // Then
+        assertEquals(HALT, cmd[4].status());
+        assertEquals(1, ctx[5].nextActionCount());
+    }
+}

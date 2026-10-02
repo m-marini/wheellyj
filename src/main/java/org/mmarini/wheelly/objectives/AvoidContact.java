@@ -43,7 +43,7 @@ public interface AvoidContact {
 
     static RewardFunction avoid(double reward) {
         return (s0, a, s1) -> {
-            RobotStatus status = s1.robotStatus();
+            RobotStatus status = s1.worldModel().robotStatus();
                 return !status.canMoveForward() || !status.canMoveBackward()
                         ? reward
                         : 0;

@@ -38,6 +38,7 @@ import org.mmarini.wheelly.apis.InferenceFileReader;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModeller;
+import org.mmarini.wheelly.envs.BasicEnvState;
 import org.mmarini.wheelly.envs.DLActionFunction;
 import org.mmarini.wheelly.envs.DLEnvironment;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -111,7 +112,7 @@ public class DatasetBuilder {
         // Reads the inference records and convert to signals, actin masks and rewards
         DLActionFunction actionFunction = (DLActionFunction) env.actionFunction();
         Tuple2<WorldModel, RobotCommands> record;
-        WorldModel s0 = null;
+        BasicEnvState s0 = null;
         RobotCommands commands = null;
         int tot = reader.available() / KB;
         try (INDArray reward = Nd4j.create(1, 1)) {
@@ -119,7 +120,8 @@ public class DatasetBuilder {
                 try {
                     record = reader.readRecord();
                     // Write states
-                    WorldModel s1 = modeller.updateForInference(record._1);
+                    WorldModel w1 = modeller.updateForInference(record._1);
+                    BasicEnvState s1 = new BasicEnvState(w1);
                     Map<String, Signal> stateSignals = env.state(s1);
                     Map<String, INDArray> stateValues = MapStream.of(stateSignals)
                             .mapValues(Signal::toINDArray)
@@ -136,7 +138,7 @@ public class DatasetBuilder {
                         rewards.write(reward);
 
                         // Writes action masks
-                        Map<String, INDArray> actionMaskValues = actionFunction.actionMasks(List.of(s0), List.of(record._2));
+                        Map<String, INDArray> actionMaskValues = actionFunction.actionMasks(List.of(s0.worldModel()), List.of(record._2));
                         for (Map.Entry<String, INDArray> entry : actionMaskValues.entrySet()) {
                             actionMasks.get(entry.getKey())
                                     .write(entry.getValue());

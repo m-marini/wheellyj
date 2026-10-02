@@ -32,8 +32,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
+import org.mmarini.wheelly.envs.BasicEnvState;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -44,11 +44,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 
 class StuckTest {
-    static WorldModel createEnvironment(int sensorDir, double distance) {
-        return new WorldModelBuilder()
+    static BasicEnvState createEnvironment(int sensorDir, double distance) {
+        return new BasicEnvState(new WorldModelBuilder()
                 .headAngle(sensorDir)
                 .frontDistance(distance)
-                .build();
+                .build());
     }
 
     @ParameterizedTest(name = "[{index}] Sensor {1} DEG, D {2} m")
@@ -80,7 +80,7 @@ class StuckTest {
                 "distance3: 1.5",
                 "sensorRange: 20"));
         RewardFunction f = Stuck.create(root, Locator.root());
-        WorldModel env = createEnvironment(sensorDir, distance);
+        BasicEnvState env = createEnvironment(sensorDir, distance);
         double result = f.applyAsDouble(null, null, env);
         assertThat(result, closeTo(expected, 1e-3));
     }
@@ -111,7 +111,7 @@ class StuckTest {
         double x4 = 1.5;
         int directionRange = 20;
         RewardFunction f = Stuck.stuck(x1, x2, x3, x4, directionRange);
-        WorldModel state = createEnvironment(sensorDir, distance);
+        BasicEnvState state = createEnvironment(sensorDir, distance);
 
         double result = f.applyAsDouble(state, null, state);
 

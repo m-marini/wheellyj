@@ -32,8 +32,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
+import org.mmarini.wheelly.envs.BasicEnvState;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -45,11 +45,11 @@ import static org.hamcrest.Matchers.closeTo;
 
 class NoMoveObjectiveTest {
 
-    static WorldModel createState(int sensorDir, double leftPps, double rightPps) {
-        return new WorldModelBuilder()
+    static BasicEnvState createState(int sensorDir, double leftPps, double rightPps) {
+        return new BasicEnvState(new WorldModelBuilder()
                 .headAngle(sensorDir)
                 .robotSpeed(leftPps, rightPps)
-                .build();
+                .build());
     }
 
     @ParameterizedTest(name = "[index] head {1} DEG, power({2},{3})")
@@ -73,7 +73,7 @@ class NoMoveObjectiveTest {
                 "$schema: " + NoMove.SCHEMA_NAME,
                 "class: " + NoMove.class.getName()));
         RewardFunction f = NoMove.create(root, Locator.root());
-        WorldModel state = createState(sensorDir, leftPps, rightPps);
+        BasicEnvState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.applyAsDouble(null, null, state);
 
@@ -102,7 +102,7 @@ class NoMoveObjectiveTest {
                 "class: " + NoMove.class.getName(),
                 "reward: 2"));
         RewardFunction f = NoMove.create(root, Locator.root());
-        WorldModel state = createState(sensorDir, leftPps, rightPps);
+        BasicEnvState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.applyAsDouble(null, null, state);
 
@@ -134,7 +134,7 @@ class NoMoveObjectiveTest {
                 "sensorRange: 1",
                 "reward: 2"));
         RewardFunction f = NoMove.create(root, Locator.root());
-        WorldModel state = createState(sensorDir, leftPps, rightPps);
+        BasicEnvState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.applyAsDouble(null, null, state);
 

@@ -120,6 +120,11 @@ public class WorldModelBuilder {
                 .updateForInference(model);
     }
 
+    public WorldModelBuilder cameraMarker(String qr) {
+        robotStatusBuilder.qr(qr);
+        return this;
+    }
+
     public WorldModelBuilder canMoveBackward(boolean canMoveBackward) {
         this.robotStatusBuilder.canMoveBackward(canMoveBackward);
         return this;
@@ -191,6 +196,11 @@ public class WorldModelBuilder {
         return this;
     }
 
+    public WorldModelBuilder rearDistance(double rearDistance) {
+        this.robotStatusBuilder.rearDistance(rearDistance);
+        return this;
+    }
+
     public WorldModelBuilder rearSensor(boolean rearSensor) {
         this.robotStatusBuilder.rearSensor(rearSensor);
         return this;
@@ -201,8 +211,17 @@ public class WorldModelBuilder {
         return this;
     }
 
+    public WorldModelBuilder robotDir(Complex robotDirDeg) {
+        return robotDir(robotDirDeg.toIntDeg());
+    }
+
     public Complex robotDir() {
         return this.robotStatusBuilder.robotDir();
+    }
+
+    public WorldModelBuilder robotHalt(boolean halt) {
+        this.robotStatusBuilder.halt(halt);
+        return this;
     }
 
     public Point2D robotLocation() {

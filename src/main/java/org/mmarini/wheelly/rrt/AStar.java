@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.engines;
+package org.mmarini.wheelly.rrt;
 
 import org.mmarini.Tuple2;
 import org.slf4j.Logger;
@@ -41,9 +41,10 @@ import java.util.function.ToDoubleFunction;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Finds the least expensive path from initial to goal node in a directed weighted graph
+ * Finds the least expensive path from an initial node to a goal node in a directed
+ * weighted graph using the A* search algorithm.
  *
- * @param <T> the type of node
+ * @param <T> the type of node configuration
  */
 public class AStar<T> {
     private static final Logger logger = LoggerFactory.getLogger(AStar.class);
@@ -64,13 +65,15 @@ public class AStar<T> {
     private T current;
 
     /**
-     * Canonical constructor
+     * Canonical constructor initialising the A* graph search engine with
+     * required functional strategies and heuristics.
      *
-     * @param isGoal   the function returning true if the node is a goal
-     * @param cost     the function returning the cost between two nodes
-     * @param estimate the function returning the cost estimate between the node and the goal
-     * @param children the function returning the list of children node to a node
-     * @param initial  the initial node
+     * @param isGoal   the predicate checking whether a node satisfies the goal condition
+     * @param cost     the function computing the edge cost between two adjacent nodes
+     * @param estimate the heuristic function estimating the remaining cost from a node to the goal
+     * @param children the function retrieving the collection of neighboring/successor nodes for a given node
+     * @param initial  the initial starting node configuration
+     * @throws NullPointerException if any of the provided functional parameters or the initial node is null
      */
     public AStar(Predicate<T> isGoal, ToDoubleBiFunction<T, T> cost, ToDoubleFunction<T> estimate, Function<T, Collection<T>> children, T initial) {
         this.isGoal = isGoal;
@@ -85,14 +88,22 @@ public class AStar<T> {
     }
 
     /**
-     * Returns the current node
+     * Returns the node currently being evaluated or expanded by the search iteration.
+     *
+     * @return the current node of type {@code T}
      */
     public T current() {
         return current;
     }
 
     /**
-     * Returns the least expensive path
+     * Executes the search and returns the least expensive path from the initial node to the goal.
+     * <p>
+     * The loop continuously expands nodes until a goal is discovered or the open set is exhausted.
+     * </p>
+     *
+     * @return an ordered {@link List} of nodes forming the optimal path,
+     * or an empty list if no valid path can be established
      */
     public List<T> find() {
         init();
@@ -110,7 +121,12 @@ public class AStar<T> {
     }
 
     /**
-     * Returns the least expensive node or null if not exist
+     * Retrieves the node with the lowest total estimated f-score from the fringe priority queue.
+     * <p>
+     * If debug level is active, it additionally logs diagnostic summaries of the top 5 candidates.
+     * </p>
+     *
+     * @return the least expensive node available in the open set, or {@code null} if the set is empty
      */
     private T findCheaper() {
         T result = openSet.peek();
@@ -128,7 +144,11 @@ public class AStar<T> {
     }
 
     /**
-     * Initializes the search
+     * Resets internal structures and prepares the engine for a fresh search execution.
+     * <p>
+     * This method clears cached structures, seeds the open set with the initial root vertex,
+     * anchors its g-score to zero, and assigns the initial heuristic value to its f-score.
+     * </p>
      */
     public void init() {
         // Initialize
@@ -142,9 +162,10 @@ public class AStar<T> {
     }
 
     /**
-     * Returns the path by traversing the result from node and reversing it
+     * Traces back through the structural link map to assemble the ordered optimal pathway.
      *
-     * @param node the final node
+     * @param node the final terminal goal node from which reconstruction originates
+     * @return an ordered {@link List} of sequential nodes stretching from start to target
      */
     public List<T> reconstructPath(T node) {
         List<T> result = new ArrayList<>();
@@ -158,7 +179,12 @@ public class AStar<T> {
     }
 
     /**
-     * Evaluates neighbours
+     * Evaluates all neighboring successor nodes linked to the current vertex.
+     * <p>
+     * For each adjacent child, it computes a tentative g-score. If this pathway offers a
+     * cheaper solution than previously discovered options, the relationship link and costs
+     * are recorded, and the node is scheduled or updated inside the priority fringe list.
+     * </p>
      */
     public void traverse() {
         if (current != null) {

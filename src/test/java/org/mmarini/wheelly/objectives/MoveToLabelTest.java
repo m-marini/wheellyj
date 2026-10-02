@@ -34,8 +34,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
+import org.mmarini.wheelly.envs.BasicEnvState;
 
 import java.awt.geom.Point2D;
 import java.util.stream.Stream;
@@ -47,12 +47,12 @@ class MoveToLabelTest {
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 100;
 
-    static WorldModel createState(Point2D robotLocation, int robotDeg, Point2D marker) {
-        return new WorldModelBuilder()
+    static BasicEnvState createState(Point2D robotLocation, int robotDeg, Point2D marker) {
+        return new BasicEnvState(new WorldModelBuilder()
                 .robotLocation(robotLocation)
                 .robotDir(robotDeg)
                 .addMarker("A", marker)
-                .build();
+                .build());
     }
 
     public static Stream<Arguments> dataReward() {
@@ -86,9 +86,9 @@ class MoveToLabelTest {
         // Given two states
         Point2D.Double robotLocation0 = new Point2D.Double(robotX, robotY);
         Point2D marker = Complex.fromDeg(markerDeg).at(robotLocation0, markerDistance);
-        WorldModel s0 = createState(robotLocation0, robotDeg, marker);
+        BasicEnvState s0 = createState(robotLocation0, robotDeg, marker);
         Point2D robotLocation1 = Complex.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
-        WorldModel s1 = createState(robotLocation1, robotDeg, marker);
+        BasicEnvState s1 = createState(robotLocation1, robotDeg, marker);
 
         double reward = MoveToLabel.moveToLabel(matchReward).applyAsDouble(s0, RobotCommands.halt(), s1);
 
@@ -101,9 +101,9 @@ class MoveToLabelTest {
         // Given two states
         Point2D.Double robotLocation0 = new Point2D.Double(robotX, robotY);
         Point2D marker = Complex.fromDeg(markerDeg).at(robotLocation0, markerDistance);
-        WorldModel s0 = createState(robotLocation0, robotDeg, marker);
+        BasicEnvState s0 = createState(robotLocation0, robotDeg, marker);
         Point2D robotLocation1 = Complex.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
-        WorldModel s1 = createState(robotLocation1, robotDeg, marker);
+        BasicEnvState s1 = createState(robotLocation1, robotDeg, marker);
 
         double reward = MoveToLabel.moveToLabel(1).applyAsDouble(s0, RobotCommands.halt(), s1);
 

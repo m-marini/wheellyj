@@ -31,53 +31,14 @@ package org.mmarini.wheelly.apis;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+
 /**
  * Load and cache JSON schemas
  */
 public interface WheellyJsonSchemas {
     Logger logger = LoggerFactory.getLogger(WheellyJsonSchemas.class);
-
-    org.mmarini.yaml.JsonSchemas singleton = org.mmarini.yaml.JsonSchemas.load(
-            "/schemas/action-func-map-schema.yml",
-            "/schemas/action-func-circular-schema.yml",
-            "/schemas/agent-state-machine-schema.yml",
-            "/schemas/batch-schema.yml",
-            "/schemas/camera-calibration-schema.yml",
-            "/schemas/checkup-schema.yml",
-            "/schemas/controller-schema.yml",
-            "/schemas/dl-agent-schema.yml",
-            "/schemas/dl-agent-builder-schema.yml",
-            "/schemas/env-world-schema.yml",
-            "/schemas/env-dl-schema.yml",
-            "/schemas/executor-schema.yml",
-            "/schemas/map-schema.yml",
-            "/schemas/monitor-schema.yml",
-            "/schemas/mqtt-robot-schema.yml",
-            "/schemas/network-schema.yml",
-            "/schemas/objective-avoid-contact-schema.yml",
-            "/schemas/objective-cautious-schema.yml",
-            "/schemas/objective-nomove-schema.yml",
-            "/schemas/objective-explore-schema.yml",
-            "/schemas/objective-stuck-schema.yml",
-            "/schemas/objective-constant-schema.yml",
-            "/schemas/objective-label-schema.yml",
-            "/schemas/objective-moveToLabel-schema.yml",
-            "/schemas/objective-sensor-label-schema.yml",
-            "/schemas/sim-robot-schema.yml",
-            "/schemas/signal-schema.yml",
-            "/schemas/state-avoid-schema.yml",
-            "/schemas/state-clear-map-schema.yml",
-            "/schemas/state-func-rl-schema.yml",
-            "/schemas/state-func-dl-schema.yml",
-            "/schemas/state-search-label-schema.yml",
-            "/schemas/state-search-refresh-schema.yml",
-            "/schemas/state-search-unknown-schema.yml",
-            "/schemas/state-halt-schema.yml",
-            "/schemas/state-label-stuck-schema.yml",
-            "/schemas/state-mapping-schema.yml",
-            "/schemas/state-move-path-schema.yml",
-            "/schemas/wheelly-schema.yml",
-            "/schemas/world-modeller-schema.yml");
+    org.mmarini.yaml.JsonSchemas singleton = org.mmarini.yaml.JsonSchemas.loadPath(new File("schemas"));
 
     /**
      * Returns the singleton instance

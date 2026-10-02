@@ -1,0 +1,108 @@
+/*
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
+package org.mmarini.wheelly.fsm;
+
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotStatus;
+
+/**
+ * Represents a finite state machine state that handles the rotational
+ * behaviour of the robot towards a specific target direction.
+ * <p>
+ * This state monitors the robot's orientation relative to a target angle and
+ * optimises transitions upon completion or when an obstacle contact occurs.
+ * </p>
+ */
+public class RotateState extends AbstractContactEventState {
+
+    /**
+     * The target orientation in degrees.
+     */
+    private int targetDeg;
+
+    /**
+     * Initialises a new instance of {@code RotateState} with a specified commitment duration.
+     *
+     * @param commitmentTime the maximum time duration for which this state remains active
+     */
+    public RotateState(long commitmentTime) {
+        super(commitmentTime);
+    }
+
+    /**
+     * Guards against invalid standard state initialisation by forcing the usage of the
+     * target-specified initialiser.
+     *
+     * @param context the environment finite state machine context
+     * @throws IllegalStateException always thrown to prohibit initialisation without a valid target position
+     */
+    @Override
+    public void init(EnvFSMContext context) {
+        throw new IllegalStateException("Initialization without target position is not allowed");
+    }
+
+    /**
+     * Initialises the state context and sets the target angle for the rotation.
+     *
+     * @param context   the environment finite state machine context
+     * @param targetDeg the target direction angle in degrees
+     */
+    public void init(EnvFSMContext context, int targetDeg) {
+        super.init(context);
+        this.targetDeg = targetDeg;
+    }
+
+    /**
+     * Evaluates the environment state on each clock tick and produces the next robot command.
+     * <p>
+     * This method verifies if the robot can safely turn, checks whether the orientation
+     * is within the acceptable target range, and issues the rotation command if required.
+     * </p>
+     *
+     * @param context the current finite state machine context containing the world model
+     * @return the computed {@link RobotCommands} to guide the robot's behaviour
+     */
+    @Override
+    public RobotCommands tick(EnvFSMContext context) {
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward() || contacted()) {
+            return triggerContact(context);
+        }
+        if (completed()) {
+            return complete(context);
+        }
+
+        Complex directionRange = robotStatus.robotSpec().directionRange();
+        if (robotStatus.direction().isCloseTo(targetDeg, directionRange.toIntDeg())) {
+            return complete(context);
+        }
+        return RobotCommands.rotate(targetDeg);
+    }
+}

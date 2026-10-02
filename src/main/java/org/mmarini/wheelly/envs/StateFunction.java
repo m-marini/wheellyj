@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,7 +30,6 @@ package org.mmarini.wheelly.envs;
 
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.apis.WorldModel;
 
 import java.util.Map;
 
@@ -44,7 +43,7 @@ public interface StateFunction {
      *
      * @param states the world states
      */
-    Map<String, Signal> signals(WorldModel... states);
+    Map<String, Signal> signals(EnvState... states);
 
     /**
      * Returns the signal specification

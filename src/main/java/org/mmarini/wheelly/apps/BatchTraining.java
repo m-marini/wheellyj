@@ -42,7 +42,6 @@ import org.deeplearning4j.ui.model.stats.StatsListener;
 import org.deeplearning4j.ui.model.storage.InMemoryStatsStorage;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.*;
-import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.batch.BatchTrainer;
@@ -69,7 +68,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -205,9 +203,8 @@ public class BatchTraining {
         // Creates agent
 
         logger.atInfo().log("Creating agent ...");
-        Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
+        this.agent = (BatchAgent) Agent.fromFile(
                 new File(Locator.locate("agent").getNode(config).asText()));
-        this.agent = (BatchAgent) agentBuilder.apply(environment);
         environment.connect(agent);
 
         kpisPanel.addActionColumns(environment.actionSpec()

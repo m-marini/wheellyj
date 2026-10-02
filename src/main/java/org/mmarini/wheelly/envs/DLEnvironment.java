@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,15 +22,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
 package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
@@ -44,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.function.DoubleConsumer;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
@@ -52,7 +51,7 @@ import static java.util.Objects.requireNonNull;
  * Connects the world modeller to reinforcement learning agent
  * generating state signals and converting actions to robot command
  */
-public class DLEnvironment implements EnvironmentApi {
+public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-dl-schema-0.1";
     public static final String ACTION_FUNCTION_ID = "actionFunction";
     public static final String STATE_FUNCTION_ID = "stateFunction";
@@ -83,14 +82,14 @@ public class DLEnvironment implements EnvironmentApi {
 
     private final ActionFunction actionFunc;
     private final Function<WorldModelSpec, StateFunction> stateFunctionBuilder;
-    private final PublishProcessor<Double> rewards;
     private StateFunction stateFunc;
     private RewardFunction rewardFunc;
     private AgentConnector agent;
-    private WorldModel prevState;
+    private BasicEnvState prevState;
     private RobotCommands prevCommands;
     private Map<String, Signal> signals0;
     private Map<String, Signal> prevActions;
+    private DoubleConsumer onReward;
 
     /**
      * Creates the deep learning environment
@@ -101,7 +100,6 @@ public class DLEnvironment implements EnvironmentApi {
     public DLEnvironment(ActionFunction actionFunc, Function<WorldModelSpec, StateFunction> stateFunctionBuilder) {
         this.actionFunc = requireNonNull(actionFunc);
         this.stateFunctionBuilder = requireNonNull(stateFunctionBuilder);
-        this.rewards = PublishProcessor.create();
         logger.atDebug().log("Created");
     }
 
@@ -127,44 +125,47 @@ public class DLEnvironment implements EnvironmentApi {
     @Override
     public void connect(AgentConnector agent) {
         requireNonNull(agent);
+        agent.validate(stateSpec(), actionSpec());
         this.agent = agent;
     }
 
     @Override
-    public RobotCommands onInference(WorldModel state) {
-        requireNonNull(state);
+    public RobotCommands onInference(WorldModel model) {
+        requireNonNull(model);
         requireNonNull(agent);
         requireNonNull(stateFunc);
 
-        Map<String, Signal> signals1 = state(state);
+        BasicEnvState s1 = new BasicEnvState(model);
+        Map<String, Signal> signals1 = state(s1);
         Map<String, Signal> actions = agent.act(signals1);
-        RobotCommands commands = actionFunc.commands(actions, state).getFirst();
+        RobotCommands commands = actionFunc.commands(actions, model).getFirst();
 
         if (prevState != null) {
-            double reward = reward(prevState, prevCommands, state);
+            double reward = reward(prevState, prevCommands, s1);
             ExecutionResult result = new ExecutionResult(
                     signals0, prevActions, reward, signals1
             );
             agent = agent.observe(result);
-            rewards.onNext(reward);
+            if (onReward != null) {
+                onReward.accept(reward);
+            }
         }
         // Split status
-        prevState = state;
+        prevState = s1;
         signals0 = signals1;
         prevCommands = commands;
         prevActions = actions;
         return commands;
     }
 
-    /**
-     * Returns the rewards flow
-     */
-    public Flowable<Double> readRewards() {
-        return rewards;
+    @Override
+    public DLEnvironment onReward(DoubleConsumer callback) {
+        onReward = onReward != null ? onReward.andThen(callback) : callback;
+        return this;
     }
 
     @Override
-    public double reward(WorldModel state0, RobotCommands actions, WorldModel state1) {
+    public double reward(EnvState state0, EnvAction actions, EnvState state1) {
         return rewardFunc != null ? rewardFunc.applyAsDouble(state0, actions, state1) : 0;
     }
 
@@ -174,7 +175,7 @@ public class DLEnvironment implements EnvironmentApi {
     }
 
     @Override
-    public Map<String, Signal> state(WorldModel model) {
+    public Map<String, Signal> state(EnvState model) {
         requireNonNull(model);
         requireNonNull(stateFunc);
         return stateFunc.signals(model);

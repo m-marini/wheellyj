@@ -36,8 +36,6 @@ import org.mmarini.yaml.Utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -74,7 +72,7 @@ public class WorldModeller implements WorldModellerApi {
         PolarMapModeller polarModeller = PolarMapModeller.create(root, locator);
         MarkerLocator markerModeller = MarkerLocator.create(root, locator);
         int gridSize = locator.path("robotMapSize").getNode(root).asInt();
-        return new WorldModeller(radarModeller, polarModeller, markerModeller, new ArrayList<>(), gridSize);
+        return new WorldModeller(radarModeller, polarModeller, markerModeller, null, gridSize);
     }
 
     /**
@@ -90,7 +88,7 @@ public class WorldModeller implements WorldModellerApi {
     private final RadarModeller radarModeller;
     private final PolarMapModeller polarModeller;
     private final MarkerLocator markerLocator;
-    private final List<Consumer<Tuple2<WorldModel, RobotCommands>>> onInferences;
+    private Consumer<Tuple2<WorldModel, RobotCommands>> onInferences;
     private WorldModelSpec worldSpec;
     private WorldModel currentModel;
     private RobotControllerConnector controller;
@@ -105,17 +103,18 @@ public class WorldModeller implements WorldModellerApi {
      * @param onInferences  the inference callback list
      * @param robotMapSize  the robot relative map size
      */
-    protected WorldModeller(RadarModeller radarModeller, PolarMapModeller polarModeller, MarkerLocator markerLocator, List<Consumer<Tuple2<WorldModel, RobotCommands>>> onInferences, int robotMapSize) {
+    protected WorldModeller(RadarModeller radarModeller, PolarMapModeller polarModeller, MarkerLocator markerLocator, Consumer<Tuple2<WorldModel, RobotCommands>> onInferences, int robotMapSize) {
         this.radarModeller = requireNonNull(radarModeller);
         this.polarModeller = requireNonNull(polarModeller);
-        this.onInferences = requireNonNull(onInferences);
+        this.onInferences = onInferences;
         this.worldSpec = new WorldModelSpec(null, polarModeller.numSectors(), robotMapSize);
         this.markerLocator = requireNonNull(markerLocator);
     }
 
     @Override
     public void addOnInference(Consumer<Tuple2<WorldModel, RobotCommands>> callback) {
-        onInferences.add(callback);
+        requireNonNull(callback);
+        onInferences = onInferences != null ? onInferences.andThen(callback) : callback;
     }
 
     @Override
@@ -167,8 +166,8 @@ public class WorldModeller implements WorldModellerApi {
             RobotCommands commands = inference.onInference(model);
             if (commands != null) {
                 controller.execute(commands);
-                for (Consumer<Tuple2<WorldModel, RobotCommands>> callback : onInferences) {
-                    callback.accept(Tuple2.of(model, commands));
+                if (onInferences != null) {
+                    onInferences.accept(Tuple2.of(model, commands));
                 }
             }
         }

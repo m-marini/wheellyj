@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.engines;
+package org.mmarini.wheelly.rrt;
 
 import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.apis.GridTopology;
@@ -43,6 +43,8 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.engines.AbstractSearchAndMoveState.DEFAULT_GROWTH_DISTANCE;
 import static org.mmarini.wheelly.engines.AbstractSearchAndMoveState.DEFAULT_SAFETY_DISTANCE;
+import static org.mmarini.wheelly.engines.SearchRefreshState.FREE_PROB;
+import static org.mmarini.wheelly.engines.SearchRefreshState.NEAREST_TARGET_PROB;
 
 class RRTPathFinderTest {
 
@@ -65,7 +67,8 @@ class RRTPathFinderTest {
                                 : cell);
         Random random = new Random(SEED);
         // Given the related pathfinder
-        RRTPathFinder pathFinder = RRTPathFinder.createUnknownTargets(map, initial, DEFAULT_SAFETY_DISTANCE, DEFAULT_GROWTH_DISTANCE, random);
+        RRTPathFinder.Config config1 = new RRTPathFinder.Config(DEFAULT_GROWTH_DISTANCE, NEAREST_TARGET_PROB, FREE_PROB, initial);
+        RRTPathFinder pathFinder = RRTPathFinder.createUnknownTargets(config1, map, DEFAULT_SAFETY_DISTANCE, random);
 
         // Then the target should not be empty
         assertFalse(pathFinder.targets().isEmpty());

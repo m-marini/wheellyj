@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -37,6 +37,7 @@ import org.mmarini.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
@@ -64,6 +65,34 @@ public class JsonSchemas {
                 .flatMap(id -> {
                     try {
                         return Stream.of(Utils.fromResource(id));
+                    } catch (IOException e) {
+                        logger.atError().setCause(e).log("Error loading schema {}", id);
+                        return Stream.of();
+                    }
+                })
+                .map(factory::getSchema)
+                .filter(schema -> {
+                    boolean hasId = schema.getSchemaNode().has("$id");
+                    if (!hasId) {
+                        logger.atError().log("Missing $id in schema {}", schema.getSchemaPath());
+                    }
+                    return hasId;
+                })
+                .map(schema -> Tuple2.of(
+                        schema.getSchemaNode().get("$id").asText(),
+                        schema
+                ))
+                .collect(Tuple2.toMap());
+        return new JsonSchemas(schemaMap);
+    }
+
+    public static JsonSchemas loadPath(File path) {
+        JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
+        Map<String, JsonSchema> schemaMap = Arrays.stream(path.listFiles((dir, name) ->
+                        name.toLowerCase().endsWith(".yml")))
+                .flatMap(id -> {
+                    try {
+                        return Stream.of(Utils.fromFile(id));
                     } catch (IOException e) {
                         logger.atError().setCause(e).log("Error loading schema {}", id);
                         return Stream.of();

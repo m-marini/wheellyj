@@ -83,30 +83,8 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
     public static final String AVG_REWARD_ID = "avgReward";
     public static final String ALPHAS_ID = "alphas";
     public static final String BETA_ID = "beta";
-    public static final String GAMMA_ID = "gamma";
     private static final Logger logger = LoggerFactory.getLogger(DLAgent.class);
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/dl-agent-schema-0.1";
-
-    /**
-     * Returns the agent
-     *
-     * @param stateSpec          the state specification
-     * @param actionSpec         the action specification
-     * @param network            the network
-     * @param random             the random number generator
-     * @param numEpochs          the number of epochs to train
-     * @param numSteps           the minimum length of training trajectory
-     * @param batchSize          the mini batch size
-     * @param alphas             the policy change factors
-     * @param beta               the average rewards factor
-     * @param filePath           the file path for the agent save
-     * @param concurrentTraining true if concurrent training
-     */
-    public static DLAgent create(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, File filePath, boolean concurrentTraining) {
-        DLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, 0, concurrentTraining);
-        agent.validate(stateSpec, actionSpec);
-        return agent;
-    }
 
     /**
      * Returns the agent
@@ -130,6 +108,27 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
                 trajectoryBuffer, null, false, avgReward, false, true));
         return new DLAgent(filePath, random, numEpochs, batchSize, beta, alphas, concurrentTraining,
                 status, new ArrayList<>(), new ArrayList<>());
+    }
+
+    /**
+     * Returns the agent
+     *
+     * @param stateSpec          the state specification
+     * @param actionSpec         the action specification
+     * @param network            the network
+     * @param random             the random number generator
+     * @param numEpochs          the number of epochs to train
+     * @param numSteps           the minimum length of training trajectory
+     * @param batchSize          the mini batch size
+     * @param alphas             the policy change factors
+     * @param beta               the average rewards factor
+     * @param filePath           the file path for the agent save
+     * @param concurrentTraining true if concurrent training
+     */
+    public static DLAgent create(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, File filePath, boolean concurrentTraining) {
+        DLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, 0, concurrentTraining);
+        agent.validate(stateSpec, actionSpec);
+        return agent;
     }
 
     /**
@@ -513,7 +512,8 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
      * @param stateSpec  the state specification
      * @param actionSpec the action specification
      */
-    void validate(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec) {
+    @Override
+    public void validate(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec) {
         ComputationGraph network = status.get().network();
         String missingLayers = network.getConfiguration().getNetworkInputs().stream()
                 .filter(id -> !stateSpec.containsKey(id))

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -33,8 +33,8 @@ import org.mmarini.wheelly.apis.*;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static java.lang.Math.max;
@@ -73,7 +73,7 @@ public class MapPanel extends LayeredCanvas {
      * @param colour the edge colour
      * @param edges  the edges
      */
-    public void edges(Color colour, List<Tuple2<Point2D, Point2D>> edges) {
+    public void edges(Color colour, Collection<Tuple2<Point2D, Point2D>> edges) {
         BaseShape shape = edges != null
                 ? CompositeShape.create(edges.stream()
                 .map(t -> createPolygon(colour, BORDER_STROKE, false, null, t._1, t._2))
@@ -195,9 +195,9 @@ public class MapPanel extends LayeredCanvas {
     /**
      * Sets the robot location
      *
-     * @param location  the location
-     * @param direction the direction
-     * @param sensorDir the sensor direction
+     * @param location         the location
+     * @param direction        the direction
+     * @param sensorDir        the sensor direction
      * @param maxRadarDistance the max radar distance (m)
      */
     public void robot(Point2D location, Complex direction, Complex sensorDir, double maxRadarDistance) {
@@ -273,7 +273,7 @@ public class MapPanel extends LayeredCanvas {
         setLayer(Layers.TARGETS.ordinal(), shape);
     }
 
-    private enum Layers {
+    public enum Layers {
         GRID,
         RADAR_MAP,
         OBSTACLES,

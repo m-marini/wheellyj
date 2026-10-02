@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -46,7 +46,7 @@ public interface EnvironmentApi extends EnvironmentConnector, InferenceConnector
     /**
      * Returns the robot environment from configuration
      *
-     * @param config     the json document
+     * @param config     the JSON document
      * @param locator    the configuration locator
      * @param controller the controller
      */
