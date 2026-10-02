@@ -30,6 +30,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.rrt.RRTPathFinder;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,9 @@ import java.awt.geom.Point2D;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.function.Function;
+
+import static org.mmarini.wheelly.engines.SearchRefreshState.FREE_PROB;
+import static org.mmarini.wheelly.engines.SearchRefreshState.NEAREST_TARGET_PROB;
 
 /**
  * Generates the behaviour to select the path to the nearest label sector
@@ -113,9 +117,10 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
             RobotStatus status = worldModel.robotStatus();
             Point2D robotLocation = status.location();
             Point2D[] markers = worldModel.markers().values().stream().map(LabelMarker::location).toArray(Point2D[]::new);
+            RRTPathFinder.Config config1 = new RRTPathFinder.Config(growthDistance, NEAREST_TARGET_PROB, FREE_PROB, robotLocation);
             return markers.length == 0
                     ? null
-                    : RRTPathFinder.createMarkerTargets(map, robotLocation, distance, safetyDistance + CM, growthDistance, random,
+                    : RRTPathFinder.createMarkerTargets(config1, map, distance, safetyDistance + CM, random,
                     Arrays.stream(markers));
         };
         return new SearchLabelState(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);

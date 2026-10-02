@@ -83,11 +83,11 @@ public interface SensorLabel {
                                 double reward) {
         return (s0, a, s1) -> {
             // the environment supports radar map
-            RobotStatus robotStatus = s1.robotStatus();
+            RobotStatus robotStatus = s1.worldModel().robotStatus();
             double frontDistance = robotStatus.frontDistance();
             Point2D robotLocation = robotStatus.location();
             // Get the nearest marker
-            Optional<LabelMarker> marker = s1.markers().values().stream()
+            Optional<LabelMarker> marker = s1.worldModel().markers().values().stream()
                     .min(Comparator.comparingDouble(m -> m.location().distanceSq(robotLocation)));
             // obstacle distance in range
             if (frontDistance >= minDistance

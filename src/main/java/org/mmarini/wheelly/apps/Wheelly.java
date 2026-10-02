@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -45,7 +45,6 @@ import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.DLAgent;
 import org.mmarini.rl.agents.KeyBinWriter;
 import org.mmarini.rl.agents.TrainingKpis;
-import org.mmarini.rl.envs.WithSignalsSpec;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
@@ -72,7 +71,6 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 
 import static io.reactivex.rxjava3.core.Flowable.interval;
 import static java.util.Objects.requireNonNull;
@@ -89,63 +87,6 @@ public class Wheelly {
 
     static {
         Nd4j.zeros(1);
-    }
-
-    protected final EnvironmentPanel envPanel;
-    private final WheellyToolBar toolBar;
-    private final DoubleReducedValue reactionRobotTime;
-    private final DoubleReducedValue reactionRealTime;
-    private final ComMonitor comMonitor;
-    private final SensorMonitor sensorMonitor;
-    private final KpisPanel kpisPanel;
-    private final CompletableSubject completion;
-    private final Namespace args;
-    private final JButton relocateButton;
-    private final AtomicBoolean shuttingDown;
-    private final JFrame waitFrame;
-    private final AtomicBoolean active;
-    private long autosaveInstant;
-    private long robotStartTimestamp;
-    private Long sessionDuration;
-    private GridPanel gridPanel;
-    private long prevRobotStep;
-    private long prevStep;
-    private List<JFrame> allFrames;
-    private RobotControllerApi controller;
-    private WorldModeller worldModeller;
-    private EnvironmentApi environment;
-    private RobotApi robot;
-    private Agent agent;
-    private JFrame frame;
-    private InferenceWriter modelDumper;
-    private KeyBinWriter kpisWriter;
-    private long savingInterval;
-
-    /**
-     * Creates the server reinforcement learning engine server
-     *
-     * @param args the parsed argument
-     */
-    public Wheelly(Namespace args) {
-        this.args = requireNonNull(args);
-        this.envPanel = new EnvironmentPanel();
-        this.kpisPanel = new KpisPanel();
-        this.comMonitor = new ComMonitor();
-        this.sensorMonitor = new SensorMonitor();
-        this.toolBar = new WheellyToolBar();
-        this.robotStartTimestamp = -1;
-        this.reactionRobotTime = DoubleReducedValue.mean();
-        this.reactionRealTime = DoubleReducedValue.mean();
-        this.prevRobotStep = -1;
-        this.prevStep = -1;
-        this.completion = CompletableSubject.create();
-        this.relocateButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.relocateButton");
-        this.waitFrame = center(createFrame("Shutdown", createWaitPanel()));
-        this.shuttingDown = new AtomicBoolean(false);
-        this.active = new AtomicBoolean(true);
-
-        comMonitor.setPrintTimestamp(true);
-        waitFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
     }
 
     /**
@@ -212,6 +153,63 @@ public class Wheelly {
         }
     }
 
+    protected final EnvironmentPanel envPanel;
+    private final WheellyToolBar toolBar;
+    private final DoubleReducedValue reactionRobotTime;
+    private final DoubleReducedValue reactionRealTime;
+    private final ComMonitor comMonitor;
+    private final SensorMonitor sensorMonitor;
+    private final KpisPanel kpisPanel;
+    private final CompletableSubject completion;
+    private final Namespace args;
+    private final JButton relocateButton;
+    private final AtomicBoolean shuttingDown;
+    private final JFrame waitFrame;
+    private final AtomicBoolean active;
+    private long autosaveInstant;
+    private long robotStartTimestamp;
+    private Long sessionDuration;
+    private GridPanel gridPanel;
+    private long prevRobotStep;
+    private long prevStep;
+    private List<JFrame> allFrames;
+    private RobotControllerApi controller;
+    private WorldModeller worldModeller;
+    private EnvironmentApi environment;
+    private RobotApi robot;
+    private Agent agent;
+    private JFrame frame;
+    private InferenceWriter modelDumper;
+    private KeyBinWriter kpisWriter;
+    private long savingInterval;
+
+    /**
+     * Creates the server reinforcement learning engine server
+     *
+     * @param args the parsed argument
+     */
+    public Wheelly(Namespace args) {
+        this.args = requireNonNull(args);
+        this.envPanel = new EnvironmentPanel();
+        this.kpisPanel = new KpisPanel();
+        this.comMonitor = new ComMonitor();
+        this.sensorMonitor = new SensorMonitor();
+        this.toolBar = new WheellyToolBar();
+        this.robotStartTimestamp = -1;
+        this.reactionRobotTime = DoubleReducedValue.mean();
+        this.reactionRealTime = DoubleReducedValue.mean();
+        this.prevRobotStep = -1;
+        this.prevStep = -1;
+        this.completion = CompletableSubject.create();
+        this.relocateButton = SwingUtils.getInstance().initButton(new JButton(), "Wheelly.relocateButton");
+        this.waitFrame = center(createFrame("Shutdown", createWaitPanel()));
+        this.shuttingDown = new AtomicBoolean(false);
+        this.active = new AtomicBoolean(true);
+
+        comMonitor.setPrintTimestamp(true);
+        waitFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+    }
+
     /**
      * Creates the context from configuration
      *
@@ -241,9 +239,8 @@ public class Wheelly {
         environment.setRewardFunc(rewardFunc);
 
         logger.atInfo().log("Creating agent ...");
-        Function<WithSignalsSpec, Agent> agentBuilder = Agent.fromFile(
+        this.agent = Agent.fromFile(
                 new File(Locator.locate("agent").getNode(config).asText()));
-        this.agent = agentBuilder.apply(environment);
 
         if (agent instanceof DLAgent dlAgent) {
             dlAgent = dlAgent.concurrentTraining(args.getBoolean("parallel"))
@@ -324,24 +321,12 @@ public class Wheelly {
         }
 
         if (environment instanceof DLEnvironment dlEnvironment) {
-            dlEnvironment.readRewards()
-                    .subscribeOn(Schedulers.io())
-                    .subscribe(reward -> {
-                        envPanel.setReward(reward);
-                        sensorMonitor.onReward(reward);
-                    });
+            dlEnvironment.onReward(reward -> {
+                envPanel.setReward(reward);
+                sensorMonitor.onReward(reward);
+            });
         }
         completion.onComplete();
-    }
-
-    /**
-     * Handles the learning toggle button
-     *
-     * @param actionEvent the event
-     */
-    private void onLearningToggle(ActionEvent actionEvent) {
-        boolean learning = toolBar.learningButton().isSelected();
-        agent.learning(learning);
     }
 
     /**
@@ -544,6 +529,16 @@ public class Wheelly {
                 logger.atError().setCause(e).log("Error dumping kpis");
             }
         }
+    }
+
+    /**
+     * Handles the learning toggle button
+     *
+     * @param actionEvent the event
+     */
+    private void onLearningToggle(ActionEvent actionEvent) {
+        boolean learning = toolBar.learningButton().isSelected();
+        agent.learning(learning);
     }
 
     /**

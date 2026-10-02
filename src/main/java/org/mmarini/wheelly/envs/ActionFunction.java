@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Converts the signal action to roboto command
+ * Converts the signal action to robot command
  */
 public interface ActionFunction {
 

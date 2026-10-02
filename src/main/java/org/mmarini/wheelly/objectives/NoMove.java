@@ -69,7 +69,7 @@ public interface NoMove {
      */
     static RewardFunction noMove(float velocityThreshold, Complex sensorRange, double reward) {
         return (s0, a, s1) -> {
-            RobotStatus status = s1.robotStatus();
+            RobotStatus status = s1.worldModel().robotStatus();
             if (abs(status.leftPps()) < velocityThreshold
                     && abs(status.rightPps()) < velocityThreshold
                     && status.headDirection().isClose0(sensorRange)) {

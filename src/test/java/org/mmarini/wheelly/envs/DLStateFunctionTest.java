@@ -111,9 +111,10 @@ class DLStateFunctionTest {
                 .frontSensor(frontSensor)
                 .rearSensor(rearSensor)
                 .build();
+        BasicEnvState state = new BasicEnvState(model);
 
         // When ...
-        Map<String, Signal> signals = dataGen.signals(model, model);
+        Map<String, Signal> signals = dataGen.signals(state, state);
 
         // Then ...
         assertThat(signals, hasKey("canMoveStates"));
@@ -134,11 +135,11 @@ class DLStateFunctionTest {
                 .addContactsCell(cellLocation)
                 .robotLocation(robotLocation)
                 .build();
-
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().hasContact());
+        BasicEnvState state = new BasicEnvState(model);
 
         // When ...
-        Map<String, Signal> signals = dataGen.signals(model, model);
+        Map<String, Signal> signals = dataGen.signals(state, state);
 
         // Then ...
         assertThat(signals, hasKey("map"));
@@ -202,9 +203,10 @@ class DLStateFunctionTest {
                 .build();
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().echogenic());
+        BasicEnvState state = new BasicEnvState(model);
 
         // When ...
-        Map<String, Signal> signals = dataGen.signals(model, model);
+        Map<String, Signal> signals = dataGen.signals(state, state);
 
         // Then ...
         assertThat(signals, hasKey("map"));
@@ -268,9 +270,10 @@ class DLStateFunctionTest {
                 .build();
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().empty());
+        BasicEnvState state = new BasicEnvState(model);
 
         // When ...
-        Map<String, Signal> signals = dataGen.signals(model, model);
+        Map<String, Signal> signals = dataGen.signals(state, state);
 
         // Then ...
         assertThat(signals, hasKey("map"));
@@ -335,9 +338,10 @@ class DLStateFunctionTest {
 //        WorldModel model = createModeller().updateForInference(createModelLabelMap(directionDeg, robotLocation, cellLocation));
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().echogenic());
+        BasicEnvState state = new BasicEnvState(model);
 
         // When ...
-        Map<String, Signal> signals = dataGen.signals(model, model);
+        Map<String, Signal> signals = dataGen.signals(state, state);
 
         // Then ...
         assertThat(signals, hasKey("map"));

@@ -373,6 +373,16 @@ public class DLAgentBuilder {
     /**
      * Returns the agent from spec
      *
+     * @param root the spec documents
+     */
+    public static DLAgent create(JsonNode root) throws IOException {
+        Random random = Nd4j.getRandom();
+        return new DLAgentBuilder(root).build(random);
+    }
+
+    /**
+     * Returns the agent from spec
+     *
      * @param root the spec document
      * @param env  the environment
      */
@@ -389,14 +399,12 @@ public class DLAgentBuilder {
      * @param root the configuration
      * @param file the configuration file
      */
-    public static Function<WithSignalsSpec, DLAgent> create(JsonNode root, File file) {
-        return env -> {
-            try {
-                return DLAgentBuilder.create(root, env);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        };
+    public static DLAgent create(JsonNode root, File file) {
+        try {
+            return DLAgentBuilder.create(root);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private final JsonNode root;

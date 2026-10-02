@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.engines;
+package org.mmarini.wheelly.rrt;
 
 import org.junit.jupiter.api.Test;
 

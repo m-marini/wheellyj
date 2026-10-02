@@ -32,8 +32,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
+import org.mmarini.wheelly.envs.BasicEnvState;
 import org.mmarini.wheelly.envs.RewardFunction;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -44,11 +44,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 
 class AvoidTest {
-    static WorldModel createState(boolean canMoveForward, boolean canMoveBackward) {
-        return new WorldModelBuilder()
+    static BasicEnvState createState(boolean canMoveForward, boolean canMoveBackward) {
+        return new BasicEnvState(new WorldModelBuilder()
                 .canMoveForward(canMoveForward)
                 .canMoveBackward(canMoveBackward)
-                .build();
+                .build());
     }
 
     @ParameterizedTest
@@ -65,7 +65,7 @@ class AvoidTest {
                 "$schema: " + AvoidContact.SCHEMA_NAME,
                 "class: " + AvoidContact.class.getName()));
         RewardFunction f = AvoidContact.create(root, Locator.root());
-        WorldModel state = createState(canMoveForward != 0, canMoveBackward != 0);
+        BasicEnvState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
         double result = f.applyAsDouble(null, null, state);
 
@@ -87,7 +87,7 @@ class AvoidTest {
                 "class: " + AvoidContact.class.getName(),
                 "reward: -2"));
         RewardFunction f = AvoidContact.create(root, Locator.root());
-        WorldModel state = createState(canMoveForward != 0, canMoveBackward != 0);
+        BasicEnvState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
         double result = f.applyAsDouble(null, null, state);
 

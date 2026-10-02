@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -148,23 +148,23 @@ public class DLStateFunction implements StateFunction {
     }
 
     @Override
-    public Map<String, Signal> signals(WorldModel... states) {
+    public Map<String, Signal> signals(EnvState... states) {
         int n = states.length;
         INDArray sensor = Nd4j.zeros(n, 1).castTo(DataType.FLOAT);
         INDArray canMoveStates = Nd4j.zeros(n, NUM_CAN_MOVE_STATES).castTo(DataType.FLOAT);
 
         long numMarkers = markers.size();
         long numChannels = NUM_CELL_STATES + numMarkers;
-        WorldModel model = states[0];
+
+        WorldModel model = states[0].worldModel();
         GridMap map = model.gridMap();
         int width = map.topology().width();
         int height = map.topology().height();
         INDArray mapSignals = Nd4j.zeros(n, numChannels, width, height).castTo(DataType.FLOAT);
-
         int[] indices = new int[2];
         for (int k = 0; k < n; k++) {
             indices[0] = k;
-            model = states[k];
+            model = states[k].worldModel();
             RobotStatus robotStatus = model.getRobotStatus();
             Point2D robotLocation = robotStatus.location();
             map = model.gridMap();

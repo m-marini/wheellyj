@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,6 +30,7 @@ package org.mmarini.rl.agents;
 
 import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
+import org.mmarini.rl.envs.SignalSpec;
 
 import java.util.Map;
 
@@ -42,16 +43,18 @@ public interface AgentConnector {
     Map<String, Signal> act(Map<String, Signal> state);
 
     /**
+     * Sets the learning mode
+     *
+     * @param learning true if learning active
+     */
+    void learning(boolean learning);
+
+    /**
      * Observes the execution result training the agent
      *
      * @param result the execution result
      */
     Agent observe(ExecutionResult result);
 
-    /**
-     * Sets the learning mode
-     *
-     * @param learning true if learning active
-     */
-    void learning(boolean learning);
+    void validate(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec);
 }

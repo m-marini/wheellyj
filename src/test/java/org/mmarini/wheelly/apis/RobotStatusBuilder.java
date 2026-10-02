@@ -51,11 +51,15 @@ public class RobotStatusBuilder {
     private double rightPps;
     private Point2D robotLocation;
     private long lidarTime;
+    private boolean halt;
+    private String qr;
 
     public RobotStatusBuilder() {
         this.canMoveBackward = this.canMoveForward = this.frontSensor = this.rearSensor = true;
         this.time = 1;
         this.robotLocation = new Point2D.Double();
+        this.halt = true;
+        this.qr = "?";
     }
 
     public RobotStatusBuilder addTime(long deltaTime) {
@@ -74,9 +78,9 @@ public class RobotStatusBuilder {
         WheellyMotionMessage motion = new WheellyMotionMessage(time,
                 xPulses,
                 yPulses,
-                robotDirDeg, 0, 0, 0, true, 0, 0, 0, 0);
+                robotDirDeg, 0, 0, 0, halt, 0, 0, 0, 0);
         WheellyContactsMessage contacts = new WheellyContactsMessage(time, frontSensor, rearSensor, canMoveForward, canMoveBackward);
-        CameraEvent camera = new CameraEvent(time, "?", 3, 4, null, Complex.DEG0);
+        CameraEvent camera = new CameraEvent(time, qr, 3, 4, null, Complex.DEG0);
         WheellyLidarMessage lidars = new WheellyLidarMessage(lidarTime, m2mm(frontDistance), m2mm(rearDistance), xPulses, yPulses, robotDirDeg, headAngle);
         return new RobotStatus(DEFAULT_ROBOT_SPEC, time, motion, contacts,
                 InferenceFileReader.DEFAULT_SUPPLY_MESSAGE,
@@ -120,12 +124,22 @@ public class RobotStatusBuilder {
         return this;
     }
 
+    public RobotStatusBuilder halt(boolean halt) {
+        this.halt = halt;
+        return this;
+    }
+
     public Complex headAngle() {
         return Complex.fromDeg(headAngle);
     }
 
     public RobotStatusBuilder headAngle(int headAngle) {
         this.headAngle = headAngle;
+        return this;
+    }
+
+    public RobotStatusBuilder qr(String qr) {
+        this.qr = qr;
         return this;
     }
 

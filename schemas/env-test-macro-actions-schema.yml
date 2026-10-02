@@ -1,0 +1,86 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/env-test-macro-actions-schema-0.1
+title: Environment
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/env-test-macro-actions-schema-0.1
+  class:
+    const: org.mmarini.wheelly.envs.DLTestMacroActionEnvironment
+  stateFunction:
+    type: object
+    properties:
+      class:
+        type: string
+  maxIterations:
+    type: integer
+    minimum: 1
+  minGoals:
+    type: integer
+    minimum: 1
+  maxSearchTime:
+    type: integer
+    minimum: 0
+  maxRobotGoalToMarkerDistance:
+    type: number
+    exclusiveMinimum: 0
+  pathSafetyDistance:
+    type: number
+    exclusiveMinimum: 0
+  growthDistance:
+    type: number
+    exclusiveMinimum: 0
+  commitmentDuration:
+    type: integer
+    minimum: 0
+  scanInterval:
+    type: integer
+    minimum: 0
+  microDistance:
+    type: number
+    exclusiveMinimum: 0
+  minMarkerDistance:
+    type: number
+    minimum: 0
+  minObstacleDistance:
+    type: number
+    minimum: 0
+  minHeadTargetDistance:
+    type: number
+    exclusiveMinimum: 0
+  safeDistance:
+    type: number
+    exclusiveMinimum: 0
+  turnScanAngle:
+    type: integer
+    minimum: 1
+    maximum: 180
+  microAngle:
+    type: integer
+    minimum: 1
+    maximum: 180
+  scanAngleInterval:
+    type: integer
+    minimum: 1
+    maximum: 90
+  action:
+    enum:
+      - fullScan
+      - explore
+  seed:
+    type: integer
+required:
+  - $schema
+  - class
+  - stateFunction
+  - maxSearchTime
+  - maxRobotGoalToMarkerDistance
+  - commitmentDuration
+  - scanInterval
+  - microDistance
+  - minMarkerDistance
+  - minObstacleDistance
+  - minHeadTargetDistance
+  - action
+

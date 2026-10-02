@@ -33,6 +33,7 @@ import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.rrt.RRTPathFinder;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +60,8 @@ public class SearchRefreshState extends AbstractSearchAndMoveState {
     public static final double CM = 10e-3;
     private static final Logger logger = LoggerFactory.getLogger(SearchRefreshState.class);
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-search-refresh-schema-0.1";
+    public static final double NEAREST_TARGET_PROB = 0.05;
+    public static final double FREE_PROB = 0.9;
 
     /**
      * Returns the exploring state from configuration
@@ -88,7 +91,8 @@ public class SearchRefreshState extends AbstractSearchAndMoveState {
             RobotStatus status = worldModel.robotStatus();
             Point2D robotLocation = status.location();
             double maxDistance = status.robotSpec().maxRadarDistance();
-            return RRTPathFinder.createLeastEmptyTargets(map, robotLocation, safetyDistance + CM, growthDistance, maxDistance, random);
+            RRTPathFinder.Config config = new RRTPathFinder.Config(growthDistance, NEAREST_TARGET_PROB, FREE_PROB, robotLocation);
+            return RRTPathFinder.createLeastEmptyTargets(config, map, safetyDistance + CM, maxDistance, random);
         };
         return new SearchRefreshState(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
     }

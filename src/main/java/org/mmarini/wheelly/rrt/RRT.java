@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.engines;
+package org.mmarini.wheelly.rrt;
 
 import org.mmarini.Tuple2;
 
@@ -39,10 +39,10 @@ import java.util.function.*;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Finds the path from initial to goal node in a directed weighted graph
- * using RRT (Rapidly exploring random tree)
+ * Finds the path from an initial node to a goal node in a directed weighted graph
+ * using a Rapidly-exploring Random Tree (RRT).
  *
- * @param <T> the type of node
+ * @param <T> the type of node configuration
  */
 public class RRT<T> {
     private final Supplier<T> newConf;
@@ -56,14 +56,15 @@ public class RRT<T> {
     private T last;
 
     /**
-     * Creates the RRT
+     * Initialises a new RRT instance with functional strategies and the root configuration.
      *
-     * @param initial     the initial configuration
-     * @param newConf     the function returning a new configuration
-     * @param interpolate the function returning the interpolation configuration to target configuration
-     * @param distance    the function returning the distance between two configurations
-     * @param isConnected the function returning true if two configurations are connected
-     * @param isGoal      the function returning true if is the configuration is a goal
+     * @param initial     the initial root configuration of the tree
+     * @param newConf     the function supplying a new sample configuration
+     * @param interpolate the function returning an intermediate configuration stepped towards a target
+     * @param distance    the function computing the distance metric between two configurations
+     * @param isConnected the predicate checking whether a direct connection between two configurations is clear
+     * @param isGoal      the predicate determining whether a configuration satisfies the goal criteria
+     * @throws NullPointerException if any of the provided functional parameters or the initial node is null
      */
     public RRT(T initial, Supplier<T> newConf, BiFunction<T, T, T> interpolate,
                ToDoubleBiFunction<T, T> distance, BiPredicate<T, T> isConnected,
@@ -83,23 +84,33 @@ public class RRT<T> {
     }
 
     /**
-     * Returns the edges of the tree
+     * Returns the set of directed edges that currently build up the exploration tree.
+     *
+     * @return a {@link Set} of {@link Tuple2} elements containing the parent-child node pairs
      */
     public Set<Tuple2<T, T>> edges() {
         return edges;
     }
 
     /**
-     * Returns the found goals
+     * Returns the set of goal nodes that have been successfully discovered within the tree.
+     *
+     * @return a {@link Set} of target configurations reached by the algorithm
      */
     public Set<T> goals() {
         return goals;
     }
 
     /**
-     * Grows the tree with a new random node
+     * Grows the exploration tree by attempting to add a new node towards a randomly sampled configuration.
+     * <p>
+     * The process samples a candidate position, determines its nearest neighbour inside the existing
+     * tree topology, and steps towards it via interpolation. If the resulting node is novel and the
+     * trajectory connection is valid and obstacle-free, it is committed to the tree vertices and edges.
+     * </p>
      *
-     * @return the new node or null if not found
+     * @return the newly added configuration node, or {@code null} if sampling failed,
+     * if an identical node already exists, or if the connection is obstructed
      */
     public T grow() {
         last = newConf.get();
@@ -127,23 +138,32 @@ public class RRT<T> {
     }
 
     /**
-     * Returns true if the last node is connected to a target
+     * Checks whether at least one valid path connecting to a goal destination
+     * has been successfully established.
+     *
+     * @return {@code true} if one or more goals are present within the tree structures,
+     * {@code false} otherwise
      */
     public boolean isFound() {
         return !goals.isEmpty();
     }
 
     /**
-     * Returns the last configuration
+     * Returns the most recent node configuration evaluated or appended during the latest tree expansion.
+     *
+     * @return the last sample or node configuration of type {@code T}
      */
     public T last() {
         return last;
     }
 
     /**
-     * Returns the nearest connected node
+     * Finds the closest existing node within the tree structures to a given configuration
+     * using the configured distance metric.
      *
-     * @param node the node
+     * @param node the reference node configuration used for the proximity check
+     * @return the closest configuration node of type {@code T} present in the tree,
+     * or {@code null} if the vertices list is empty
      */
     private T nearestNode(T node) {
         return vertices.stream()
@@ -153,10 +173,12 @@ public class RRT<T> {
     }
 
     /**
-     * Returns the path
+     * Reconstructs the full path between two nodes within the tree by performing a depth-first search.
      *
-     * @param from start configuration
-     * @param to   end configuration
+     * @param from the starting point configuration of the requested path
+     * @param to   the terminal goal configuration of the requested path
+     * @return a ordered {@link List} of configurations representing the sequential path,
+     * or {@code null} if no connection exists between the two nodes
      */
     public List<T> path(T from, T to) {
         ArrayList<T> path = new ArrayList<>();
@@ -167,11 +189,14 @@ public class RRT<T> {
     }
 
     /**
-     * Returns the path
+     * Recursively traverses the tree structure from a current position trying to trace
+     * an active path towards the target destination node.
      *
-     * @param acc  accumulator
-     * @param from start configuration
-     * @param to   end configuration
+     * @param acc  the list accumulator used to store the intermediate milestones during path recovery
+     * @param from the current node under evaluation
+     * @param to   the absolute target goal destination node
+     * @return the milestone configuration if a path segment is validated,
+     * or {@code null} if the current subtree branch does not lead to the target
      */
     private T traverse(List<T> acc, T from, T to) {
         if (from.equals(to)) {
@@ -190,7 +215,9 @@ public class RRT<T> {
     }
 
     /**
-     * Returns the tree nodes
+     * Returns the complete set of structural vertices that compose the current tree.
+     *
+     * @return a {@link Set} containing all registered configurations in the tree
      */
     public Set<T> vertices() {
         return vertices;

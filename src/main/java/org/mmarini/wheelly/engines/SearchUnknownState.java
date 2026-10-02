@@ -33,12 +33,16 @@ import org.mmarini.wheelly.apis.RadarMap;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.rrt.RRTPathFinder;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 import java.util.function.Function;
+
+import static org.mmarini.wheelly.engines.SearchRefreshState.FREE_PROB;
+import static org.mmarini.wheelly.engines.SearchRefreshState.NEAREST_TARGET_PROB;
 
 /**
  * Generates the behaviour to select the path to the nearest unknown sector
@@ -57,9 +61,9 @@ import java.util.function.Function;
  */
 public class SearchUnknownState extends AbstractSearchAndMoveState {
     public static final double CM = 10e-3;
+    public static final int DEFAULT_MIN_GOALS = 1;
     private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-search-unknown-schema-0.1";
     private static final Logger logger = LoggerFactory.getLogger(SearchUnknownState.class);
-    public static final int DEFAULT_MIN_GOALS = 1;
 
     /**
      * Returns the exploring state from configuration
@@ -86,17 +90,17 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
     /**
      * Returns the exploring state
      *
-     * @param id               the node identifier
-     * @param onInit           the initialisation command or null if none
-     * @param onEntry          the entry command or null if none
-     * @param onExit           the exit command or null if none
-     * @param seed             the random generator seed
-     * @param timeout          the timeout (ms)
-     * @param maxIterations    the maximum number of iterations
-     * @param minGoals         the minimum number of goals
-     * @param maxSearchTime    the maximum search time (ms)
-     * @param safetyDistance   the maximum safety distance (m)
-     * @param growthDistance   the growth distance(m)
+     * @param id             the node identifier
+     * @param onInit         the initialisation command or null if none
+     * @param onEntry        the entry command or null if none
+     * @param onExit         the exit command or null if none
+     * @param seed           the random generator seed
+     * @param timeout        the timeout (ms)
+     * @param maxIterations  the maximum number of iterations
+     * @param minGoals       the minimum number of goals
+     * @param maxSearchTime  the maximum search time (ms)
+     * @param safetyDistance the maximum safety distance (m)
+     * @param growthDistance the growth distance(m)
      */
     public static SearchUnknownState create(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
                                             long seed, long timeout, int maxIterations, int minGoals,
@@ -108,8 +112,8 @@ public class SearchUnknownState extends AbstractSearchAndMoveState {
             WorldModel worldModel = context.worldModel();
             RadarMap map = worldModel.radarMap();
             RobotStatus status = worldModel.robotStatus();
-            return RRTPathFinder.createUnknownTargets(map, status.location(),
-                    safetyDistance + CM, growthDistance, random);
+            RRTPathFinder.Config config1 = new RRTPathFinder.Config(growthDistance, NEAREST_TARGET_PROB, FREE_PROB, status.location());
+            return RRTPathFinder.createUnknownTargets(config1, map, safetyDistance + CM, random);
         };
         return new SearchUnknownState(id, onInit, onEntry, onExit, timeout, maxIterations, minGoals, maxSearchTime, pathFinderSupplier);
     }
