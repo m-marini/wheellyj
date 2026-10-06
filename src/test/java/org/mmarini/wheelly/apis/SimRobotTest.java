@@ -32,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mmarini.RandomArgumentsGenerator;
@@ -61,6 +62,10 @@ class SimRobotTest {
     public static final float GRID_SIZE = 0.2f;
     public static final int STALEMATE_INTERVAL = 60000;
     public static final int INTERVAL = 10;
+    public static final SimRobotConfig DEFAULT_SIM_ROBOT_CONFIG = new SimRobotConfig(DEFAULT_ROBOT_SPEC, INTERVAL, 0, MESSAGE_INTERVAL,
+            MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL,
+            0, 0, 0, 0, DEFAULT_WORLD_SIZE, 0, 0,
+            List.of(MapBuilder.empty(41, GRID_SIZE)));
     public static final int NUM_CASES = 30;
     public static final double MAX_DISTANCE = 1;
     private static final double PULSES_EPSILON = 1;
@@ -69,11 +74,7 @@ class SimRobotTest {
      * Given a simulated robot with an obstacle map grid of 0.2 m without obstacles
      */
     private static SimRobot createRobot() {
-        return new SimRobot(DEFAULT_ROBOT_SPEC, new Random(SEED), new Random(SEED),
-                0, INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL,
-                0, 0, List.of(MapBuilder.empty(41, GRID_SIZE)),
-                0, 0, 0, 0,
-                SimRobot.DEFAULT_WORLD_SIZE);
+        return new SimRobot(DEFAULT_SIM_ROBOT_CONFIG, new Random(SEED), new Random(SEED));
     }
 
     public static Stream<Arguments> dataFar() {
@@ -169,6 +170,33 @@ class SimRobotTest {
 
         assertNotNull(motion);
         assertThat(motion.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, 0.5"
+    })
+    void testFrontTrack(int targetDeg, double targetDistance) {
+        // Given a sim robot connected and robotConfigured
+        // Given a robot connected and robotConfigured
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
+        // ANd a tracking target
+        Point2D target = new Point2D.Double(0, 0.5);
+
+        // When front track target
+        robot.syncConnect();
+        robot.track(true, target);
+        waitForMessages(() -> robot.simulate(), lidars);
+
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertEquals(500L, proxy.time());
+        assertEquals(0, proxy.headDirectionDeg());
     }
 
     @ParameterizedTest

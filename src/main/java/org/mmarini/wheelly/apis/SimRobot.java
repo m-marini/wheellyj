@@ -95,29 +95,33 @@ public class SimRobot implements RobotApi {
     private static final int VELOCITY_ITER = 10;
     private static final int POSITION_ITER = 10;
     private static final double SAFE_DISTANCE_SQ = pow(SAFE_DISTANCE + OBSTACLE_SIZE, 2);
-    private final RobotSpec robotSpec;
+
+    /**
+     * Returns the simulated robot from JSON configuration
+     *
+     * @param root the JSON document
+     * @param file the configuration file
+     */
+    public static SimRobot create(JsonNode root, File file) {
+        Locator locator = Locator.root();
+        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME, file.toString());
+        long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
+        long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
+        Random mapRandom = mapSeed > 0L ? new Random(mapSeed) : new Random();
+        Random robotRandom = robotSeed > 0L ? new Random(robotSeed) : new Random();
+        SimRobotConfig config = SimRobotConfig.fromJson(root, locator);
+        return new SimRobot(config, robotRandom, mapRandom);
+    }
+
+    private final SimRobotConfig config;
     private final Random random;
     private final Random mapRandom;
-    private final long motionInterval;
-    private final long lidarInterval;
-    private final long cameraInterval;
-    private final long stalemateInterval;
-    private final long mapPeriod;
-    private final long randomPeriod;
-    private final int numObstacles;
-    private final int numLabels;
-    private final double worldSize;
-    private final double errSensor;
-    private final double errSigma;
     private final PublishProcessor<Throwable> errors;
     private final BehaviorProcessor<Collection<Obstacle>> obstacleChanged;
     private final BehaviorProcessor<RobotStatusApi> robotLineState;
-    private final List<MapBuilder> maps;
     private final World world;
     private final Body robot;
     private final Fixture robotFixture;
-    private final long interval;
-    private final long tickInterval;
     private final AtomicReference<RobotRequests> requests;
     private final List<Consumer<WheellyContactsMessage>> onContacts;
     private final List<Consumer<WheellyLidarMessage>> onLidars;
@@ -155,45 +159,14 @@ public class SimRobot implements RobotApi {
     /**
      * Creates the simulated robot
      *
-     * @param robotSpec         the robot specification
-     * @param random            the robot random generator
-     * @param mapRandom         the map random generator
-     * @param tickInterval      the tick interval (ms)
-     * @param interval          the simulation interval (ms)
-     * @param motionInterval    the motion message interval (ms)
-     * @param lidarInterval     the proxy message interval (ms)
-     * @param cameraInterval    the camera event interval (ms)
-     * @param stalemateInterval the stalemate interval (ms)
-     * @param errSensor         the relative error sensor
-     * @param errSigma          the relative error on power simulation
-     * @param maps              the list of maps
-     * @param numObstacles      the number of obstacles
-     * @param numLabels         the number of labels
-     * @param mapPeriod         the change map period (ms)
-     * @param randomPeriod      the change obstacle period (ms)
-     * @param worldSize         the world size (m)
+     * @param config
+     * @param random    the robot random generator
+     * @param mapRandom the map random generator
      */
-    public SimRobot(RobotSpec robotSpec, Random random, Random mapRandom,
-                    long tickInterval, long interval, long motionInterval, long lidarInterval, long cameraInterval,
-                    long stalemateInterval, double errSensor, double errSigma, List<MapBuilder> maps, int numObstacles,
-                    int numLabels, long mapPeriod, long randomPeriod, double worldSize) {
-        this.robotSpec = requireNonNull(robotSpec);
+    public SimRobot(SimRobotConfig config, Random random, Random mapRandom) {
+        this.config = config;
         this.random = requireNonNull(random);
         this.mapRandom = requireNonNull(mapRandom);
-        this.motionInterval = motionInterval;
-        this.lidarInterval = lidarInterval;
-        this.cameraInterval = cameraInterval;
-        this.stalemateInterval = stalemateInterval;
-        this.mapPeriod = mapPeriod;
-        this.randomPeriod = randomPeriod;
-        this.numObstacles = numObstacles;
-        this.numLabels = numLabels;
-        this.errSensor = errSensor;
-        this.errSigma = errSigma;
-        this.interval = interval;
-        this.tickInterval = tickInterval;
-        this.maps = requireNonNull(maps);
-        this.worldSize = worldSize;
         this.requests = new AtomicReference<>(RobotRequests.empty());
         this.errors = PublishProcessor.create();
         this.obstacleChanged = BehaviorProcessor.create();
@@ -222,50 +195,6 @@ public class SimRobot implements RobotApi {
         this.onMotions = new ArrayList<>();
         this.onCameras = new ArrayList<>();
         generateRandomMap();
-    }
-
-    /**
-     * Returns the simulated robot from JSON configuration
-     *
-     * @param root the JSON document
-     * @param file the configuration file
-     */
-    public static SimRobot create(JsonNode root, File file) {
-        Locator locator = Locator.root();
-        WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME, file.toString());
-        long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);
-        long robotSeed = locator.path("robotSeed").getNode(root).asLong(0);
-        int numObstacles = locator.path("numObstacles").getNode(root).asInt();
-        int numLabels = locator.path("numLabels").getNode(root).asInt();
-        Random mapRandom = mapSeed > 0L ? new Random(mapSeed) : new Random();
-        Random robotRandom = robotSeed > 0L ? new Random(robotSeed) : new Random();
-        double errSigma = locator.path("errSigma").getNode(root).asDouble();
-        double errSensor = locator.path("errSensor").getNode(root).asDouble();
-        long motionInterval = locator.path("motionInterval").getNode(root).asLong(DEFAULT_MOTION_INTERVAL);
-        long lidarInterval = locator.path("lidarInterval").getNode(root).asLong(DEFAULT_LIDAR_INTERVAL);
-        long stalemateInterval = locator.path("stalemateInterval").getNode(root).asLong(DEFAULT_STALEMATE_INTERVAL);
-        long cameraInterval = locator.path("cameraInterval").getNode(root).asLong(DEFAULT_CAMERA_INTERVAL);
-        long interval = locator.path("interval").getNode(root).asLong();
-        long tickInterval = locator.path("tickInterval").getNode(root).asLong();
-        long mapPeriod = locator.path("mapPeriod").getNode(root).asLong();
-        long randomPeriod = locator.path("randomPeriod").getNode(root).asLong();
-        double worldSize = locator.path("worldSize").getNode(root).asDouble(DEFAULT_WORLD_SIZE);
-        RobotSpec robotSpec = RobotSpec.fromJson(root, locator);
-        List<MapBuilder> maps = locator.path("mapFiles").elements(root)
-                .map(l -> {
-                    String filename = l.getNode(root).asText();
-                    try {
-                        JsonNode mapYaml = org.mmarini.yaml.Utils.fromFile(filename);
-                        return MapBuilder.create(mapYaml, Locator.root());
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .toList();
-        return new SimRobot(robotSpec, robotRandom, mapRandom,
-                tickInterval, interval, motionInterval, lidarInterval, cameraInterval, stalemateInterval,
-                errSensor, errSigma,
-                maps, numObstacles, numLabels, mapPeriod, randomPeriod, worldSize);
     }
 
     @Override
@@ -297,13 +226,14 @@ public class SimRobot implements RobotApi {
      * Returns the camera location
      */
     private Point2D cameraLocation() {
-        return robotSpec.cameraLocation(location(), direction(), sensorDirection());
+        return config.robotSpec().cameraLocation(location(), direction(), sensorDirection());
     }
 
     /**
      * Returns the camera sensor area
      */
     public AreaExpression cameraSensorArea() {
+        RobotSpec robotSpec = robotSpec();
         return AreaExpression.radialSensorArea(
                 cameraLocation(),
                 headAbsDirection(),
@@ -350,7 +280,7 @@ public class SimRobot implements RobotApi {
             // Computes the distance of obstacles
             Point2D lidarLocation = frontLidarLocation();
             currentFrontDistance = nearestFrontObstacle.centre().distance(lidarLocation) - nearestFrontObstacle.radius()
-                    + random.nextGaussian() * errSensor;
+                    + random.nextGaussian() * config.errSensor();
         } else {
             currentFrontDistance = 0;
         }
@@ -366,7 +296,7 @@ public class SimRobot implements RobotApi {
             // Computes the distance of obstacles
             Point2D lidarLocation = rearLidarLocation();
             currentRearDistance = nearestRearObstacle.centre().distance(lidarLocation) - nearestRearObstacle.radius()
-                    + random.nextGaussian() * errSensor;
+                    + random.nextGaussian() * config.errSensor();
         } else {
             currentRearDistance = 0;
         }
@@ -418,7 +348,7 @@ public class SimRobot implements RobotApi {
     public void connect() {
         if (!closed && !connected) {
             syncConnect();
-            if (tickInterval == 0) {
+            if (config.tickInterval() == 0) {
                 startSyncSimulation();
             } else {
                 logger.atInfo().log("Started simulation");
@@ -485,10 +415,10 @@ public class SimRobot implements RobotApi {
         return template
                 // add obstacles
                 .rand(random, null,
-                        robotLocation, MIN_OBSTACLE_DISTANCE, numObstacles)
+                        robotLocation, MIN_OBSTACLE_DISTANCE, config.numObstacles())
                 // add labels
                 .rand(random, LABEL,
-                        robotLocation, MIN_OBSTACLE_DISTANCE, numLabels)
+                        robotLocation, MIN_OBSTACLE_DISTANCE, config.numLabels())
                 .build();
     }
 
@@ -517,10 +447,10 @@ public class SimRobot implements RobotApi {
      */
     private AreaExpression frontLidarArea() {
         return AreaExpression.radialSensorArea(
-                frontLidarLocation(), headAbsDirection(), robotSpec.lidarFOV(),
+                frontLidarLocation(), headAbsDirection(), config.robotSpec().lidarFOV(),
                 DEFAULT_OBSTACLE_RADIUS,
                 DEFAULT_OBSTACLE_RADIUS,
-                robotSpec.maxRadarDistance() + DEFAULT_OBSTACLE_RADIUS
+                config.robotSpec().maxRadarDistance() + DEFAULT_OBSTACLE_RADIUS
         );
     }
 
@@ -528,7 +458,7 @@ public class SimRobot implements RobotApi {
      * Returns the front lidar location
      */
     Point2D frontLidarLocation() {
-        return robotSpec.frontLidarLocation(location(), direction(), sensorDirection());
+        return config.robotSpec().frontLidarLocation(location(), direction(), sensorDirection());
     }
 
     /**
@@ -546,6 +476,7 @@ public class SimRobot implements RobotApi {
      */
     private Point2D generateLocation(Collection<Obstacle> map) {
         Point2D loc1;
+        double worldSize = config.worldSize();
         for (; ; ) {
             // Generates a random location in the map
             loc1 = new Point2D.Double(
@@ -569,6 +500,7 @@ public class SimRobot implements RobotApi {
      */
     private void generateRandomMap() {
         // Selects a random map builder
+        List<MapBuilder> maps = config.maps();
         template = maps.size() == 1
                 ? maps.getFirst()
                 : maps.get(mapRandom.nextInt(maps.size()));
@@ -602,6 +534,7 @@ public class SimRobot implements RobotApi {
      * Sets the motor speed to handle move backward
      */
     private void handleBackward() {
+        RobotSpec robotSpec = robotSpec();
         // Compute the distance to target
         Point2D robotLocation = location();
         double distance = robotLocation.distance(target);
@@ -685,6 +618,7 @@ public class SimRobot implements RobotApi {
         Point2D robotLocation = location();
         double distance = robotLocation.distance(target);
         // Check for target reached
+        RobotSpec robotSpec = robotSpec();
         if (distance <= robotSpec.targetRange()) {
             // Target reached
             haltImmediate();
@@ -777,6 +711,7 @@ public class SimRobot implements RobotApi {
         // Compute che rotation speed
         double rotSpeed;
         // Check for rotation completed
+        RobotSpec robotSpec = robotSpec();
         if (absRotDeg <= robotSpec.directionRange().toIntDeg()) {
             // Rotation completed -> halt robot
             haltImmediate();
@@ -807,7 +742,7 @@ public class SimRobot implements RobotApi {
         } else if (!stalemate) {
             // First stalemate, start the timer
             stalemate = true;
-            stalemateTimeout = robotTime + stalemateInterval;
+            stalemateTimeout = robotTime + config.stalemateInterval();
         } else if (robotTime >= stalemateTimeout) {
             // stalemate timeout
             safeRelocateRandom();
@@ -833,17 +768,17 @@ public class SimRobot implements RobotApi {
         return HALT.equals(statusId);
     }
 
-    @Override
-    public Single<Boolean> move(boolean frontMove, Point2D location) {
-        throw new NotImplementedException(); // TODO
-    }
-
     /**
      * Returns the robot location
      */
     public Point2D location() {
         Vec2 pos = robot.getPosition();
         return new Point2D.Double(pos.x / JBOX_SCALE, pos.y / JBOX_SCALE);
+    }
+
+    @Override
+    public Single<Boolean> move(boolean frontMove, Point2D location) {
+        throw new NotImplementedException(); // TODO
     }
 
     /**
@@ -855,8 +790,8 @@ public class SimRobot implements RobotApi {
         obstacleMap = map;
         createObstacleBody(map);
         obstacleChanged.onNext(map);
-        randomMapExpiration = robotTime + mapPeriod;
-        mapExpiration = robotTime + randomPeriod;
+        randomMapExpiration = robotTime + config.mapPeriod();
+        mapExpiration = robotTime + config.randomPeriod();
         return this;
     }
 
@@ -897,6 +832,7 @@ public class SimRobot implements RobotApi {
      * Returns the rear lidar area
      */
     public AreaExpression rearLidarArea() {
+        RobotSpec robotSpec = robotSpec();
         return AreaExpression.radialSensorArea(
                 rearLidarLocation(), headAbsDirection().opposite(), robotSpec.lidarFOV(),
                 DEFAULT_OBSTACLE_RADIUS,
@@ -909,7 +845,7 @@ public class SimRobot implements RobotApi {
      * Returns the rear lidar location
      */
     Point2D rearLidarLocation() {
-        return robotSpec.rearLidarLocation(location(), direction(), sensorDirection());
+        return config.robotSpec().rearLidarLocation(location(), direction(), sensorDirection());
     }
 
     /**
@@ -950,7 +886,7 @@ public class SimRobot implements RobotApi {
 
     @Override
     public RobotSpec robotSpec() {
-        return robotSpec;
+        return config.robotSpec();
     }
 
     @Override
@@ -1013,7 +949,7 @@ public class SimRobot implements RobotApi {
         for (Consumer<CameraEvent> callback : onCameras) {
             callback.accept(event);
         }
-        cameraTimeout = robotTime + cameraInterval;
+        cameraTimeout = robotTime + config.cameraInterval();
     }
 
     /**
@@ -1044,7 +980,7 @@ public class SimRobot implements RobotApi {
                 m2mm(frontDistance), m2mm(rearDistance),
                 xPulses, yPulses, robotYaw.toIntDeg(), headDirection.toIntDeg(),
                 HeadStatus.HeadStatusId.FIX_DIRECTION, 0, 0, 0);
-        lidarTimeout = robotTime + lidarInterval;
+        lidarTimeout = robotTime + config.lidarInterval();
         for (Consumer<WheellyLidarMessage> callback : onLidars) {
             callback.accept(msg);
         }
@@ -1065,7 +1001,7 @@ public class SimRobot implements RobotApi {
                 0, MotionStatus.MotionStatusId.HALT, // TODO status
                 0, (int) round(leftPps), (int) round(rightPps),
                 0, 0, 0, 0);
-        motionTimeout = robotTime + motionInterval;
+        motionTimeout = robotTime + config.motionInterval();
         for (Consumer<WheellyMotionMessage> callback : onMotions) {
             callback.accept(msg);
         }
@@ -1093,7 +1029,7 @@ public class SimRobot implements RobotApi {
      */
     void simulate() {
         // Update current simulation time
-        robotTime += interval;
+        robotTime += config.interval();
         sendMotion = sendContacts = sendLidar = false;
         lastTick = System.nanoTime();
         handleRequests();
@@ -1103,9 +1039,10 @@ public class SimRobot implements RobotApi {
         }
 
         // Check for random map expiration
+        long randomPeriod = config.randomPeriod();
         if (robotTime >= randomMapExpiration) {
             generateRandomMap();
-            randomMapExpiration = robotTime + expRandom(random, mapPeriod);
+            randomMapExpiration = robotTime + expRandom(random, config.mapPeriod());
             mapExpiration = robotTime + expRandom(random, randomPeriod);
         }
 
@@ -1150,7 +1087,7 @@ public class SimRobot implements RobotApi {
      * Simulates robot physics for interval time
      */
     private void simulatePhysics() {
-        double dt = interval * 1e-3;
+        double dt = config.interval() * 1e-3;
 
         // Relative left-right motor speeds
         double expectedLeftPps = leftPps;
@@ -1189,7 +1126,7 @@ public class SimRobot implements RobotApi {
         // Robot relative force
         Vec2 localForce = robot.getLocalVector(force);
         // add a random factor to force
-        localForce = localForce.mul((float) (1 + random.nextGaussian() * errSensor));
+        localForce = localForce.mul((float) (1 + random.nextGaussian() * config.errSensor()));
 
         // Clip the local force to physic constraints
         localForce.x = clamp(localForce.x, (float) -MAX_FORCE, (float) MAX_FORCE);
@@ -1204,7 +1141,7 @@ public class SimRobot implements RobotApi {
         float inertia = robot.getInertia();
         double angularTorque = (angularVelocity - robotAngularVelocity) * inertia / dt;
         // Add a random factor to angular impulse
-        angularTorque *= (1 + random.nextGaussian() * errSigma);
+        angularTorque *= (1 + random.nextGaussian() * config.errSigma());
         // Clip the angular torque
         angularTorque = clamp(angularTorque, -MAX_TORQUE, MAX_TORQUE);
         world.clearForces();
@@ -1217,11 +1154,6 @@ public class SimRobot implements RobotApi {
     public double simulationSpeed() {
         long dt = lastTick - startSimulationTime;
         return dt > 0 ? robotTime * NANOS_PER_MILLIS / dt : 1;
-    }
-
-    @Override
-    public Single<Boolean> track(boolean frontTrack, Point2D target) {
-        throw new NotImplementedException(); // TODO
     }
 
     /**
@@ -1271,7 +1203,7 @@ public class SimRobot implements RobotApi {
      */
     private void tick() {
         if (!closed) {
-            Completable.timer(tickInterval, TimeUnit.MILLISECONDS)
+            Completable.timer(config.tickInterval(), TimeUnit.MILLISECONDS)
                     .observeOn(Schedulers.computation())
                     .subscribe(() -> {
                         simulate();
@@ -1280,6 +1212,65 @@ public class SimRobot implements RobotApi {
                     });
         } else {
             logger.atInfo().log("Simulation completed");
+        }
+    }
+
+    @Override
+    public Single<Boolean> track(boolean frontTrack, Point2D target) {
+        throw new NotImplementedException(); // TODO
+    }
+
+    public record SimRobotConfig(
+            RobotSpec robotSpec,
+            long interval,
+            long tickInterval,
+            long motionInterval,
+            long lidarInterval,
+            long cameraInterval,
+            long stalemateInterval,
+            long mapPeriod,
+            long randomPeriod,
+            int numObstacles,
+            int numLabels,
+            double worldSize,
+            double errSensor,
+            double errSigma,
+            List<MapBuilder> maps
+    ) {
+        public static SimRobotConfig fromJson(JsonNode root, Locator locator) {
+            int numObstacles = locator.path("numObstacles").getNode(root).asInt();
+            int numLabels = locator.path("numLabels").getNode(root).asInt();
+            double errSigma = locator.path("errSigma").getNode(root).asDouble();
+            double errSensor = locator.path("errSensor").getNode(root).asDouble();
+            long motionInterval = locator.path("motionInterval").getNode(root).asLong(DEFAULT_MOTION_INTERVAL);
+            long lidarInterval = locator.path("lidarInterval").getNode(root).asLong(DEFAULT_LIDAR_INTERVAL);
+            long stalemateInterval = locator.path("stalemateInterval").getNode(root).asLong(DEFAULT_STALEMATE_INTERVAL);
+            long cameraInterval = locator.path("cameraInterval").getNode(root).asLong(DEFAULT_CAMERA_INTERVAL);
+            long interval = locator.path("interval").getNode(root).asLong();
+            long tickInterval = locator.path("tickInterval").getNode(root).asLong();
+            long mapPeriod = locator.path("mapPeriod").getNode(root).asLong();
+            long randomPeriod = locator.path("randomPeriod").getNode(root).asLong();
+            double worldSize = locator.path("worldSize").getNode(root).asDouble(DEFAULT_WORLD_SIZE);
+            RobotSpec robotSpec = RobotSpec.fromJson(root, locator);
+            List<MapBuilder> maps = locator.path("mapFiles").elements(root)
+                    .map(l -> {
+                        String filename = l.getNode(root).asText();
+                        try {
+                            JsonNode mapYaml = org.mmarini.yaml.Utils.fromFile(filename);
+                            return MapBuilder.create(mapYaml, Locator.root());
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
+                    .toList();
+            return new SimRobotConfig(robotSpec, interval, tickInterval, motionInterval, lidarInterval, cameraInterval,
+                    stalemateInterval, mapPeriod, randomPeriod, numObstacles, numLabels,
+                    worldSize, errSensor, errSigma, maps);
+        }
+
+        public SimRobotConfig {
+            requireNonNull(robotSpec);
+            requireNonNull(maps);
         }
     }
 
