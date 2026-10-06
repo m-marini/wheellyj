@@ -122,10 +122,7 @@ public class SimRobot implements RobotApi {
     private final Body robot;
     private final Fixture robotFixture;
     private final AtomicReference<RobotRequests> requests;
-    private final List<Consumer<WheellyContactsMessage>> onContacts;
-    private final List<Consumer<WheellyLidarMessage>> onLidars;
-    private final List<Consumer<WheellyMotionMessage>> onMotions;
-    private final List<Consumer<CameraEvent>> onCameras;
+    private final HeadStatus headStatus;
     private Body obstacleBody;
     private boolean connected;
     private boolean closed;
@@ -143,7 +140,6 @@ public class SimRobot implements RobotApi {
     private long randomMapExpiration;
     private Complex headDirection;
     private MotionStatus motionStatus;
-    private final HeadStatus headStatus;
     private double frontDistance;
     private double rearDistance;
     private boolean frontSensor;
@@ -153,6 +149,10 @@ public class SimRobot implements RobotApi {
     private boolean sendLidar;
     private boolean sendMotion;
     private boolean sendContacts;
+    private Consumer<WheellyContactsMessage> onContacts;
+    private Consumer<WheellyLidarMessage> onLidars;
+    private Consumer<WheellyMotionMessage> onMotions;
+    private Consumer<CameraEvent> onCameras;
 
     /**
      * Creates the simulated robot
@@ -187,10 +187,6 @@ public class SimRobot implements RobotApi {
         this.headDirection = Complex.DEG0;
         this.frontSensor = this.rearSensor = true;
         this.robotLineState = BehaviorProcessor.createDefault(new RobotLineState(false, false, false, false));
-        this.onContacts = new ArrayList<>();
-        this.onLidars = new ArrayList<>();
-        this.onMotions = new ArrayList<>();
-        this.onCameras = new ArrayList<>();
         this.motionStatus = MotionStatus.halt();
         this.headStatus = HeadStatus.lookStraight();
         generateRandomMap();
@@ -198,17 +194,17 @@ public class SimRobot implements RobotApi {
 
     @Override
     public void addOnContacts(Consumer<WheellyContactsMessage> callback) {
-        onContacts.add(callback);
+        onContacts = onContacts == null ? callback : callback.andThen(onContacts);
     }
 
     @Override
     public void addOnLidar(Consumer<WheellyLidarMessage> callback) {
-        onLidars.add(callback);
+        onLidars = onLidars == null ? callback : callback.andThen(onLidars);
     }
 
     @Override
     public void addOnMotion(Consumer<WheellyMotionMessage> callback) {
-        onMotions.add(callback);
+        onMotions = onMotions == null ? callback : callback.andThen(onMotions);
     }
 
     @Override
@@ -777,7 +773,7 @@ public class SimRobot implements RobotApi {
 
     @Override
     public void onCamera(Consumer<CameraEvent> callback) {
-        onCameras.add(callback);
+        onCameras = onCameras == null ? callback : callback.andThen(onCameras);
     }
 
     @Override
@@ -923,8 +919,8 @@ public class SimRobot implements RobotApi {
         } else {
             event = CameraEvent.unknown(robotTime);
         }
-        for (Consumer<CameraEvent> callback : onCameras) {
-            callback.accept(event);
+        if (onCameras != null) {
+            onCameras.accept(event);
         }
         cameraTimeout = robotTime + config.cameraInterval();
     }
@@ -939,8 +935,8 @@ public class SimRobot implements RobotApi {
                 canMoveForward(),
                 canMoveBackward()
         );
-        for (Consumer<WheellyContactsMessage> callback : onContacts) {
-            callback.accept(msg);
+        if (onContacts != null) {
+            onContacts.accept(msg);
         }
     }
 
@@ -958,8 +954,8 @@ public class SimRobot implements RobotApi {
                 xPulses, yPulses, robotYaw.toIntDeg(), headDirection.toIntDeg(),
                 HeadStatus.HeadStatusId.FIX_DIRECTION, 0, 0, 0);
         lidarTimeout = robotTime + config.lidarInterval();
-        for (Consumer<WheellyLidarMessage> callback : onLidars) {
-            callback.accept(msg);
+        if (onLidars != null) {
+            onLidars.accept(msg);
         }
     }
 
@@ -979,8 +975,8 @@ public class SimRobot implements RobotApi {
                 0, (int) round(leftPps), (int) round(rightPps),
                 0, 0, 0, 0);
         motionTimeout = robotTime + config.motionInterval();
-        for (Consumer<WheellyMotionMessage> callback : onMotions) {
-            callback.accept(msg);
+        if (onMotions != null) {
+            onMotions.accept(msg);
         }
     }
 
