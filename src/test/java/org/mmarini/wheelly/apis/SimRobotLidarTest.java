@@ -146,7 +146,7 @@ public class SimRobotLidarTest {
         robot = new SimRobot(new SimRobot.SimRobotConfig(
                 DEFAULT_ROBOT_SPEC, 10, 0, DEFAULT_MOTION_INTERVAL, LIDAR_INTERVAL, DEFAULT_CAMERA_INTERVAL,
                 DEFAULT_STALEMATE_INTERVAL, CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD, 0, 0, DEFAULT_WORLD_SIZE, 0, 0,
-                List.of(MapBuilder.empty(41, GRID_SIZE))),
+                List.of(MapBuilder.empty(41, GRID_SIZE)), DEFAULT_ANTI_GIMBAL_RADIUS),
                 new Random(SEED), new Random(SEED));
         robot.robotPos(xRobot, yRobot);
         robot.robotDir(Complex.fromDeg(robotDirDeg));

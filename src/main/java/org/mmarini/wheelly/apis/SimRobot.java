@@ -40,7 +40,6 @@ import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
-import org.mmarini.NotImplementedException;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +55,7 @@ import java.util.function.Predicate;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.HeadStatus.HeadStatusId.FIX_DIRECTION;
 import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.RobotStatus.OBSTACLE_SIZE;
@@ -81,6 +81,7 @@ public class SimRobot implements RobotApi {
     public static final long DEFAULT_CAMERA_INTERVAL = 500;
     public static final String LABEL = "A";
     public static final double MIN_OBSTACLE_DISTANCE = 1;
+    public static final double DEFAULT_ANTI_GIMBAL_RADIUS = 0.3;
     static final float JBOX_SCALE = 100;
     static final double MAX_ACC = 1 * JBOX_SCALE;
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
@@ -122,7 +123,7 @@ public class SimRobot implements RobotApi {
     private final Body robot;
     private final Fixture robotFixture;
     private final AtomicReference<RobotRequests> requests;
-    private final HeadStatus headStatus;
+    private HeadStatus headStatus;
     private Body obstacleBody;
     private boolean connected;
     private boolean closed;
@@ -586,6 +587,10 @@ public class SimRobot implements RobotApi {
      * Sets the motor speed based on the command status
      */
     private void handleEngine() {
+        switch (headStatus.status()) {
+            case FRONT_TRACK -> trackFrontTarget();
+            case REAR_TRACK -> trackRearTarget();
+        }
         switch (motionStatus.status()) {
             case ROTATE -> handleRotation();
             case FORWARD -> handleForward();
@@ -659,9 +664,9 @@ public class SimRobot implements RobotApi {
                 checkForSpeed();
             }
             if (r.headStatus() != null) {
-                switch (r.headStatus().status()) {
-                    case FIX_DIRECTION -> headDirection = Complex.fromDeg(r.headStatus().direction());
-                    default -> headDirection = Complex.DEG0;
+                headStatus = r.headStatus();
+                if (FIX_DIRECTION.equals(headStatus.status())) {
+                    headDirection = Complex.fromDeg(r.headStatus().direction());
                 }
             }
         }
@@ -948,11 +953,13 @@ public class SimRobot implements RobotApi {
         double xPulses = distance2Pulse(pos.getX());
         double yPulses = distance2Pulse(pos.getY());
         Complex robotYaw = direction();
+        Point2D pulses = location2Pulses(headStatus.target());
         WheellyLidarMessage msg = new WheellyLidarMessage(
                 robotTime,
                 m2mm(frontDistance), m2mm(rearDistance),
                 xPulses, yPulses, robotYaw.toIntDeg(), headDirection.toIntDeg(),
-                HeadStatus.HeadStatusId.FIX_DIRECTION, 0, 0, 0);
+                headStatus.status(), headStatus.direction(),
+                pulses.getX(), pulses.getY());
         lidarTimeout = robotTime + config.lidarInterval();
         if (onLidars != null) {
             onLidars.accept(msg);
@@ -967,13 +974,15 @@ public class SimRobot implements RobotApi {
         double xPulses = pos.getX() / DISTANCE_PER_PULSE;
         double yPulses = pos.getY() / DISTANCE_PER_PULSE;
         Complex robotDir = direction();
+        Point2D pulses = location2Pulses(motionStatus.target());
         WheellyMotionMessage msg = new WheellyMotionMessage(
                 robotTime,
                 xPulses, yPulses, robotDir.toIntDeg(),
                 leftPps, rightPps,
-                0, MotionStatus.MotionStatusId.HALT, // TODO status
-                0, (int) round(leftPps), (int) round(rightPps),
-                0, 0, 0, 0);
+                0, motionStatus.status(),
+                motionStatus.targetDir(), (int) round(leftPps), (int) round(rightPps),
+                0, 0,
+                pulses.getX(), pulses.getY());
         motionTimeout = robotTime + config.motionInterval();
         if (onMotions != null) {
             onMotions.accept(msg);
@@ -1190,7 +1199,41 @@ public class SimRobot implements RobotApi {
 
     @Override
     public Single<Boolean> track(boolean frontTrack, Point2D target) {
-        throw new NotImplementedException(); // TODO
+        requireNonNull(target);
+        requests.updateAndGet(r -> r.headStatus(
+                frontTrack
+                        ? HeadStatus.trackFrontFace(target)
+                        : HeadStatus.trackRearFace(target)));
+        return Single.just(true);
+    }
+
+    private void trackFrontTarget() {
+        RobotSpec robotSpec = robotSpec();
+        Point2D target = headStatus.target();
+        Point2D headLocation = robotSpec.headLocation(location(), direction());
+        double distance = headLocation.distance(target);
+        if (distance > config.antiGimbalRadius()) {
+            int headDir = Complex.direction(headLocation, target)
+                    .sub(direction())
+                    .toIntDeg();
+            int headRange = robotSpec.headFOV().toIntDeg() / 2;
+            this.headDirection = Complex.fromDeg(clamp(headDir, -headRange, headRange));
+        }
+    }
+
+    private void trackRearTarget() {
+        RobotSpec robotSpec = robotSpec();
+        Point2D target = headStatus.target();
+        Point2D headLocation = robotSpec.headLocation(location(), direction());
+        double distance = headLocation.distance(target);
+        if (distance > config.antiGimbalRadius()) {
+            int headDir = Complex.direction(headLocation, target)
+                    .opposite()
+                    .sub(direction())
+                    .toIntDeg();
+            int headRange = robotSpec.headFOV().toIntDeg() / 2;
+            this.headDirection = Complex.fromDeg(clamp(headDir, -headRange, headRange));
+        }
     }
 
     public record SimRobotConfig(
@@ -1208,8 +1251,8 @@ public class SimRobot implements RobotApi {
             double worldSize,
             double errSensor,
             double errSigma,
-            List<MapBuilder> maps
-    ) {
+            List<MapBuilder> maps,
+            double antiGimbalRadius) {
         public static SimRobotConfig fromJson(JsonNode root, Locator locator) {
             int numObstacles = locator.path("numObstacles").getNode(root).asInt();
             int numLabels = locator.path("numLabels").getNode(root).asInt();
@@ -1224,6 +1267,7 @@ public class SimRobot implements RobotApi {
             long mapPeriod = locator.path("mapPeriod").getNode(root).asLong();
             long randomPeriod = locator.path("randomPeriod").getNode(root).asLong();
             double worldSize = locator.path("worldSize").getNode(root).asDouble(DEFAULT_WORLD_SIZE);
+            double antiGimbalRadius = locator.path("antiGimbalRadius").getNode(root).asDouble(DEFAULT_ANTI_GIMBAL_RADIUS);
             RobotSpec robotSpec = RobotSpec.fromJson(root, locator);
             List<MapBuilder> maps = locator.path("mapFiles").elements(root)
                     .map(l -> {
@@ -1238,7 +1282,7 @@ public class SimRobot implements RobotApi {
                     .toList();
             return new SimRobotConfig(robotSpec, interval, tickInterval, motionInterval, lidarInterval, cameraInterval,
                     stalemateInterval, mapPeriod, randomPeriod, numObstacles, numLabels,
-                    worldSize, errSensor, errSigma, maps);
+                    worldSize, errSensor, errSigma, maps, antiGimbalRadius);
         }
 
         public SimRobotConfig {

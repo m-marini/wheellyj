@@ -50,6 +50,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.TestFunctions.waitForMessages;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.BACKWARD;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.FORWARD;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.SimRobot.*;
 import static org.mmarini.wheelly.apis.Utils.MM;
@@ -65,7 +67,7 @@ class SimRobotTest {
     public static final SimRobotConfig DEFAULT_SIM_ROBOT_CONFIG = new SimRobotConfig(DEFAULT_ROBOT_SPEC, INTERVAL, 0, MESSAGE_INTERVAL,
             MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL,
             0, 0, 0, 0, DEFAULT_WORLD_SIZE, 0, 0,
-            List.of(MapBuilder.empty(41, GRID_SIZE)));
+            List.of(MapBuilder.empty(41, GRID_SIZE)), DEFAULT_ANTI_GIMBAL_RADIUS);
     public static final int NUM_CASES = 30;
     public static final double MAX_DISTANCE = 1;
     private static final double PULSES_EPSILON = 1;
@@ -77,11 +79,81 @@ class SimRobotTest {
         return new SimRobot(DEFAULT_SIM_ROBOT_CONFIG, new Random(SEED), new Random(SEED));
     }
 
-    public static Stream<Arguments> dataFar() {
+    static Stream<Arguments> dataFar() {
         return RandomArgumentsGenerator.create(SEED)
                 .uniform(0, 359) // int robotDeg
                 .uniform(0, 359) // int targetDeg
-                .uniform(0, MAX_DISTANCE, 9) // double targetDistance
+                .uniform(DEFAULT_TARGET_RANGE + 30 * MM, MAX_DISTANCE, 9) // double targetDistance
+                .build(NUM_CASES);
+    }
+
+    static Stream<Arguments> dataFrontTrack() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-180, 179)
+                .uniform(-65, 65)
+                .exponential(DEFAULT_ANTI_GIMBAL_RADIUS + MM, MAX_DISTANCE, 11)
+                .build(NUM_CASES);
+    }
+
+    public static Stream<Arguments> dataFrontTrackLeft() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-180, 179)
+                .uniform(-180, -66)
+                .exponential(DEFAULT_ANTI_GIMBAL_RADIUS + MM, MAX_DISTANCE, 11)
+                .build(NUM_CASES);
+    }
+
+    static Stream<Arguments> dataFrontTrackNear() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-180, 179)
+                .uniform(-180, 179)
+                .uniform(0.0, DEFAULT_ANTI_GIMBAL_RADIUS - MM, 11)
+                .build(NUM_CASES);
+    }
+
+    public static Stream<Arguments> dataFrontTrackRight() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-180, 179)
+                .uniform(66, 179)
+                .exponential(DEFAULT_ANTI_GIMBAL_RADIUS + MM, MAX_DISTANCE, 11)
+                .build(NUM_CASES);
+    }
+
+    public static Stream<Arguments> dataRearTrack() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-180, 179)
+                .uniform(180 - 65, 180 + 65)
+                .exponential(DEFAULT_ANTI_GIMBAL_RADIUS + MM, MAX_DISTANCE, 11)
+                .build(NUM_CASES);
+    }
+
+    public static Stream<Arguments> dataRearTrackLeft() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-180, 179)
+                .uniform(-180 + 65, 0)
+                .exponential(DEFAULT_ANTI_GIMBAL_RADIUS + MM, MAX_DISTANCE, 11)
+                .build(NUM_CASES);
+    }
+
+    public static Stream<Arguments> dataRearTrackRight() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-180, 179)
+                .uniform(1, 179 - 65)
+                .exponential(DEFAULT_ANTI_GIMBAL_RADIUS + MM, MAX_DISTANCE, 11)
                 .build(NUM_CASES);
     }
 
@@ -109,10 +181,12 @@ class SimRobotTest {
         // When move to 0 DEG at max power
         robot.syncConnect();
         robot.move(false, target);
+        waitForMessages(() -> robot.simulate(), motions);
+        WheellyMotionMessage motionMsg = motions.getLast();
+        // And waiting for messages with time > 500
         do {
             robot.simulate();
         } while (!robot.isHalt() && robot.robotTime() <= rt);
-
         waitForMessages(() -> robot.simulate(), motions);
 
         robot.close();
@@ -121,6 +195,9 @@ class SimRobotTest {
         assertThat(robot.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
 
         // Then ...
+        assertEquals(BACKWARD, motionMsg.status());
+        assertThat(motionMsg.target(), pointCloseTo(target, MM));
+
         WheellyMotionMessage motion = motions.getLast();
 
         assertNotNull(motion);
@@ -154,6 +231,8 @@ class SimRobotTest {
         long rt = 10000;
         robot.syncConnect();
         robot.move(true, target);
+        waitForMessages(() -> robot.simulate(), motions);
+        WheellyMotionMessage motionMsg = motions.getLast();
         // And waiting for messages with time > 500
         do {
             robot.simulate();
@@ -166,23 +245,113 @@ class SimRobotTest {
         assertThat(robot.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
 
         // Then ...
-        WheellyMotionMessage motion = motions.getLast();
+        assertEquals(FORWARD, motionMsg.status());
+        assertThat(motionMsg.target(), pointCloseTo(target, MM));
 
+        WheellyMotionMessage motion = motions.getLast();
         assertNotNull(motion);
         assertThat(motion.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
     }
 
     @ParameterizedTest
     @CsvSource({
-            "0, 0.5"
+            "0,0, 0, 0, 0.5"
     })
-    void testFrontTrack(int targetDeg, double targetDistance) {
-        // Given a sim robot connected and robotConfigured
-        // Given a robot connected and robotConfigured
+    @MethodSource("dataFrontTrack")
+    void testFrontTrack(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
+        // Given a robot location
+        Point2D robotLocation = new Point2D.Double(x, y);
+        // And a robot heading
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        // And a world target direction
+        Complex targetDir = Complex.fromDeg(targetDeg).add(robotDir);
+        // And a tracking target
+        Point2D headPosition = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotDir);
+        Point2D target = targetDir.at(headPosition, targetDistance);
+        // And a sim robot connected and robotConfigured
+        robot.robotPos(x, y);
+        robot.robotDir(robotDir);
+        // And a robot connected, onfigured and positioned
         List<WheellyLidarMessage> lidars = new ArrayList<>();
         robot.addOnLidar(lidars::add);
-        // ANd a tracking target
-        Point2D target = new Point2D.Double(0, 0.5);
+
+        // When front track target
+        robot.syncConnect();
+        robot.track(true, target);
+        waitForMessages(() -> robot.simulate(), lidars);
+
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertEquals(500L, proxy.time());
+        assertEquals(targetDeg, proxy.headDirectionDeg());
+        assertEquals(HeadStatus.HeadStatusId.FRONT_TRACK, proxy.trackingState());
+        assertThat(proxy.target(), pointCloseTo(target, MM));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, -90, 0.5"
+    })
+    @MethodSource("dataFrontTrackLeft")
+    void testFrontTrackLeft(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
+        // Given a robot location
+        Point2D robotLocation = new Point2D.Double(x, y);
+        // And a robot heading
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        // And a world target direction
+        Complex targetDir = Complex.fromDeg(targetDeg).add(robotDir);
+        // And a tracking target
+        Point2D headPosition = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotDir);
+        Point2D target = targetDir.at(headPosition, targetDistance);
+        // And a sim robot connected and robotConfigured
+        robot.robotPos(x, y);
+        robot.robotDir(robotDir);
+        // And a robot connected, onfigured and positioned
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
+
+        // When front track target
+        robot.syncConnect();
+        robot.track(true, target);
+        waitForMessages(() -> robot.simulate(), lidars);
+
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertEquals(500L, proxy.time());
+        assertEquals(-65, proxy.headDirectionDeg());
+        assertEquals(HeadStatus.HeadStatusId.FRONT_TRACK, proxy.trackingState());
+        assertThat(proxy.target(), pointCloseTo(target, MM));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, -180, 0.2"
+    })
+    @MethodSource("dataFrontTrackNear")
+    void testFrontTrackNear(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
+        // Given a robot location
+        Point2D robotLocation = new Point2D.Double(x, y);
+        // And a robot heading
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        // And a world target direction
+        Complex targetDir = Complex.fromDeg(targetDeg).add(robotDir);
+        // And a tracking target
+        Point2D headPosition = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotDir);
+        Point2D target = targetDir.at(headPosition, targetDistance);
+        // And a sim robot connected and robotConfigured
+        robot.robotPos(x, y);
+        robot.robotDir(robotDir);
+        // And a robot connected, onfigured and positioned
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
 
         // When front track target
         robot.syncConnect();
@@ -197,10 +366,207 @@ class SimRobotTest {
         assertNotNull(proxy);
         assertEquals(500L, proxy.time());
         assertEquals(0, proxy.headDirectionDeg());
+        assertEquals(HeadStatus.HeadStatusId.FRONT_TRACK, proxy.trackingState());
+        assertThat(proxy.target(), pointCloseTo(target, MM));
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {5, 15, 30, 45, 60, 90, 135, -180, -135, -90, -60, -45, -30, -15, -5})
+    @CsvSource({
+            "0,0, 0, 90, 0.5"
+    })
+    @MethodSource("dataFrontTrackRight")
+    void testFrontTrackRight(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
+        // Given a robot location
+        Point2D robotLocation = new Point2D.Double(x, y);
+        // And a robot heading
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        // And a world target direction
+        Complex targetDir = Complex.fromDeg(targetDeg).add(robotDir);
+        // And a tracking target
+        Point2D headPosition = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotDir);
+        Point2D target = targetDir.at(headPosition, targetDistance);
+        // And a sim robot connected and robotConfigured
+        robot.robotPos(x, y);
+        robot.robotDir(robotDir);
+        // And a robot connected, onfigured and positioned
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
+
+        // When front track target
+        robot.syncConnect();
+        robot.track(true, target);
+        waitForMessages(() -> robot.simulate(), lidars);
+
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertEquals(500L, proxy.time());
+        assertEquals(65, proxy.headDirectionDeg());
+        assertEquals(HeadStatus.HeadStatusId.FRONT_TRACK, proxy.trackingState());
+        assertThat(proxy.target(), pointCloseTo(target, MM));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, -180, 0.5"
+    })
+    @MethodSource("dataRearTrack")
+    void testRearTrack(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
+        // Given a robot location
+        Point2D robotLocation = new Point2D.Double(x, y);
+        // And a robot heading
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        // And a world target direction
+        Complex targetDir = Complex.fromDeg(targetDeg).add(robotDir);
+        // And a tracking target
+        Point2D headPosition = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotDir);
+        Point2D target = targetDir.at(headPosition, targetDistance);
+        // And a sim robot connected and robotConfigured
+        robot.robotPos(x, y);
+        robot.robotDir(robotDir);
+        // And a robot connected, onfigured and positioned
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
+
+        // When front track target
+        robot.syncConnect();
+        robot.track(false, target);
+        waitForMessages(() -> robot.simulate(), lidars);
+
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertEquals(500L, proxy.time());
+        assertEquals(Complex.fromDeg(targetDeg).opposite().toIntDeg(), proxy.headDirectionDeg());
+        assertEquals(HeadStatus.HeadStatusId.REAR_TRACK, proxy.trackingState());
+        assertThat(proxy.target(), pointCloseTo(target, MM));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, -90, 0.5"
+    })
+    @MethodSource("dataRearTrackLeft")
+    void testRearTrackLeft(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
+        // Given a robot location
+        Point2D robotLocation = new Point2D.Double(x, y);
+        // And a robot heading
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        // And a world target direction
+        Complex targetDir = Complex.fromDeg(targetDeg).add(robotDir);
+        // And a tracking target
+        Point2D headPosition = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotDir);
+        Point2D target = targetDir.at(headPosition, targetDistance);
+        // And a sim robot connected and robotConfigured
+        robot.robotPos(x, y);
+        robot.robotDir(robotDir);
+        // And a robot connected, onfigured and positioned
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
+
+        // When front track target
+        robot.syncConnect();
+        robot.track(false, target);
+        waitForMessages(() -> robot.simulate(), lidars);
+
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertEquals(500L, proxy.time());
+        assertEquals(65, proxy.headDirectionDeg());
+        assertEquals(HeadStatus.HeadStatusId.REAR_TRACK, proxy.trackingState());
+        assertThat(proxy.target(), pointCloseTo(target, MM));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, 0, 0.2"
+    })
+    @MethodSource("dataFrontTrackNear")
+    void testRearTrackNear(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
+        // Given a robot location
+        Point2D robotLocation = new Point2D.Double(x, y);
+        // And a robot heading
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        // And a world target direction
+        Complex targetDir = Complex.fromDeg(targetDeg).add(robotDir);
+        // And a tracking target
+        Point2D headPosition = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotDir);
+        Point2D target = targetDir.at(headPosition, targetDistance);
+        // And a sim robot connected and robotConfigured
+        robot.robotPos(x, y);
+        robot.robotDir(robotDir);
+        // And a robot connected, onfigured and positioned
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
+
+        // When front track target
+        robot.syncConnect();
+        robot.track(false, target);
+        waitForMessages(() -> robot.simulate(), lidars);
+
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertEquals(500L, proxy.time());
+        assertEquals(0, proxy.headDirectionDeg());
+        assertEquals(HeadStatus.HeadStatusId.REAR_TRACK, proxy.trackingState());
+        assertThat(proxy.target(), pointCloseTo(target, MM));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, 90, 0.5"
+    })
+    @MethodSource("dataRearTrackRight")
+    void testRearTrackRight(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
+        // Given a robot location
+        Point2D robotLocation = new Point2D.Double(x, y);
+        // And a robot heading
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        // And a world target direction
+        Complex targetDir = Complex.fromDeg(targetDeg).add(robotDir);
+        // And a tracking target
+        Point2D headPosition = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotDir);
+        Point2D target = targetDir.at(headPosition, targetDistance);
+        // And a sim robot connected and robotConfigured
+        robot.robotPos(x, y);
+        robot.robotDir(robotDir);
+        // And a robot connected, onfigured and positioned
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
+
+        // When front track target
+        robot.syncConnect();
+        robot.track(false, target);
+        waitForMessages(() -> robot.simulate(), lidars);
+
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertEquals(500L, proxy.time());
+        assertEquals(-65, proxy.headDirectionDeg());
+        assertEquals(HeadStatus.HeadStatusId.REAR_TRACK, proxy.trackingState());
+        assertThat(proxy.target(), pointCloseTo(target, MM));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {30, 45, 60, 90, 135, -180, -135, -90, -60, -45, -30})
     void testRotate(int dir) {
         // Given a robot connected and robotConfigured
         List<WheellyMotionMessage> motions = new ArrayList<>();
@@ -210,6 +576,9 @@ class SimRobotTest {
         long rt = 10000;
         robot.syncConnect();
         robot.rotate(dir);
+        waitForMessages(() -> robot.simulate(), motions);
+        WheellyMotionMessage motionMsg = motions.getLast();
+        // And waiting for messages with time > 500
         do {
             robot.simulate();
         } while (!robot.isHalt() && robot.robotTime() <= rt);
@@ -219,6 +588,8 @@ class SimRobotTest {
         robot.simulate();
 
         // Then ...
+        assertEquals(MotionStatus.MotionStatusId.ROTATE, motionMsg.status());
+        assertEquals(dir, motionMsg.targetDeg());
 
         // And the robot should emit motion at (0, 0) toward 5 DEG
         WheellyMotionMessage motion = motions.getLast();
@@ -255,6 +626,8 @@ class SimRobotTest {
         assertNotNull(proxy);
         assertEquals(500L, proxy.time());
         assertEquals(dir, proxy.headDirectionDeg());
+        assertEquals(HeadStatus.HeadStatusId.FIX_DIRECTION, proxy.trackingState());
+        assertEquals(dir, proxy.headTargetDeg());
     }
 
     @ParameterizedTest

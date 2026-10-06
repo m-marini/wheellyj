@@ -49,8 +49,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
-import static org.mmarini.wheelly.apis.SimRobot.DEFAULT_WORLD_SIZE;
-import static org.mmarini.wheelly.apis.SimRobot.SAFE_DISTANCE;
+import static org.mmarini.wheelly.apis.SimRobot.*;
 import static org.mmarini.wheelly.apis.Utils.MM;
 
 class SimRobotObstacleTest {
@@ -107,7 +106,7 @@ class SimRobotObstacleTest {
         SimRobot simRobot = new SimRobot(new SimRobot.SimRobotConfig(DEFAULT_ROBOT_SPEC, INTERVAL, INTERVAL, 0,
                 MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, CHANGE_MAP_PERIOD,
                 CHANGE_MAP_PERIOD, 0, 0, DEFAULT_WORLD_SIZE, 0, 0,
-                List.of(mapBuilder)),
+                List.of(mapBuilder), DEFAULT_ANTI_GIMBAL_RADIUS),
                 random, random);
         simRobot.robotPos(location.getX(), location.getY());
         simRobot.robotDir(robotDirection);
