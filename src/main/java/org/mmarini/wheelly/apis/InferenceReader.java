@@ -63,8 +63,6 @@ public interface InferenceReader extends AutoCloseable, DataReader {
      * @throws IOException in case of error
      */
     default RobotCommands readCommands() throws IOException {
-        RobotStatusId status = RobotStatusId.values()[readInt()];
-        int headDeg = readInt();
         throw new NotImplementedException();
             /* TODO
 

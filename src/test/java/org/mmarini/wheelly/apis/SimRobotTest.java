@@ -108,7 +108,7 @@ class SimRobotTest {
 
         // When move to 0 DEG at max power
         robot.syncConnect();
-        robot.backward(target);
+        robot.move(false, target);
         do {
             robot.simulate();
         } while (!robot.isHalt() && robot.robotTime() <= rt);
@@ -153,7 +153,7 @@ class SimRobotTest {
         // When move to 0 DEG at max power
         long rt = 10000;
         robot.syncConnect();
-        robot.forward(target);
+        robot.move(true, target);
         // And waiting for messages with time > 500
         do {
             robot.simulate();
@@ -235,7 +235,7 @@ class SimRobotTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {-90, -45, -30, -15, -5, 0, 5, 15, 30, 45, 90})
+    @ValueSource(ints = {-65, -45, -30, -15, -5, 0, 5, 15, 30, 45, 65})
     void testScan(int dir) {
         // Given a sim robot connected and robotConfigured
         // Given a robot connected and robotConfigured
@@ -257,6 +257,34 @@ class SimRobotTest {
         assertEquals(dir, proxy.headDirectionDeg());
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "-180, -65",
+            "-66, -65",
+            "66, 65",
+            "179, 65",
+    })
+    void testScanOutOfFov(int dir, int expected) {
+        // Given a sim robot connected and robotConfigured
+        // Given a robot connected and robotConfigured
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
+
+        // When scan 90 DEG
+        robot.syncConnect();
+        robot.scan(dir);
+        waitForMessages(() -> robot.simulate(), lidars);
+
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertEquals(500L, proxy.time());
+        assertEquals(expected, proxy.headDirectionDeg());
+    }
+
     @ParameterizedTest(name = "[{index}] R{0}, Target {1} DEG, {2} m")
     @MethodSource({
             "dataFar",
@@ -270,7 +298,7 @@ class SimRobotTest {
         // When move to 0 DEG at max power
         long rt = 10000;
         robot.syncConnect();
-        robot.backward(target);
+        robot.move(false, target);
         robot.simulate();
 
         // Then the location should be the expected location
@@ -293,7 +321,7 @@ class SimRobotTest {
         // When move to 0 DEG at max power
         long rt = 10000;
         robot.syncConnect();
-        robot.forward(target);
+        robot.move(true, target);
         robot.simulate();
 
         // Then the location should be the expected location

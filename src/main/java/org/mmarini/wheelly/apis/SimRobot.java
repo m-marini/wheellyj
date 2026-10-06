@@ -59,7 +59,6 @@ import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.RobotStatus.OBSTACLE_SIZE;
-import static org.mmarini.wheelly.apis.RobotStatusId.*;
 import static org.mmarini.wheelly.apis.Utils.expRandom;
 import static org.mmarini.wheelly.apis.Utils.m2mm;
 
@@ -142,10 +141,9 @@ public class SimRobot implements RobotApi {
     private Collection<Obstacle> obstacleMap;
     private MapBuilder template;
     private long randomMapExpiration;
-    private Complex targetDirection;
-    private Point2D target;
     private Complex headDirection;
-    private RobotStatusId statusId;
+    private MotionStatus motionStatus;
+    private final HeadStatus headStatus;
     private double frontDistance;
     private double rearDistance;
     private boolean frontSensor;
@@ -187,13 +185,14 @@ public class SimRobot implements RobotApi {
         fixDef.restitution = (float) ROBOT_RESTITUTION;
         this.robotFixture = robot.createFixture(fixDef);
         this.headDirection = Complex.DEG0;
-        this.statusId = HALT;
         this.frontSensor = this.rearSensor = true;
         this.robotLineState = BehaviorProcessor.createDefault(new RobotLineState(false, false, false, false));
         this.onContacts = new ArrayList<>();
         this.onLidars = new ArrayList<>();
         this.onMotions = new ArrayList<>();
         this.onCameras = new ArrayList<>();
+        this.motionStatus = MotionStatus.halt();
+        this.headStatus = HeadStatus.lookStraight();
         generateRandomMap();
     }
 
@@ -214,12 +213,6 @@ public class SimRobot implements RobotApi {
 
     @Override
     public void addOnSupply(Consumer<WheellySupplyMessage> callback) {
-    }
-
-    public Single<Boolean> backward(Point2D location) {
-        requireNonNull(location);
-        requests.updateAndGet(s -> s.backward(location));
-        return Single.just(true);
     }
 
     /**
@@ -320,8 +313,8 @@ public class SimRobot implements RobotApi {
      * Halt the robot if it is moving in forbidden direction
      */
     private void checkForSpeed() {
-        if ((FORWARD.equals(statusId) && !canMoveForward())
-                || (BACKWARD.equals(statusId) && !canMoveBackward())) {
+        if ((MotionStatus.MotionStatusId.FORWARD.equals(motionStatus.status()) && !canMoveForward())
+                || (MotionStatus.MotionStatusId.BACKWARD.equals(motionStatus.status()) && !canMoveBackward())) {
             haltImmediate();
             sendMotion = true;
         }
@@ -429,12 +422,6 @@ public class SimRobot implements RobotApi {
         return Complex.fromRad(PI / 2 - robot.getAngle());
     }
 
-    public Single<Boolean> forward(Point2D location) {
-        requireNonNull(location);
-        requests.updateAndGet(s -> s.forward(location));
-        return Single.just(true);
-    }
-
     /**
      * Returns the rear distance (m)
      */
@@ -521,12 +508,12 @@ public class SimRobot implements RobotApi {
 
     @Override
     public Single<Boolean> halt() {
-        requests.updateAndGet(RobotRequests::halt);
+        requests.updateAndGet(r -> r.motionStatus(MotionStatus.halt()));
         return Single.just(true);
     }
 
     private void haltImmediate() {
-        statusId = HALT;
+        motionStatus = MotionStatus.halt();
         leftPps = rightPps = 0;
     }
 
@@ -537,7 +524,7 @@ public class SimRobot implements RobotApi {
         RobotSpec robotSpec = robotSpec();
         // Compute the distance to target
         Point2D robotLocation = location();
-        double distance = robotLocation.distance(target);
+        double distance = robotLocation.distance(motionStatus.target());
         // Check for target reached
         if (distance <= robotSpec.targetRange()) {
             // Target reached
@@ -546,7 +533,7 @@ public class SimRobot implements RobotApi {
             return;
         }
         // Compute the rotation angle
-        Complex targetDirection = Complex.direction(robotLocation, target);
+        Complex targetDirection = Complex.direction(robotLocation, motionStatus.target());
         double rotDeg = targetDirection.sub(direction()).opposite().toDeg();
         double absRotDeg = abs(rotDeg);
         // Compute che rotation speed
@@ -603,7 +590,7 @@ public class SimRobot implements RobotApi {
      * Sets the motor speed based on the command status
      */
     private void handleEngine() {
-        switch (statusId) {
+        switch (motionStatus.status()) {
             case ROTATE -> handleRotation();
             case FORWARD -> handleForward();
             case BACKWARD -> handleBackward();
@@ -616,7 +603,7 @@ public class SimRobot implements RobotApi {
     private void handleForward() {
         // Compute the distance to target
         Point2D robotLocation = location();
-        double distance = robotLocation.distance(target);
+        double distance = robotLocation.distance(motionStatus.target());
         // Check for target reached
         RobotSpec robotSpec = robotSpec();
         if (distance <= robotSpec.targetRange()) {
@@ -626,7 +613,7 @@ public class SimRobot implements RobotApi {
             return;
         }
         // Compute the rotation angle
-        Complex targetDirection = Complex.direction(robotLocation, target);
+        Complex targetDirection = Complex.direction(robotLocation, motionStatus.target());
         double rotDeg = targetDirection.sub(direction()).toDeg();
         double absRotDeg = abs(rotDeg);
         // Compute che rotation speed
@@ -667,36 +654,19 @@ public class SimRobot implements RobotApi {
                 logger.atDebug().log("Set simulation time");
                 robotTime = t;
             }
-            if (r.statusId() != null) {
-                switch (r.statusId()) {
-                    case ROTATE -> {
-                        statusId = ROTATE;
-                        targetDirection = Complex.fromDeg(r.targetDir());
-                        logger.atDebug().log("Rotate robot to {} DEG", targetDirection.toIntDeg());
-                    }
-                    case BACKWARD -> {
-                        statusId = BACKWARD;
-                        target = r.target();
-                        logger.atDebug().log("Move robot backward to {}", target);
-                    }
-                    case FORWARD -> {
-                        statusId = FORWARD;
-                        target = r.target();
-                        logger.atDebug().log("Move robot forward to {}", target);
-                    }
-                    default -> {
-                        statusId = HALT;
-                        headDirection = Complex.DEG0;
-                        leftPps = rightPps = 0;
-                        logger.atDebug().log("Halt robot");
-                    }
+            if (r.motionStatus() != null) {
+                MotionStatus newMotionStatus = r.motionStatus();
+                motionStatus = newMotionStatus;
+                if (newMotionStatus.status() == MotionStatus.MotionStatusId.HALT) {
+                    leftPps = rightPps = 0;
                 }
                 checkForSpeed();
             }
-            Complex headDir = r.headDir();
-            if (headDir != null) {
-                this.headDirection = headDir;
-                logger.atDebug().log("Rotate head to {} DEG", headDir.toIntDeg());
+            if (r.headStatus() != null) {
+                switch (r.headStatus().status()) {
+                    case FIX_DIRECTION -> headDirection = Complex.fromDeg(r.headStatus().direction());
+                    default -> headDirection = Complex.DEG0;
+                }
             }
         }
     }
@@ -706,7 +676,7 @@ public class SimRobot implements RobotApi {
      */
     private void handleRotation() {
         // Compute the rotation angle
-        double rotDeg = targetDirection.sub(direction()).toDeg();
+        double rotDeg = Complex.fromDeg(motionStatus.targetDir()).sub(direction()).toDeg();
         double absRotDeg = abs(rotDeg);
         // Compute che rotation speed
         double rotSpeed;
@@ -765,7 +735,7 @@ public class SimRobot implements RobotApi {
 
     @Override
     public boolean isHalt() {
-        return HALT.equals(statusId);
+        return MotionStatus.MotionStatusId.HALT.equals(motionStatus.status());
     }
 
     /**
@@ -778,7 +748,13 @@ public class SimRobot implements RobotApi {
 
     @Override
     public Single<Boolean> move(boolean frontMove, Point2D location) {
-        throw new NotImplementedException(); // TODO
+        requireNonNull(location);
+        requests.updateAndGet(s ->
+                s.motionStatus(frontMove
+                        ? MotionStatus.forward(location)
+                        : MotionStatus.backward(location)
+                ));
+        return Single.just(true);
     }
 
     /**
@@ -896,7 +872,7 @@ public class SimRobot implements RobotApi {
 
     @Override
     public Single<Boolean> rotate(int dir) {
-        requests.updateAndGet(r -> r.rotate(dir));
+        requests.updateAndGet(r -> r.motionStatus(MotionStatus.rotate(dir)));
         return Single.just(true);
     }
 
@@ -914,9 +890,10 @@ public class SimRobot implements RobotApi {
 
     @Override
     public Single<Boolean> scan(int direction) {
-        Complex dir = Complex.fromDeg(clamp(direction, -90, 90));
+        int range = robotSpec().headFOV().toIntDeg() / 2;
+        int dir = clamp(direction, -range, range);
         requests.updateAndGet(s ->
-                s.headDir(dir)
+                s.headStatus(HeadStatus.scan(dir))
         );
         return Single.just(true);
     }
@@ -1291,15 +1268,13 @@ public class SimRobot implements RobotApi {
      *
      * @param connect        true if connect request
      * @param simulationTime the simulation time (ms) valid request if >= 0
-     * @param statusId       the requested status
-     * @param targetDir      the target direction (DEG)
-     * @param target         the target location
-     * @param headDir        the head direction request
+     * @param motionStatus
+     * @param headStatus
      */
-    record RobotRequests(boolean connect, boolean close, long simulationTime, RobotStatusId statusId, int targetDir,
-                         Point2D target, Complex headDir) {
+    record RobotRequests(boolean connect, boolean close, long simulationTime,
+                         MotionStatus motionStatus, HeadStatus headStatus) {
 
-        private static final RobotRequests EMPTY = new RobotRequests(false, false, -1, null, 0, null, null);
+        private static final RobotRequests EMPTY = new RobotRequests(false, false, -1, null, null);
 
         /**
          *
@@ -1310,62 +1285,24 @@ public class SimRobot implements RobotApi {
         }
 
         /**
-         * Sets the rotation request
-         *
-         * @param target the target location
-         */
-        public RobotRequests backward(Point2D target) {
-            return BACKWARD.equals(statusId) && Objects.equals(this.target, target)
-                    ? this
-                    : new RobotRequests(connect, close, simulationTime, BACKWARD, targetDir, target, headDir);
-        }
-
-        /**
          * Sets the close request
          *
          * @param close true if close request
          */
         public RobotRequests close(boolean close) {
-            return this.close == close ? this : new RobotRequests(connect, close, simulationTime, statusId, targetDir, target, headDir);
+            return this.close == close ? this : new RobotRequests(connect, close, simulationTime, motionStatus, headStatus);
         }
 
-        /**
-         * Sets the rotation request
-         *
-         * @param target the target location
-         */
-        public RobotRequests forward(Point2D target) {
-            return FORWARD.equals(statusId) && Objects.equals(this.target, target)
+        public RobotRequests headStatus(HeadStatus headStatus) {
+            return Objects.equals(this.headStatus, headStatus)
                     ? this
-                    : new RobotRequests(connect, close, simulationTime, FORWARD, targetDir, target, headDir);
+                    : new RobotRequests(connect, close, simulationTime, motionStatus, headStatus);
         }
 
-        public RobotRequests halt() {
-            return HALT.equals(statusId)
+        public RobotRequests motionStatus(MotionStatus motionStatus) {
+            return Objects.equals(this.motionStatus, motionStatus)
                     ? this
-                    : new RobotRequests(connect, close, simulationTime, HALT, targetDir, target, headDir);
-        }
-
-        /**
-         * Sets the head direction
-         *
-         * @param headDir the head direction
-         */
-        public RobotRequests headDir(Complex headDir) {
-            return Objects.equals(this.headDir, headDir)
-                    ? this
-                    : new RobotRequests(connect, close, simulationTime, statusId, targetDir, target, headDir);
-        }
-
-        /**
-         * Sets the rotation request
-         *
-         * @param dir the direction (DEG)
-         */
-        public RobotRequests rotate(int dir) {
-            return ROTATE.equals(statusId) && this.targetDir == dir
-                    ? this
-                    : new RobotRequests(connect, close, simulationTime, ROTATE, dir, target, headDir);
+                    : new RobotRequests(connect, close, simulationTime, motionStatus, headStatus);
         }
 
         /**
@@ -1374,7 +1311,9 @@ public class SimRobot implements RobotApi {
          * @param simulationTime the simulation time (ms)
          */
         public RobotRequests simulationTime(long simulationTime) {
-            return this.simulationTime == simulationTime ? this : new RobotRequests(connect, close, simulationTime, statusId, targetDir, target, headDir);
+            return this.simulationTime == simulationTime
+                    ? this
+                    : new RobotRequests(connect, close, simulationTime, motionStatus, headStatus);
         }
     }
 }
