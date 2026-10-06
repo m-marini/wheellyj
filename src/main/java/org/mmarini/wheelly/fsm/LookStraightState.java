@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.fsm;
 
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.RobotCommands;
 
 /**
@@ -82,6 +83,10 @@ public class LookStraightState extends AbstractCommitmentState implements EnvFSM
      */
     @Override
     public RobotCommands tick(EnvFSMContext context) {
+        throw new NotImplementedException();
+            /* TODO
         return RobotCommands.halt(0);
+
+             */
     }
 }

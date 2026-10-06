@@ -40,6 +40,7 @@ import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
+import org.mmarini.NotImplementedException;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -286,7 +287,6 @@ public class SimRobot implements RobotApi {
     public void addOnSupply(Consumer<WheellySupplyMessage> callback) {
     }
 
-    @Override
     public Single<Boolean> backward(Point2D location) {
         requireNonNull(location);
         requests.updateAndGet(s -> s.backward(location));
@@ -499,7 +499,6 @@ public class SimRobot implements RobotApi {
         return Complex.fromRad(PI / 2 - robot.getAngle());
     }
 
-    @Override
     public Single<Boolean> forward(Point2D location) {
         requireNonNull(location);
         requests.updateAndGet(s -> s.forward(location));
@@ -834,6 +833,11 @@ public class SimRobot implements RobotApi {
         return HALT.equals(statusId);
     }
 
+    @Override
+    public Single<Boolean> move(boolean frontMove, Point2D location) {
+        throw new NotImplementedException(); // TODO
+    }
+
     /**
      * Returns the robot location
      */
@@ -1038,8 +1042,8 @@ public class SimRobot implements RobotApi {
         WheellyLidarMessage msg = new WheellyLidarMessage(
                 robotTime,
                 m2mm(frontDistance), m2mm(rearDistance),
-                xPulses, yPulses, robotYaw.toIntDeg(), headDirection.toIntDeg()
-        );
+                xPulses, yPulses, robotYaw.toIntDeg(), headDirection.toIntDeg(),
+                HeadStatus.HeadStatusId.FIX_DIRECTION, 0, 0, 0);
         lidarTimeout = robotTime + lidarInterval;
         for (Consumer<WheellyLidarMessage> callback : onLidars) {
             callback.accept(msg);
@@ -1058,9 +1062,9 @@ public class SimRobot implements RobotApi {
                 robotTime,
                 xPulses, yPulses, robotDir.toIntDeg(),
                 leftPps, rightPps,
-                0, isHalt(),
-                (int) round(leftPps), (int) round(rightPps),
-                0, 0);
+                0, MotionStatus.MotionStatusId.HALT, // TODO status
+                0, (int) round(leftPps), (int) round(rightPps),
+                0, 0, 0, 0);
         motionTimeout = robotTime + motionInterval;
         for (Consumer<WheellyMotionMessage> callback : onMotions) {
             callback.accept(msg);
@@ -1213,6 +1217,11 @@ public class SimRobot implements RobotApi {
     public double simulationSpeed() {
         long dt = lastTick - startSimulationTime;
         return dt > 0 ? robotTime * NANOS_PER_MILLIS / dt : 1;
+    }
+
+    @Override
+    public Single<Boolean> track(boolean frontTrack, Point2D target) {
+        throw new NotImplementedException(); // TODO
     }
 
     /**

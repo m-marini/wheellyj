@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.apis.WorldModel;
@@ -41,7 +41,8 @@ import java.awt.geom.Point2D;
 import java.util.List;
 
 import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
-import static org.mmarini.wheelly.engines.StateResult.*;
+import static org.mmarini.wheelly.engines.StateResult.completed;
+import static org.mmarini.wheelly.engines.StateResult.notFound;
 
 /**
  * Generates the behaviour to move robot through path
@@ -157,7 +158,11 @@ public class MovePathState extends TimeOutState {
             logger.atDebug().log("Target reached");
             return nextLocation(context);
         }
+        throw new NotImplementedException();
+            /* TODO
         return new StateResult(NONE_EXIT, RobotCommands.forward(target));
+
+             */
     }
 
     /**
@@ -175,7 +180,11 @@ public class MovePathState extends TimeOutState {
         }
         Point2D target = path.get(targetIndex);
         logger.atDebug().log("Move to {}", target);
-        return new StateResult(NONE_EXIT, RobotCommands.forward(target));
+        throw new NotImplementedException();
+            /* TODO
+return new StateResult(NONE_EXIT, RobotCommands.forward(target));
+
+             */
     }
 
     @Override

@@ -123,7 +123,7 @@ class SimRobotTest {
         WheellyMotionMessage motion = motions.getLast();
 
         assertNotNull(motion);
-        assertThat(motion.robotLocation(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
+        assertThat(motion.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
     }
 
     @Test
@@ -168,7 +168,7 @@ class SimRobotTest {
         WheellyMotionMessage motion = motions.getLast();
 
         assertNotNull(motion);
-        assertThat(motion.robotLocation(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
+        assertThat(motion.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
     }
 
     @ParameterizedTest

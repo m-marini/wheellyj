@@ -39,17 +39,14 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.IntToDoubleFunction;
 
-import static java.lang.Math.abs;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apis.Utils.linear;
@@ -96,9 +93,10 @@ public class RobotController implements RobotControllerApi {
     private final AtomicReference<RobotControllerStatus> status;
     private final List<Consumer<RobotStatus>> onRobotStatus;
     private final List<Consumer<RobotStatus>> onLatches;
-    private final List<Consumer<RobotCommands>> onCommands;
     private final List<Consumer<RobotStatus>> onInferences;
     private RobotApi robot;
+    private Consumer<HeadStatus> onHeadStatus;
+    private Consumer<MotionStatus> onMotionStatus;
 
     /**
      * Creates the robot controller
@@ -112,51 +110,69 @@ public class RobotController implements RobotControllerApi {
         this.reactionInterval = reactionInterval;
         this.commandInterval = commandInterval;
         this.status = new AtomicReference<>(new RobotControllerStatus(
-                null, RobotCommands.halt(),
+                MotionStatus.halt(), HeadStatus.lookStraight(), null,
                 false, true, false,
-                0, 0, 0, null));
+                0,
+                MotionStatus.halt(), HeadStatus.lookStraight(), 0, 0));
         this.controllerStatus = BehaviorProcessor.createDefault(status.get());
         this.controllerErrors = PublishProcessor.create();
         this.shutdownCompletable = CompletableSubject.create();
         this.onRobotStatus = new ArrayList<>();
         this.onLatches = new ArrayList<>();
-        this.onCommands = new ArrayList<>();
         this.onInferences = new ArrayList<>();
+    }
+
+    @Override
+    public void addOnRobotStatus(Consumer<RobotStatus> callback) {
+        onRobotStatus.add(callback);
     }
 
     /**
      * Synchronises the robot actions
      */
-    private void checkForSync(RobotStatus robotStatus) {
-        long time = robotStatus.robotTime();
-        RobotControllerStatus s = status.get();
-        // Check for the command interval
-        if (s.syncRequired(time)) {
-            syncActions(robotStatus);
+    private void checkForSync() {
+        syncMotionStatus();
+        syncHeadStatus();
+    }
+
+    @Override
+    public RobotController connectRobot(RobotApi robot) {
+        this.robot = requireNonNull(robot);
+        RobotStatus robotStatus = RobotStatus.create(robot.robotSpec(), decodeVoltage);
+        RobotControllerStatus st = this.status.updateAndGet(s -> s.robotStatus(robotStatus));
+        this.controllerStatus.onNext(st);
+        notifyRobotStatus(robotStatus);
+        this.robot.onCamera(this::onCamera);
+        this.robot.addOnLidar(this::onLidarMessage);
+        this.robot.addOnContacts(this::onContactsMessage);
+        this.robot.addOnMotion(this::onMotionMessage);
+        this.robot.addOnSupply(this::onSupplyMessage);
+        this.robot.readRobotStatus()
+                .subscribeOn(Schedulers.io())
+                .distinctUntilChanged(RobotStatusApi::configured)
+                .subscribe(this::onRobotConfigured,
+                        logError(logger, "Error reading robot configuration status")
+                );
+        return this;
+    }
+
+    @Override
+    public void headStatus(HeadStatus headStatus) {
+        status.updateAndGet(s ->
+                s.headStatus(headStatus));
+        syncHeadStatus();
+        if (onHeadStatus != null) {
+            onHeadStatus.accept(headStatus);
         }
     }
 
     @Override
-    public void addOnCommand(Consumer<RobotCommands> callback) {
-        onCommands.add(callback);
-    }
-
-    @Override
-    public void execute(RobotCommands command) {
-        // Validates the command
-        int scanDeg = command.scanDirection();
-        if (abs(scanDeg) > 90) {
-            logger.atError().log("Wrong scan direction {}", scanDeg);
-            return;
-        }
-        robot.scan(scanDeg);
-        RobotControllerStatus prevStatus = status.getAndUpdate(s -> s.command(command));
-        if (!Objects.equals(prevStatus.command(), command)) {
-            // command changed
-            syncActions(status.get().robotStatus());
-        }
-        for (Consumer<RobotCommands> callback : onCommands) {
-            callback.accept(command);
+    public void motionStatus(MotionStatus motionStatus) {
+        status.updateAndGet(s ->
+                s.motionStatus(motionStatus));
+        syncMotionStatus();
+        if (onMotionStatus != null) {
+            onMotionStatus.accept(motionStatus);
         }
     }
 
@@ -197,12 +213,6 @@ public class RobotController implements RobotControllerApi {
         RobotStatus robotStatus = st.robotStatus();
         notifyRobotStatus(robotStatus);
         scheduleInference(robotStatus);
-        checkForSync(robotStatus);
-    }
-
-    @Override
-    public void addOnRobotStatus(Consumer<RobotStatus> callback) {
-        onRobotStatus.add(callback);
     }
 
     /**
@@ -218,7 +228,11 @@ public class RobotController implements RobotControllerApi {
                 .robotStatus();
         notifyRobotStatus(status);
         scheduleInference(status);
-        checkForSync(status);
+    }
+
+    public RobotController onHeadStatus(Consumer<HeadStatus> callback) {
+        onHeadStatus = onHeadStatus == null ? callback : callback.andThen(onHeadStatus);
+        return this;
     }
 
     @Override
@@ -244,7 +258,7 @@ public class RobotController implements RobotControllerApi {
                 .robotStatus();
         notifyRobotStatus(status);
         scheduleInference(status);
-        checkForSync(status);
+        checkForSync();
     }
 
     /**
@@ -260,7 +274,12 @@ public class RobotController implements RobotControllerApi {
                 .robotStatus();
         notifyRobotStatus(status);
         scheduleInference(status);
-        checkForSync(status);
+        checkForSync();
+    }
+
+    public RobotController onMotionStatus(Consumer<MotionStatus> callback) {
+        onMotionStatus = onMotionStatus == null ? callback : callback.andThen(onMotionStatus);
+        return this;
     }
 
     /**
@@ -286,27 +305,6 @@ public class RobotController implements RobotControllerApi {
         controllerStatus.onNext(st);
     }
 
-    @Override
-    public RobotController connectRobot(RobotApi robot) {
-        this.robot = requireNonNull(robot);
-        RobotStatus robotStatus = RobotStatus.create(robot.robotSpec(), decodeVoltage);
-        RobotControllerStatus st = this.status.updateAndGet(s -> s.robotStatus(robotStatus));
-        this.controllerStatus.onNext(st);
-        notifyRobotStatus(robotStatus);
-        this.robot.onCamera(this::onCamera);
-        this.robot.addOnLidar(this::onLidarMessage);
-        this.robot.addOnContacts(this::onContactsMessage);
-        this.robot.addOnMotion(this::onMotionMessage);
-        this.robot.addOnSupply(this::onSupplyMessage);
-        this.robot.readRobotStatus()
-                .subscribeOn(Schedulers.io())
-                .distinctUntilChanged(RobotStatusApi::configured)
-                .subscribe(this::onRobotConfigured,
-                        logError(logger, "Error reading robot configuration status")
-                );
-        return this;
-    }
-
     /**
      * Handles supply messages
      *
@@ -320,7 +318,6 @@ public class RobotController implements RobotControllerApi {
                 .robotStatus();
         notifyRobotStatus(status);
         scheduleInference(status);
-        checkForSync(status);
     }
 
     @Override
@@ -409,62 +406,44 @@ public class RobotController implements RobotControllerApi {
         }
     }
 
+
     /**
      * Synchronises the robot status to commands
      */
-    private void syncActions(RobotStatus robotStatus) {
-        long time = robotStatus.robotTime();
-        //RobotControllerStatus s = status.get();
-        RobotControllerStatus s = status.updateAndGet(s1 -> {
-            RobotCommands cmd = s1.command();
-            if (!cmd.isHalt()
-                    && time > s1.commandTime() + commandInterval
-                    && robotStatus.halt()) {
-                logger.atDebug().log("Halt due command {} not accepted", cmd.status());
-                return s1.command(RobotCommands.halt());
-            }
-            return s1;
-        });
-        RobotCommands cmd = s.command();
-        // Check for commands required
-        switch (cmd.status()) {
-            case HALT -> {
-                if (!robotStatus.halt()) {
-                    robot.halt();
-                }
-            }
-            case ROTATE -> {
-                // Rotate command
-                if (!robotStatus.direction().isCloseTo(cmd.rotationDirection(),
-                        robotStatus.robotSpec().directionRange().toIntDeg())) {
-                    robot.rotate(cmd.rotationDirection());
-                }
-            }
-            case FORWARD -> {
-                // forward command
-                Point2D robotLocation = robotStatus.location();
-                Point2D target = cmd.target();
-                double distance = robotLocation.distance(target);
-                if (distance > robot.robotSpec().targetRange()) {
-                    robot.forward(target);
-                }
-            }
-            case BACKWARD -> {
-                // backward command
-                Point2D robotLocation = robotStatus.location();
-                Point2D target = cmd.target();
-                double distance = robotLocation.distance(target);
-                if (distance > robot.robotSpec().targetRange()) {
-                    robot.backward(target);
-                }
+    private void syncHeadStatus() {
+        RobotControllerStatus s = status.get();
+        WheellyLidarMessage wheellyLidarMessage = s.robotStatus().lidarMessage();
+        long time = wheellyLidarMessage.time();
+        if (time > s.lastHeadTime() + commandInterval) {
+            HeadStatus headStatus = status.updateAndGet(s1 ->
+                            s1.registerHeadStatus(time))
+                    .headStatus();
+            switch (headStatus.status()) {
+                case FIX_DIRECTION -> robot.scan(headStatus.direction());
+                case FRONT_TRACK -> robot.track(true, headStatus.target());
+                case REAR_TRACK -> robot.track(false, headStatus.target());
             }
         }
-        // Check for the head direction
-        int scanDeg = cmd.scanDirection();
-        if (scanDeg != 0 || !cmd.isHalt()) {
-            robot.scan(scanDeg);
+    }
+
+    /**
+     * Synchronises the robot status to commands
+     */
+    private void syncMotionStatus() {
+        RobotControllerStatus s = status.get();
+        WheellyMotionMessage msg = s.robotStatus().motionMessage();
+        long time = msg.time();
+        if (time > s.lastMotionTime() + commandInterval
+                || !s.headStatus().equals(s.lastHeadStatus())) {
+            MotionStatus motionStatus = status.updateAndGet(s1 ->
+                            s1.registerMotionStatus(time))
+                    .motionStatus();
+            switch (motionStatus.status()) {
+                case HALT -> robot.halt();
+                case FORWARD -> robot.move(true, motionStatus.target());
+                case BACKWARD -> robot.move(false, motionStatus.target());
+                case ROTATE -> robot.rotate(motionStatus.targetDir());
+            }
         }
-        status.updateAndGet(s1 ->
-                s1.nextSyncTime(time + commandInterval));
     }
 }

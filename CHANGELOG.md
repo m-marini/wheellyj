@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Add
 
-- Issue [#660](https://github.com/m-marini/wheellyj/issues/660):  Multi-Task Hierarchical Environment
+- Issue [#660](https://github.com/m-marini/wheellyj/issues/660): Multi-Task Hierarchical Environment
+- Issue [#663](https://github.com/m-marini/wheellyj/issues/663): Head absolute target
 
 ## [[0.28.1]](https://github.com/m-marini/wheellyj/releases/tag/v0.28.1) 2026-09-17
 

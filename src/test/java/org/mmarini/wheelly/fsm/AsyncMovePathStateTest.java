@@ -156,14 +156,14 @@ class AsyncMovePathStateTest {
         cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getFirst(), MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(path.getFirst(), MM));
 
         // When move to 1st point
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 2nd tick should return forward to target1
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getLast(), MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(path.getLast(), MM));
 
         // When move to 2nd point
         ctx = iter.next();
@@ -251,14 +251,14 @@ class AsyncMovePathStateTest {
         cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getFirst(), MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(path.getFirst(), MM));
 
         // When 4 - move to 1st point
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 2nd tick should return forward to target1
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getLast(), MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(path.getLast(), MM));
 
         // When 5 - move to 2nd point
         ctx = iter.next();
@@ -365,14 +365,14 @@ class AsyncMovePathStateTest {
         RobotCommands cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getFirst(), MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(path.getFirst(), MM));
 
         // When move to 1st point
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 2nd tick should return forward to target1
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getLast(), MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(path.getLast(), MM));
 
         // When move to 2nd point
         ctx = iter.next();
@@ -435,11 +435,11 @@ class AsyncMovePathStateTest {
 
         // Than 1st tick should return forward to target0
         assertEquals(FORWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target0, MM));
+        assertThat(cmd[0].moveTarget(), pointCloseTo(target0, MM));
 
         // Than 2nd tick should return forward to target1
         assertEquals(FORWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target1, MM));
+        assertThat(cmd[1].moveTarget(), pointCloseTo(target1, MM));
 
         // Than 3rd tick should return halt
         assertEquals(HALT, cmd[2].status());

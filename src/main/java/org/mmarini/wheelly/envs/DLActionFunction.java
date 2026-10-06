@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.envs;
 
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 import org.mmarini.Utils;
 import org.mmarini.rl.envs.ArraySignal;
@@ -169,6 +170,8 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param model   the world model
      */
     RobotCommands decodeCommand(int headIdx, int moveIdx, WorldModel model) {
+        throw new NotImplementedException();
+            /* TODO
         int headDeg = headAngle(headIdx, model);
         if (isHalt(moveIdx)) {
             return RobotCommands.halt(headDeg);
@@ -183,6 +186,8 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
             Point2D target = target(moveIdx, model.gridMap());
             return RobotCommands.backward(headDeg, target);
         }
+
+             */
     }
 
     /**
@@ -273,8 +278,8 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
         return switch (commands.status()) {
             case ROTATE -> rotationIndex(Complex.fromDeg(commands.rotationDirection())
                     .sub(model.gridMap().direction())) + 1;
-            case FORWARD -> targetIndex(commands.target(), model) + numRotations + 1;
-            case BACKWARD -> targetIndex(commands.target(), model) + numRotations + 1 + indicesMap.size();
+            case FORWARD -> targetIndex(commands.moveTarget(), model) + numRotations + 1;
+            case BACKWARD -> targetIndex(commands.moveTarget(), model) + numRotations + 1 + indicesMap.size();
             default -> 0;
         };
     }

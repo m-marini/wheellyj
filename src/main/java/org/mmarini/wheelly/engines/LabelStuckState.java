@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
@@ -42,7 +43,6 @@ import java.util.regex.Pattern;
 import static java.lang.Math.abs;
 import static java.lang.Math.clamp;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.engines.StateResult.NONE_EXIT;
 import static org.mmarini.wheelly.engines.StateResult.notFound;
 
 /**
@@ -193,19 +193,31 @@ public class LabelStuckState extends TimeOutState {
         if (robotMarkerDistance < minDistance) {
             // the robot is too close, move backward
             logger.atDebug().log("Robot to close {} m, move backward to {} M @{}", lidarMarkerDistance, robotOptimalLocation, marker);
+            throw new NotImplementedException();
+            /* TODO
             return new StateResult(NONE_EXIT, RobotCommands.backward(headAngle, robotOptimalLocation));
+
+             */
         }
         // Check for label too far
         if (robotMarkerDistance > maxDistance) {
             // the robot is too far, move forward
             logger.atDebug().log("Robot to far {} m, move forward to {} M @{}", lidarMarkerDistance, robotOptimalLocation, marker);
+            throw new NotImplementedException();
+            /* TODO
             return new StateResult(NONE_EXIT, RobotCommands.forward(headAngle, robotOptimalLocation));
+
+             */
         }
         // Check for robot not pointing label
         if (!robotMarkerDir.isCloseTo(robotDir, directionRange)) {
             // The robot is not directed to the label, rotate toward the label
             logger.atDebug().log("Rotate toward label {}", lidarMarkerDir.toIntDeg());
-            return new StateResult(NONE_EXIT, RobotCommands.rotate(headAngle, robotMarkerDir));
+            throw new NotImplementedException();
+            /* TODO
+return new StateResult(NONE_EXIT, RobotCommands.rotate(headAngle, robotMarkerDir));
+
+             */
         }
         double frontDistance = status.frontDistance();
         // Check for sensor signal and head direction
@@ -218,6 +230,10 @@ public class LabelStuckState extends TimeOutState {
             return notFound();
         }
         // halt the robot and move head toward the target label
-        return new StateResult(NONE_EXIT, RobotCommands.halt(headAngle));
+        throw new NotImplementedException();
+            /* TODO
+return new StateResult(NONE_EXIT, RobotCommands.halt(headAngle));
+
+             */
     }
 }

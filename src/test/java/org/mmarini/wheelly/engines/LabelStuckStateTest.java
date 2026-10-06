@@ -459,7 +459,7 @@ class LabelStuckStateTest {
         assertEquals(headMarkerAngle(context), result.commands().scanDirection());
         // and the target-marker direction should be the same of robot marker
         Point2D markerLocation = context.worldModel().markers().get(LABEL_A).location();
-        int targetMarkerDir = Complex.direction(result.commands().target(), markerLocation).toIntDeg();
+        int targetMarkerDir = Complex.direction(result.commands().moveTarget(), markerLocation).toIntDeg();
         assertEquals(targetMarkerDir, robotMarkerDir(context));
     }
 
@@ -492,7 +492,7 @@ class LabelStuckStateTest {
         assertEquals(headMarkerAngle(context), result.commands().scanDirection());
         // and the target-marker direction should be the same of robot marker
         Point2D markerLocation = context.worldModel().markers().get(LABEL_A).location();
-        int targetMarkerDir = Complex.direction(result.commands().target(), markerLocation).toIntDeg();
+        int targetMarkerDir = Complex.direction(result.commands().moveTarget(), markerLocation).toIntDeg();
         assertEquals(targetMarkerDir, robotMarkerDir(context));
     }
 }

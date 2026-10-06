@@ -287,7 +287,6 @@ public class Wheelly {
         toolBar.relocateButton().addActionListener(this::onRelocateButton);
         toolBar.learningButton().addActionListener(this::onLearningToggle);
         controller.addOnRobotStatus(this::onStatusReady);
-        controller.addOnCommand(sensorMonitor::onCommand);
         controller.readErrors().subscribe(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();

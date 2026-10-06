@@ -78,10 +78,12 @@ public class RobotStatusBuilder {
         WheellyMotionMessage motion = new WheellyMotionMessage(time,
                 xPulses,
                 yPulses,
-                robotDirDeg, 0, 0, 0, halt, 0, 0, 0, 0);
+                robotDirDeg, 0, 0, 0, MotionStatus.MotionStatusId.HALT, 0, 0, 0, 0, 0, 0, 0); // TODO status
         WheellyContactsMessage contacts = new WheellyContactsMessage(time, frontSensor, rearSensor, canMoveForward, canMoveBackward);
         CameraEvent camera = new CameraEvent(time, qr, 3, 4, null, Complex.DEG0);
-        WheellyLidarMessage lidars = new WheellyLidarMessage(lidarTime, m2mm(frontDistance), m2mm(rearDistance), xPulses, yPulses, robotDirDeg, headAngle);
+        WheellyLidarMessage lidars = new WheellyLidarMessage(lidarTime, m2mm(frontDistance), m2mm(rearDistance),
+                xPulses, yPulses, robotDirDeg, headAngle, HeadStatus.HeadStatusId.FIX_DIRECTION, 0,
+                0, 0);
         return new RobotStatus(DEFAULT_ROBOT_SPEC, time, motion, contacts,
                 InferenceFileReader.DEFAULT_SUPPLY_MESSAGE,
                 InferenceFileReader.DEFAULT_DECODE_VOLTAGE,

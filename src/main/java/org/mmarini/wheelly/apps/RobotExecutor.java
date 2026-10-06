@@ -260,7 +260,6 @@ public class RobotExecutor {
         controller.readControllerStatus()
                 .map(ControllerStatusMapper::map)
                 .subscribe(this::onControllerStatus);
-        controller.addOnCommand(sensorMonitor::onCommand);
         controller.addOnRobotStatus(envPanel::robotStatus);
         agent.readState()
                 .subscribe(this::onState);

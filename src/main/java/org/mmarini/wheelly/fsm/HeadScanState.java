@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.fsm;
 
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
@@ -172,6 +173,10 @@ public class HeadScanState extends AbstractCompletableState {
             numberOfSamples = 0;
             startStepTime = time;
         }
-        return RobotCommands.halt(headDeg[currentStepIndex]);
+        throw new NotImplementedException();
+            /* TODO
+return RobotCommands.halt(headDeg[currentStepIndex]);
+
+             */
     }
 }

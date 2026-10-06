@@ -271,7 +271,7 @@ class DLMacroActionEnvironmentTest {
         cmd = markerEnv.onInference(builder.addTime(INFERENCE_INTERVAL).build());
         // Then command should be backward to target
         assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(target, MM));
 
         // When 3nd inference robot at target
         cmd = markerEnv.onInference(builder.addTime(INFERENCE_INTERVAL)
@@ -319,7 +319,7 @@ class DLMacroActionEnvironmentTest {
         cmd = exploreEnv.onInference(builder.addTime(INFERENCE_INTERVAL).build());
         // Then command should be backward to target
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(target, MM));
 
         // When 3nd inference robot at target
         cmd = exploreEnv.onInference(builder.addTime(INFERENCE_INTERVAL)

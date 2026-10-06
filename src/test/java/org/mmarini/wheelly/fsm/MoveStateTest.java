@@ -139,13 +139,13 @@ class MoveStateTest {
 
         // Then the command should be forward to target position
         assertEquals(BACKWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
+        assertThat(cmd[0].moveTarget(), pointCloseTo(targetPosition, MM));
         // And no next action should have been required
 
         //--------
         // Then the command should be forward to target position
         assertEquals(BACKWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
+        assertThat(cmd[1].moveTarget(), pointCloseTo(targetPosition, MM));
         // And next action should have been required
 
         //--------
@@ -208,7 +208,7 @@ class MoveStateTest {
         RobotCommands cmd = state.tick(ctx);
         // Then the command should forward to 1st target
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(targetPosition, MM));
         // And state not expired
         assertFalse(state.expired(ctx));
         // and state not completed
@@ -221,7 +221,7 @@ class MoveStateTest {
         cmd = state.tick(ctx);
         // Then the command should forward to 1st target
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(targetPosition, MM));
         // And state expired
         assertTrue(state.expired(ctx));
         // and state not completed
@@ -234,7 +234,7 @@ class MoveStateTest {
         cmd = state.tick(ctx);
         // Then the command should forward to 1st target
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(targetPosition, MM));
         // And state expired
         assertTrue(state.expired(ctx));
         // and state not completed
@@ -312,14 +312,14 @@ class MoveStateTest {
         RobotCommands cmd = state.tick(ctx);
         // Then the command should be forward to target position
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(targetPosition, MM));
 
         // When tick before 2ms commitment
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then the command should be forward to target position
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(targetPosition, MM));
 
         // When tick before 1ms commitment and robot opposite target and forward  by half movement and front contact
         ctx = ctxs[idx++];
@@ -379,14 +379,14 @@ class MoveStateTest {
         RobotCommands cmd = state.tick(ctx);
         // Then the command should be forward to target position
         assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(targetPosition, MM));
 
         // When tick before commitment
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then the command should be forward to target position
         assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(targetPosition, MM));
 
         // When tick after commitment robot at opposite target and backward and rear contact
         ctx = ctxs[idx++];

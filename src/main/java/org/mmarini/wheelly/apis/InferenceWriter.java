@@ -68,7 +68,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                 .write(commands.scanDirection());
         switch (commands.status()) {
             case ROTATE -> write(commands.rotationDirection());
-            case FORWARD, BACKWARD -> write(commands.target());
+            case FORWARD, BACKWARD -> write(commands.moveTarget());
         }
         return (T) this;
     }
@@ -116,7 +116,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                 .write((float) motion.leftPps())
                 .write((float) motion.rightPps())
                 .write(motion.imuFailure())
-                .write(motion.halt())
+                .write(motion.status().ordinal())
                 .write(motion.leftTargetPps())
                 .write(motion.rightTargetPps())
                 .write(motion.leftPower())

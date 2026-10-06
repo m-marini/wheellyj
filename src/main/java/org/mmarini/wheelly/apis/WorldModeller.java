@@ -30,6 +30,7 @@ package org.mmarini.wheelly.apis;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -165,10 +166,14 @@ public class WorldModeller implements WorldModellerApi {
         if (inference != null) {
             RobotCommands commands = inference.onInference(model);
             if (commands != null) {
-                controller.execute(commands);
+                throw new NotImplementedException();
+        /* TODO
+//                controller.execute(commands);
                 if (onInferences != null) {
                     onInferences.accept(Tuple2.of(model, commands));
                 }
+
+         */
             }
         }
     }

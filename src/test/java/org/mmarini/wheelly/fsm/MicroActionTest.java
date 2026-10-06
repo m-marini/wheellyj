@@ -102,13 +102,13 @@ public class MicroActionTest {
 
         // Then
         assertEquals(BACKWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target, MM));
+        assertThat(cmd[0].moveTarget(), pointCloseTo(target, MM));
         assertEquals(0, cmd[0].scanDirection());
         assertEquals(1, ctx[1].nextActionCount());
 
         // Then
         assertEquals(BACKWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target, MM));
+        assertThat(cmd[1].moveTarget(), pointCloseTo(target, MM));
         assertEquals(0, cmd[1].scanDirection());
         assertEquals(1, ctx[2].nextActionCount());
 
@@ -149,13 +149,13 @@ public class MicroActionTest {
 
         // Then
         assertEquals(BACKWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target, MM));
+        assertThat(cmd[0].moveTarget(), pointCloseTo(target, MM));
         assertEquals(0, cmd[0].scanDirection());
         assertEquals(1, ctx[1].nextActionCount());
 
         // Then
         assertEquals(BACKWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target, MM));
+        assertThat(cmd[1].moveTarget(), pointCloseTo(target, MM));
         assertEquals(0, cmd[1].scanDirection());
         assertEquals(1, ctx[2].nextActionCount());
 
@@ -193,13 +193,13 @@ public class MicroActionTest {
 
         // Then
         assertEquals(FORWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target, MM));
+        assertThat(cmd[0].moveTarget(), pointCloseTo(target, MM));
         assertEquals(0, cmd[0].scanDirection());
         assertEquals(1, ctx[1].nextActionCount());
 
         // Then
         assertEquals(FORWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target, MM));
+        assertThat(cmd[1].moveTarget(), pointCloseTo(target, MM));
         assertEquals(0, cmd[1].scanDirection());
         assertEquals(1, ctx[2].nextActionCount());
 
@@ -238,13 +238,13 @@ public class MicroActionTest {
 
         // Then
         assertEquals(FORWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target, MM));
+        assertThat(cmd[0].moveTarget(), pointCloseTo(target, MM));
         assertEquals(0, cmd[0].scanDirection());
         assertEquals(1, ctx[1].nextActionCount());
 
         // Then
         assertEquals(FORWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target, MM));
+        assertThat(cmd[1].moveTarget(), pointCloseTo(target, MM));
         assertEquals(0, cmd[1].scanDirection());
         assertEquals(1, ctx[2].nextActionCount());
 

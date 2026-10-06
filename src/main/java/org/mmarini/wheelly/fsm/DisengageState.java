@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.fsm;
 
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
@@ -93,9 +94,13 @@ public class DisengageState extends AbstractCompletableState {
      */
     private RobotCommands computeCommandToSafetyTarget(RobotStatus robotStatus, boolean forward) {
         double distance = safetyDistance + robotStatus.robotSpec().targetRange();
+        throw new NotImplementedException();
+        /* TODO
         return forward
                 ? RobotCommands.forward(robotStatus.direction().at(robotStatus.location(), distance))
                 : RobotCommands.backward(robotStatus.direction().opposite().at(robotStatus.location(), distance));
+
+         */
     }
 
     /**
@@ -148,7 +153,7 @@ public class DisengageState extends AbstractCompletableState {
         } else if (FORWARD.equals(commands.status()) || BACKWARD.equals(commands.status())) {
             // Disengaging or moving to safe zone
             Point2D location = robotStatus.location();
-            double distance = location.distance(commands.target());
+            double distance = location.distance(commands.moveTarget());
             if (distance <= targetRange) {
                 // disengaged at safe distance
                 // Action completed

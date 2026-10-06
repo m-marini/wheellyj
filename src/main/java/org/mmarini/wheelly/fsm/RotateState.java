@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.fsm;
 
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
@@ -103,6 +104,10 @@ public class RotateState extends AbstractContactEventState {
         if (robotStatus.direction().isCloseTo(targetDeg, directionRange.toIntDeg())) {
             return complete(context);
         }
+        throw new NotImplementedException();
+            /* TODO
         return RobotCommands.rotate(targetDeg);
+
+             */
     }
 }

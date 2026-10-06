@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.fsm;
 
 import io.reactivex.rxjava3.core.Single;
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -619,6 +620,10 @@ public class CoordinatedMotionState implements EnvFSMState {
         }
         RobotCommands baseCmd = baseState.tick(context);
         RobotCommands headCmd = headState.tick(context);
+        throw new NotImplementedException();
+        /* TODO
         return RobotCommands.merge(baseCmd, headCmd);
+
+         */
     }
 }

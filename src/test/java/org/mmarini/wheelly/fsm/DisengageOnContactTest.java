@@ -125,7 +125,7 @@ public class DisengageOnContactTest {
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
         assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(safeLoc0, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc0, MM));
         assertEquals(0, cmd.scanDirection());
         assertEquals(1, ctx.nextActionCount());
 
@@ -135,7 +135,7 @@ public class DisengageOnContactTest {
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
         assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(safeLoc0, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc0, MM));
         assertEquals(0, cmd.scanDirection());
         assertEquals(0, ctx.nextActionCount());
 
@@ -145,7 +145,7 @@ public class DisengageOnContactTest {
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
         assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(safeLoc1, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc1, MM));
         assertEquals(0, cmd.scanDirection());
         assertEquals(1, ctx.nextActionCount());
 
@@ -155,7 +155,7 @@ public class DisengageOnContactTest {
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
         assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(safeLoc1, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc1, MM));
         assertEquals(0, cmd.scanDirection());
         assertEquals(1, ctx.nextActionCount());
 
@@ -219,7 +219,7 @@ public class DisengageOnContactTest {
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(safeLoc0, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc0, MM));
         assertEquals(0, cmd.scanDirection());
         assertEquals(1, ctx.nextActionCount());
 
@@ -229,7 +229,7 @@ public class DisengageOnContactTest {
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(safeLoc0, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc0, MM));
         assertEquals(0, cmd.scanDirection());
         assertEquals(0, ctx.nextActionCount());
 
@@ -239,7 +239,7 @@ public class DisengageOnContactTest {
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(safeLoc1, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc1, MM));
         assertEquals(0, cmd.scanDirection());
         assertEquals(1, ctx.nextActionCount());
 
@@ -249,7 +249,7 @@ public class DisengageOnContactTest {
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(safeLoc1, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc1, MM));
         assertEquals(0, cmd.scanDirection());
         assertEquals(1, ctx.nextActionCount());
 

@@ -173,7 +173,7 @@ public class TrackTest {
         assertEquals(EXPLORE_NEAREST_UNKNOWN_AREA, state.moveAction());
         // And
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target0, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(target0, MM));
         assertEquals(1, ctx.nextActionCount());
 
         // When 5 - at target0
@@ -183,7 +183,7 @@ public class TrackTest {
         assertEquals(EXPLORE_NEAREST_UNKNOWN_AREA, state.moveAction());
         // And
         assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target1, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(target1, MM));
         assertEquals(1, ctx.nextActionCount());
 
         // When 6 - at target1
@@ -294,7 +294,7 @@ public class TrackTest {
         assertEquals(TRACK_NEAREST_MARKER, state.moveAction());
         // And
         assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target0, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(target0, MM));
         assertEquals(1, ctx.nextActionCount());
 
         // When 5 - at target0
@@ -304,7 +304,7 @@ public class TrackTest {
         assertEquals(TRACK_NEAREST_MARKER, state.moveAction());
         // And
         assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target1, MM));
+        assertThat(cmd.moveTarget(), pointCloseTo(target1, MM));
         assertEquals(1, ctx.nextActionCount());
 
         // When 6 - at target1

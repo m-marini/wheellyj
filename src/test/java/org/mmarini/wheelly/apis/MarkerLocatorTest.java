@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -64,7 +64,6 @@ public class MarkerLocatorTest {
     public static final double MARKER_SIZE = 0.2;
     public static final String LABEL_A = "A";
     public static final String LABEL_B = "B";
-    MarkerLocator locator;
 
     static CameraEvent createCameraEvent(long cameraTime, String label, int labelDeg) {
         return new CameraEvent(cameraTime, label, 0, 0, new Point2D[0], Complex.fromDeg(labelDeg));
@@ -78,7 +77,8 @@ public class MarkerLocatorTest {
 
     static WheellyLidarMessage createLidar(double xRobot, double yRobot, int robotDeg, int headDeg, int distance) {
         Point2D pulses = location2Pulses(xRobot, yRobot);
-        return new WheellyLidarMessage(MarkerLocatorTest.T0, distance, 0, pulses.getX(), pulses.getY(), robotDeg, headDeg);
+        return new WheellyLidarMessage(MarkerLocatorTest.T0, distance, 0, pulses.getX(), pulses.getY(),
+                robotDeg, headDeg, HeadStatus.HeadStatusId.FIX_DIRECTION, 0, 0, 0);
     }
 
     static LabelMarker createMarkerAt(CorrelatedCameraEvent event, int markerDeg, double markerDistance) {
@@ -100,6 +100,20 @@ public class MarkerLocatorTest {
         WheellyLidarMessage lidar = createLidar(xRobot, yRobot, robotDeg, headDeg, distance);
         CameraEvent camera = createCameraEvent(UNCORRELATED_CAMERA_TIME, MarkerLocatorTest.LABEL_A, labelDeg);
         return new CorrelatedCameraEvent(camera, lidar);
+    }
+
+    static Stream<Arguments> dataExistingMarker() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 9) // xRobot
+                .uniform(-2.0, 2.0, 9) // yRobot
+                .uniform(0, 359) // robotDeg
+                .uniform(-90, 90) // headDeg
+                .exponential(400, 1500, 5) // distance
+                .uniform(-DEFAULT_LIDAR_FOV_DEG / 2, DEFAULT_LIDAR_FOV_DEG / 2) // labelDeg
+                .uniform(0, 3000, 17) //  dTimeMarker
+                .uniform(0, 359) // markerDeg
+                .exponential(0.4, 2, 17) // markerDistance
+                .build(100);
     }
 
     static Stream<Arguments> dataNewBehindDifferentMarkerInRange() {
@@ -233,19 +247,7 @@ public class MarkerLocatorTest {
                 .build(100);
     }
 
-    static Stream<Arguments> dataExistingMarker() {
-        return RandomArgumentsGenerator.create(SEED)
-                .uniform(-2.0, 2.0, 9) // xRobot
-                .uniform(-2.0, 2.0, 9) // yRobot
-                .uniform(0, 359) // robotDeg
-                .uniform(-90, 90) // headDeg
-                .exponential(400, 1500, 5) // distance
-                .uniform(-DEFAULT_LIDAR_FOV_DEG / 2, DEFAULT_LIDAR_FOV_DEG / 2) // labelDeg
-                .uniform(0, 3000, 17) //  dTimeMarker
-                .uniform(0, 359) // markerDeg
-                .exponential(0.4, 2, 17) // markerDistance
-                .build(100);
-    }
+    MarkerLocator locator;
 
     Stream<Arguments> dataUnknownNearInRange() {
         return RandomArgumentsGenerator.create(SEED)

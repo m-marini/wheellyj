@@ -133,17 +133,17 @@ class DisengageStateTest {
         //-------- after half commitment
         // Then the command should be backward to target position
         assertEquals(FORWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target1, MM));
+        assertThat(cmd[1].moveTarget(), pointCloseTo(target1, MM));
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(FORWARD, cmd[2].status());
-        assertThat(cmd[2].target(), pointCloseTo(target2, MM));
+        assertThat(cmd[2].moveTarget(), pointCloseTo(target2, MM));
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(FORWARD, cmd[3].status());
-        assertThat(cmd[3].target(), pointCloseTo(target2, MM));
+        assertThat(cmd[3].moveTarget(), pointCloseTo(target2, MM));
 
         //-------- move backward at safe distance
         // Then the command should be backward to target position
@@ -202,22 +202,22 @@ class DisengageStateTest {
         //-------- front contact
         // Then the command should be backward to target position
         assertEquals(BACKWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target1, MM));
+        assertThat(cmd[0].moveTarget(), pointCloseTo(target1, MM));
 
         //-------- after half commitment
         // Then the command should be backward to target position
         assertEquals(BACKWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target1, MM));
+        assertThat(cmd[1].moveTarget(), pointCloseTo(target1, MM));
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(BACKWARD, cmd[2].status());
-        assertThat(cmd[2].target(), pointCloseTo(target2, MM));
+        assertThat(cmd[2].moveTarget(), pointCloseTo(target2, MM));
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(BACKWARD, cmd[3].status());
-        assertThat(cmd[3].target(), pointCloseTo(target2, MM));
+        assertThat(cmd[3].moveTarget(), pointCloseTo(target2, MM));
 
         //-------- move backward at safe distance
         // Then the command should be backward to target position
@@ -276,22 +276,22 @@ class DisengageStateTest {
         //-------- rear contact
         // Then the command should be backward to target position
         assertEquals(FORWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target1, MM));
+        assertThat(cmd[0].moveTarget(), pointCloseTo(target1, MM));
 
         //-------- after half commitment
         // Then the command should be backward to target position
         assertEquals(FORWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target1, MM));
+        assertThat(cmd[1].moveTarget(), pointCloseTo(target1, MM));
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(FORWARD, cmd[2].status());
-        assertThat(cmd[2].target(), pointCloseTo(target2, MM));
+        assertThat(cmd[2].moveTarget(), pointCloseTo(target2, MM));
 
         //-------- move backward MOVE_DISTANCE and no contact
         // Then the command should be backward to target position
         assertEquals(FORWARD, cmd[3].status());
-        assertThat(cmd[3].target(), pointCloseTo(target2, MM));
+        assertThat(cmd[3].moveTarget(), pointCloseTo(target2, MM));
 
         //-------- move backward at safe distance
         // Then the command should be backward to target position

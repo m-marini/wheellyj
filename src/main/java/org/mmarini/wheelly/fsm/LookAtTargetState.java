@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.fsm;
 
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
@@ -145,6 +146,10 @@ public class LookAtTargetState extends AbstractCommitmentState implements EnvFSM
             // target not in head fov
             return RobotCommands.halt();
         }
-        return RobotCommands.halt(headTargetDir.toIntDeg());
+        throw new NotImplementedException();
+            /* TODO
+return RobotCommands.halt(headTargetDir.toIntDeg());
+
+             */
     }
 }
