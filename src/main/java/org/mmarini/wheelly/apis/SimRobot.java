@@ -82,6 +82,7 @@ public class SimRobot implements RobotApi {
     public static final String LABEL = "A";
     public static final double MIN_OBSTACLE_DISTANCE = 1;
     public static final double DEFAULT_ANTI_GIMBAL_RADIUS = 0.3;
+    public static final long STATUS_TIMEOUT = 3000;
     static final float JBOX_SCALE = 100;
     static final double MAX_ACC = 1 * JBOX_SCALE;
     private static final Logger logger = LoggerFactory.getLogger(SimRobot.class);
@@ -130,7 +131,7 @@ public class SimRobot implements RobotApi {
     private long startSimulationTime;
     private long robotTime;
     private long lastTick;
-    private long motionTimeout;
+    private long motionStatusTime;
     private long lidarTimeout;
     private long cameraTimeout;
     private long stalemateTimeout;
@@ -154,6 +155,8 @@ public class SimRobot implements RobotApi {
     private Consumer<WheellyLidarMessage> onLidars;
     private Consumer<WheellyMotionMessage> onMotions;
     private Consumer<CameraEvent> onCameras;
+    private long headStatusTime;
+    private long moveStatusTime;
 
     /**
      * Creates the simulated robot
@@ -587,9 +590,18 @@ public class SimRobot implements RobotApi {
      * Sets the motor speed based on the command status
      */
     private void handleEngine() {
+        if (robotTime >= headStatusTime + STATUS_TIMEOUT) {
+            headStatus = HeadStatus.lookStraight();
+            headDirection = Complex.DEG0;
+            headStatusTime = robotTime;
+        }
         switch (headStatus.status()) {
             case FRONT_TRACK -> trackFrontTarget();
             case REAR_TRACK -> trackRearTarget();
+        }
+        if (robotTime >= moveStatusTime + STATUS_TIMEOUT) {
+            haltImmediate();
+            moveStatusTime = robotTime;
         }
         switch (motionStatus.status()) {
             case ROTATE -> handleRotation();
@@ -658,6 +670,7 @@ public class SimRobot implements RobotApi {
             if (r.motionStatus() != null) {
                 MotionStatus newMotionStatus = r.motionStatus();
                 motionStatus = newMotionStatus;
+                moveStatusTime = robotTime;
                 if (newMotionStatus.status() == MotionStatus.MotionStatusId.HALT) {
                     leftPps = rightPps = 0;
                 }
@@ -665,6 +678,7 @@ public class SimRobot implements RobotApi {
             }
             if (r.headStatus() != null) {
                 headStatus = r.headStatus();
+                headStatusTime = robotTime;
                 if (FIX_DIRECTION.equals(headStatus.status())) {
                     headDirection = Complex.fromDeg(r.headStatus().direction());
                 }
@@ -983,7 +997,7 @@ public class SimRobot implements RobotApi {
                 motionStatus.targetDir(), (int) round(leftPps), (int) round(rightPps),
                 0, 0,
                 pulses.getX(), pulses.getY());
-        motionTimeout = robotTime + config.motionInterval();
+        motionStatusTime = robotTime + config.motionInterval();
         if (onMotions != null) {
             onMotions.accept(msg);
         }
@@ -1051,7 +1065,7 @@ public class SimRobot implements RobotApi {
         // Handles stalemate
         handleStalemate();
         // Update robot status
-        if (sendMotion || robotTime >= motionTimeout) {
+        if (sendMotion || robotTime >= motionStatusTime) {
             sendMotion();
         }
         if (sendLidar || robotTime >= lidarTimeout) {

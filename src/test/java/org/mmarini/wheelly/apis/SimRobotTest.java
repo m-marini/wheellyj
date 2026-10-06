@@ -34,7 +34,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mmarini.RandomArgumentsGenerator;
 
 import java.awt.geom.Point2D;
@@ -43,19 +42,19 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Stream;
 
-import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.TestFunctions.waitForMessages;
+import static org.mmarini.wheelly.apis.HeadStatus.HeadStatusId.*;
 import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.BACKWARD;
 import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.FORWARD;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.SimRobot.*;
 import static org.mmarini.wheelly.apis.Utils.MM;
-import static rocks.cleancode.hamcrest.record.HasFieldMatcher.field;
 
 class SimRobotTest {
 
@@ -70,7 +69,8 @@ class SimRobotTest {
             List.of(MapBuilder.empty(41, GRID_SIZE)), DEFAULT_ANTI_GIMBAL_RADIUS);
     public static final int NUM_CASES = 30;
     public static final double MAX_DISTANCE = 1;
-    private static final double PULSES_EPSILON = 1;
+    public static final Point2D.Double ORIGIN = new Point2D.Double();
+    public static final long STATUS_TIMEOUT_INTERVAL = MESSAGE_INTERVAL + INTERVAL;
 
     /**
      * Given a simulated robot with an obstacle map grid of 0.2 m without obstacles
@@ -157,6 +157,21 @@ class SimRobotTest {
                 .build(NUM_CASES);
     }
 
+    public static Stream<Arguments> dataRotate() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-3.0, 3.0, 17)
+                .uniform(-180, 179)
+                .uniform(30, 360 - 30)
+                .build(NUM_CASES);
+    }
+
+    public static Stream<Arguments> dataScan() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-65, 65)
+                .build(NUM_CASES);
+    }
+
     private SimRobot robot;
 
     @BeforeEach
@@ -173,7 +188,7 @@ class SimRobotTest {
         Complex robotDirection = Complex.fromDeg(robotDeg);
         this.robot.robotDir(robotDirection);
         Point2D target = Complex.fromDeg(targetAngle).add(robotDirection)
-                .at(new Point2D.Double(), targetDistance);
+                .at(ORIGIN, targetDistance);
         long rt = 10000;
         List<WheellyMotionMessage> motions = new ArrayList<>();
         robot.addOnMotion(motions::add);
@@ -185,6 +200,7 @@ class SimRobotTest {
         WheellyMotionMessage motionMsg = motions.getLast();
         // And waiting for messages with time > 500
         do {
+            robot.move(false, target);
             robot.simulate();
         } while (!robot.isHalt() && robot.robotTime() <= rt);
         waitForMessages(() -> robot.simulate(), motions);
@@ -202,6 +218,40 @@ class SimRobotTest {
 
         assertNotNull(motion);
         assertThat(motion.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
+    }
+
+    @Test
+    void testBackwardTimeout() {
+        // Given a robot connected and robotConfigured
+        Point2D target = new Point2D.Double(0, -3);
+        List<WheellyMotionMessage> motions = new ArrayList<>();
+        robot.addOnMotion(motions::add);
+
+        // When move to 0 DEG at max power
+        long rt = 10000;
+        robot.syncConnect();
+        robot.move(false, target);
+        waitForMessages(() -> robot.simulate(), motions);
+        WheellyMotionMessage motionMsg = motions.getLast();
+        // And waiting for messages with time > 500
+        do {
+            robot.simulate();
+        } while (!(robot.isHalt() || robot.robotTime() > rt));
+        waitForMessages(() -> robot.simulate(), motions);
+
+        robot.close();
+        robot.simulate();
+
+        assertThat(robot.location(), not(pointCloseTo(target, DEFAULT_TARGET_RANGE)));
+
+        // Then ...
+        assertEquals(BACKWARD, motionMsg.status());
+        assertThat(motionMsg.target(), pointCloseTo(target, MM));
+
+        WheellyMotionMessage motion = motions.getLast();
+        assertNotNull(motion);
+        assertThat(motion.time(), allOf(greaterThanOrEqualTo(STATUS_TIMEOUT), lessThan(STATUS_TIMEOUT + STATUS_TIMEOUT_INTERVAL)));
+        assertThat(motion.location(), not(pointCloseTo(target, DEFAULT_TARGET_RANGE)));
     }
 
     @Test
@@ -223,7 +273,42 @@ class SimRobotTest {
         Complex robotDirection = Complex.fromDeg(robotDeg);
         this.robot.robotDir(robotDirection);
         Point2D target = Complex.fromDeg(targetAngle).add(robotDirection)
-                .at(new Point2D.Double(), targetDistance);
+                .at(ORIGIN, targetDistance);
+        List<WheellyMotionMessage> motions = new ArrayList<>();
+        robot.addOnMotion(motions::add);
+
+        // When move to 0 DEG at max power
+        long rt = 10000;
+        robot.syncConnect();
+        robot.move(true, target);
+        waitForMessages(() -> robot.simulate(), motions);
+        WheellyMotionMessage motionMsg = motions.getLast();
+        // And waiting for messages with time > 500
+        do {
+            robot.move(true, target);
+            robot.simulate();
+        } while (!(robot.isHalt() || robot.robotTime() > rt));
+        waitForMessages(() -> robot.simulate(), motions);
+
+        robot.close();
+        robot.simulate();
+
+        WheellyMotionMessage motion = motions.getLast();
+
+        // Then ...
+        assertThat(robot.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
+
+        assertEquals(FORWARD, motionMsg.status());
+        assertThat(motionMsg.target(), pointCloseTo(target, MM));
+
+        assertNotNull(motion);
+        assertThat(motion.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
+    }
+
+    @Test
+    void testForwardTimeout() {
+        // Given a robot connected and robotConfigured
+        Point2D target = new Point2D.Double(0, 3);
         List<WheellyMotionMessage> motions = new ArrayList<>();
         robot.addOnMotion(motions::add);
 
@@ -236,13 +321,13 @@ class SimRobotTest {
         // And waiting for messages with time > 500
         do {
             robot.simulate();
-        } while (!robot.isHalt() && robot.robotTime() <= rt);
+        } while (!(robot.isHalt() || robot.robotTime() > rt));
         waitForMessages(() -> robot.simulate(), motions);
 
         robot.close();
         robot.simulate();
 
-        assertThat(robot.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
+        assertThat(robot.location(), not(pointCloseTo(target, DEFAULT_TARGET_RANGE)));
 
         // Then ...
         assertEquals(FORWARD, motionMsg.status());
@@ -250,7 +335,8 @@ class SimRobotTest {
 
         WheellyMotionMessage motion = motions.getLast();
         assertNotNull(motion);
-        assertThat(motion.location(), pointCloseTo(target, DEFAULT_TARGET_RANGE));
+        assertThat(motion.time(), allOf(greaterThanOrEqualTo(STATUS_TIMEOUT), lessThan(STATUS_TIMEOUT + STATUS_TIMEOUT_INTERVAL)));
+        assertThat(motion.location(), not(pointCloseTo(target, DEFAULT_TARGET_RANGE)));
     }
 
     @ParameterizedTest
@@ -409,6 +495,39 @@ class SimRobotTest {
         assertThat(proxy.target(), pointCloseTo(target, MM));
     }
 
+    @Test
+    void testFrontTrackTimeout() {
+        // Given a sim robot connected and robotConfigured
+        // Given a robot connected and robotConfigured
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
+
+        // When scan 90 DEG
+        robot.syncConnect();
+        Point2D target = new Point2D.Double(1, 1);
+        robot.track(true, target);
+        waitForMessages(() -> robot.simulate(), lidars);
+        WheellyLidarMessage lidar = lidars.getLast();
+
+        do {
+            robot.simulate();
+        } while (!(robot.headDirection().isClose0(1) || robot.robotTime() > 10000));
+        waitForMessages(() -> robot.simulate(), lidars);
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        assertEquals(FRONT_TRACK, lidar.trackingState());
+        assertThat(lidar.target(), pointCloseTo(target, MM));
+
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertThat(proxy.time(), allOf(greaterThanOrEqualTo(STATUS_TIMEOUT), lessThan(STATUS_TIMEOUT + STATUS_TIMEOUT_INTERVAL)));
+        assertEquals(FIX_DIRECTION, proxy.trackingState());
+        assertEquals(0, proxy.headTargetDeg());
+        assertEquals(0, proxy.headDirectionDeg());
+    }
+
     @ParameterizedTest
     @CsvSource({
             "0,0, 0, -180, 0.5"
@@ -565,17 +684,61 @@ class SimRobotTest {
         assertThat(proxy.target(), pointCloseTo(target, MM));
     }
 
-    @ParameterizedTest
-    @ValueSource(ints = {30, 45, 60, 90, 135, -180, -135, -90, -60, -45, -30})
-    void testRotate(int dir) {
+    @Test
+    void testRearTrackTimeout() {
+        // Given a sim robot connected and robotConfigured
         // Given a robot connected and robotConfigured
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
+
+        // When scan 90 DEG
+        robot.syncConnect();
+        Point2D target = new Point2D.Double(-1, -1);
+        robot.track(false, target);
+        waitForMessages(() -> robot.simulate(), lidars);
+        WheellyLidarMessage lidar = lidars.getLast();
+
+        do {
+            robot.simulate();
+        } while (!(robot.headDirection().isClose0(1) || robot.robotTime() > 10000));
+        waitForMessages(() -> robot.simulate(), lidars);
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        assertEquals(REAR_TRACK, lidar.trackingState());
+        assertThat(lidar.target(), pointCloseTo(target, MM));
+
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertThat(proxy.time(), allOf(greaterThanOrEqualTo(STATUS_TIMEOUT), lessThan(STATUS_TIMEOUT + STATUS_TIMEOUT_INTERVAL)));
+        assertEquals(FIX_DIRECTION, proxy.trackingState());
+        assertEquals(0, proxy.headTargetDeg());
+        assertEquals(0, proxy.headDirectionDeg());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0,0, 0, 30",
+            "0,0, -180, 30"
+    })
+    @MethodSource("dataRotate")
+    void testRotate(double x, double y, int robotDeg, int targetDeg) {
+        // Given a robot direction
+        Point2D robotLocation = new Point2D.Double(x, y);
+        Complex robotDir = Complex.fromDeg(robotDeg);
+        // And a target direction
+        Complex targetDir = Complex.fromDeg(targetDeg).add(robotDir);
+        // And a robot connected and robotConfigured
+        robot.robotPos(x, y);
+        robot.robotDir(robotDir);
         List<WheellyMotionMessage> motions = new ArrayList<>();
         robot.addOnMotion(motions::add);
 
         // When move to 5 DEG at 0 power
         long rt = 10000;
         robot.syncConnect();
-        robot.rotate(dir);
+        robot.rotate(targetDir.toIntDeg());
         waitForMessages(() -> robot.simulate(), motions);
         WheellyMotionMessage motionMsg = motions.getLast();
         // And waiting for messages with time > 500
@@ -589,24 +752,56 @@ class SimRobotTest {
 
         // Then ...
         assertEquals(MotionStatus.MotionStatusId.ROTATE, motionMsg.status());
-        assertEquals(dir, motionMsg.targetDeg());
+        assertEquals(targetDir.toIntDeg(), motionMsg.targetDeg());
 
         // And the robot should emit motion at (0, 0) toward 5 DEG
-        WheellyMotionMessage motion = motions.getLast();
-        int maxRot = (int) round(toDegrees(MAX_ANGULAR_VELOCITY * MESSAGE_INTERVAL / 1e-3));
-        int da = (int) round(toDegrees(MAX_ANGULAR_VELOCITY * INTERVAL / 1e-3));
-        int expDir = min(maxRot, dir);
-        int minDir = expDir - da;
-        int maxDir = expDir + da;
+        assertEquals(MotionStatus.MotionStatusId.ROTATE, motionMsg.status());
+        assertEquals(targetDir.toIntDeg(), motionMsg.targetDeg());
 
-        assertThat(motion, field("xPulses", closeTo(0, PULSES_EPSILON)));
-        assertThat(motion, field("yPulses", closeTo(0, PULSES_EPSILON)));
-        assertThat(motion, field("directionDeg", greaterThanOrEqualTo(minDir)));
-        assertThat(motion, field("directionDeg", lessThanOrEqualTo(maxDir)));
+        WheellyMotionMessage motion = motions.getLast();
+
+        assertThat(motion.location(), pointCloseTo(robotLocation, MM));
+        assertThat(motion.direction(), angleCloseTo(targetDir, DEFAULT_ROBOT_SPEC.directionRange().toIntDeg() + 1));
+    }
+
+    /**
+     * Timeout during max rotation (180 DEG) never happens
+     */
+    void testRotateTimeout() {
+        List<WheellyMotionMessage> motions = new ArrayList<>();
+        robot.addOnMotion(motions::add);
+
+        // When move to 5 DEG at 0 power
+        long rt = 10000;
+        robot.syncConnect();
+        robot.rotate(-180);
+        waitForMessages(() -> robot.simulate(), motions);
+        WheellyMotionMessage motionMsg = motions.getLast();
+        // And waiting for messages with time > 500
+        do {
+            robot.simulate();
+        } while (!(robot.isHalt() || robot.robotTime() > rt));
+        waitForMessages(() -> robot.simulate(), motions);
+
+        robot.close();
+        robot.simulate();
+
+        // Then ...
+        assertEquals(MotionStatus.MotionStatusId.ROTATE, motionMsg.status());
+        assertEquals(-180, motionMsg.targetDeg());
+
+        // And the robot should emit motion at (0, 0) toward 5 DEG
+        assertEquals(MotionStatus.MotionStatusId.ROTATE, motionMsg.status());
+        assertEquals(-180, motionMsg.targetDeg());
+
+        WheellyMotionMessage motion = motions.getLast();
+        assertThat(motion.time(), allOf(greaterThanOrEqualTo(STATUS_TIMEOUT), lessThan(STATUS_TIMEOUT + STATUS_TIMEOUT_INTERVAL)));
+        assertThat(motion.location(), pointCloseTo(ORIGIN, MM));
+        assertThat(motion.direction(), not(angleCloseTo(-180, DEFAULT_ROBOT_SPEC.directionRange().toIntDeg() + 1)));
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {-65, -45, -30, -15, -5, 0, 5, 15, 30, 45, 65})
+    @MethodSource("dataScan")
     void testScan(int dir) {
         // Given a sim robot connected and robotConfigured
         // Given a robot connected and robotConfigured
@@ -626,7 +821,7 @@ class SimRobotTest {
         assertNotNull(proxy);
         assertEquals(500L, proxy.time());
         assertEquals(dir, proxy.headDirectionDeg());
-        assertEquals(HeadStatus.HeadStatusId.FIX_DIRECTION, proxy.trackingState());
+        assertEquals(FIX_DIRECTION, proxy.trackingState());
         assertEquals(dir, proxy.headTargetDeg());
     }
 
@@ -658,6 +853,38 @@ class SimRobotTest {
         assertEquals(expected, proxy.headDirectionDeg());
     }
 
+    @Test
+    void testScanTimeout() {
+        // Given a sim robot connected and robotConfigured
+        // Given a robot connected and robotConfigured
+        List<WheellyLidarMessage> lidars = new ArrayList<>();
+        robot.addOnLidar(lidars::add);
+
+        // When scan 90 DEG
+        robot.syncConnect();
+        robot.scan(65);
+        waitForMessages(() -> robot.simulate(), lidars);
+        WheellyLidarMessage lidar = lidars.getLast();
+
+        do {
+            robot.simulate();
+        } while (!(robot.headDirection().isClose0(1) || robot.robotTime() > 10000));
+        waitForMessages(() -> robot.simulate(), lidars);
+        robot.close();
+        robot.simulate();
+
+        // Then the consumer should be invoked
+        assertEquals(FIX_DIRECTION, lidar.trackingState());
+        assertEquals(65, lidar.headTargetDeg());
+
+        WheellyLidarMessage proxy = lidars.getLast();
+        assertNotNull(proxy);
+        assertEquals(0, proxy.headDirectionDeg());
+        assertThat(proxy.time(), allOf(greaterThanOrEqualTo(STATUS_TIMEOUT), lessThan(STATUS_TIMEOUT + STATUS_TIMEOUT_INTERVAL)));
+        assertEquals(FIX_DIRECTION, proxy.trackingState());
+        assertEquals(0, proxy.headTargetDeg());
+    }
+
     @ParameterizedTest(name = "[{index}] R{0}, Target {1} DEG, {2} m")
     @MethodSource({
             "dataFar",
@@ -666,7 +893,7 @@ class SimRobotTest {
         // Given a robot connected and robotConfigured
         Complex robotDirection = Complex.fromDeg(robotDeg);
         this.robot.robotDir(robotDirection);
-        Point2D target = robotDirection.opposite().at(new Point2D.Double(), MAX_DISTANCE);
+        Point2D target = robotDirection.opposite().at(ORIGIN, MAX_DISTANCE);
 
         // When move to 0 DEG at max power
         long rt = 10000;
@@ -676,7 +903,7 @@ class SimRobotTest {
 
         // Then the location should be the expected location
         double expDistance = MAX_ACC / JBOX_SCALE / 2 * INTERVAL * INTERVAL * 1e-3 * 1e-3;
-        Point2D expLocation = robotDirection.opposite().at(new Point2D.Double(), expDistance);
+        Point2D expLocation = robotDirection.opposite().at(ORIGIN, expDistance);
 
         assertThat(robot.location(), pointCloseTo(expLocation, MM));
     }
@@ -689,7 +916,7 @@ class SimRobotTest {
         // Given a robot connected and robotConfigured
         Complex robotDirection = Complex.fromDeg(robotDeg);
         this.robot.robotDir(robotDirection);
-        Point2D target = robotDirection.at(new Point2D.Double(), MAX_DISTANCE);
+        Point2D target = robotDirection.at(ORIGIN, MAX_DISTANCE);
 
         // When move to 0 DEG at max power
         long rt = 10000;
@@ -699,7 +926,7 @@ class SimRobotTest {
 
         // Then the location should be the expected location
         double expDistance = MAX_ACC / JBOX_SCALE / 2 * INTERVAL * INTERVAL * 1e-3 * 1e-3;
-        Point2D expLocation = robotDirection.at(new Point2D.Double(), expDistance);
+        Point2D expLocation = robotDirection.at(ORIGIN, expDistance);
 
         assertThat(robot.location(), pointCloseTo(expLocation, MM));
     }
