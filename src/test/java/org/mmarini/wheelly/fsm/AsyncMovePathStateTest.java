@@ -38,6 +38,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
@@ -91,11 +92,11 @@ class AsyncMovePathStateTest {
         this.state = new AsyncMovePathState(COMMITMENT_TIME)
                 .onContact(ctx1 -> {
                     onContactContexts.add(ctx1);
-                    return RobotCommands.halt();
+                    return RobotCommand.halt();
                 })
                 .onCompletion(ctx1 -> {
                     onCompletionContexts.add(ctx1);
-                    return RobotCommands.halt();
+                    return RobotCommand.halt();
                 })
         ;
     }
@@ -145,9 +146,9 @@ class AsyncMovePathStateTest {
 
         // When 1st tick no path
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertFalse(state.completed());
 
         // When tick after path
@@ -155,28 +156,28 @@ class AsyncMovePathStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getFirst(), MM));
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(path.getFirst(), MM));
 
         // When move to 1st point
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 2nd tick should return forward to target1
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getLast(), MM));
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(path.getLast(), MM));
 
         // When move to 2nd point
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 3rd tick should return halt
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertThat(onCompletionContexts, contains(ctx));
 
         // When tick after completion
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 4th tick should return halt
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
 
         // Than completion should have been invoked twice
         assertThat(onCompletionContexts, hasItem(ctx));
@@ -240,9 +241,9 @@ class AsyncMovePathStateTest {
 
         // When 2 - 1st tick no path
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertFalse(state.completed());
 
         // When 3 - tick after path
@@ -250,28 +251,28 @@ class AsyncMovePathStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getFirst(), MM));
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(path.getFirst(), MM));
 
         // When 4 - move to 1st point
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 2nd tick should return forward to target1
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getLast(), MM));
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(path.getLast(), MM));
 
         // When 5 - move to 2nd point
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 3rd tick should return halt
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertThat(onCompletionContexts, contains(ctx));
 
         // When 6 - after complete
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 4th tick should return halt
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
 
         // Than completion should have been invoked twice
         assertThat(onCompletionContexts, hasItem(ctx));
@@ -306,16 +307,16 @@ class AsyncMovePathStateTest {
         // When 1st tick after path
         Completable.timer(10, TimeUnit.MILLISECONDS).blockingAwait();
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Than 1st tick should return HALT
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertThat(onCompletionContexts, contains(ctx));
 
         // When tick after completion
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than should return HALT
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
 
         assertThat(onCompletionContexts, hasItem(ctx));
         assertThat(onContactContexts, empty());
@@ -362,30 +363,30 @@ class AsyncMovePathStateTest {
 
         // When 1st tick
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getFirst(), MM));
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(path.getFirst(), MM));
 
         // When move to 1st point
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 2nd tick should return forward to target1
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(path.getLast(), MM));
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(path.getLast(), MM));
 
         // When move to 2nd point
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 3rd tick should return halt
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertThat(onCompletionContexts, contains(ctx));
 
         // When tick after completion
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 4th tick should return halt
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
 
         // Than completion should have been invoked twice
         assertThat(onCompletionContexts, hasItem(ctx));
@@ -435,11 +436,11 @@ class AsyncMovePathStateTest {
 
         // Than 1st tick should return forward to target0
         assertEquals(FORWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target0, MM));
+        assertThat(cmd[0].moveTarget(), pointCloseTo(target0, MM));
 
         // Than 2nd tick should return forward to target1
         assertEquals(FORWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target1, MM));
+        assertThat(cmd[1].moveTarget(), pointCloseTo(target1, MM));
 
         // Than 3rd tick should return halt
         assertEquals(HALT, cmd[2].status());
@@ -480,16 +481,16 @@ class AsyncMovePathStateTest {
         // When 1st tick after path
         Completable.timer(10, TimeUnit.MILLISECONDS).blockingAwait();
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Than 1st tick should return HALT
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertThat(onCompletionContexts, contains(ctx));
 
         // When tick after completion
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than should return HALT
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
 
         assertThat(onCompletionContexts, hasItem(ctx));
         assertThat(onContactContexts, empty());

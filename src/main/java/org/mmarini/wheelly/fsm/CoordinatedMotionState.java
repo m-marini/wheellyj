@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.fsm;
 
 import io.reactivex.rxjava3.core.Single;
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -219,7 +220,7 @@ public class CoordinatedMotionState implements EnvFSMState {
      * @param context the operational context
      * @return the resulting robot motor commands issued by the brake state
      */
-    private RobotCommands forceHalt(EnvFSMContext context) {
+    private RobotCommand forceHalt(EnvFSMContext context) {
         logger.atDebug().log("Force Halt");
         haltState0.init(context);
         baseState = haltState0;
@@ -606,7 +607,7 @@ public class CoordinatedMotionState implements EnvFSMState {
      * @return the {@link RobotCommands} enforcing the calculated movement and look orientation
      */
     @Override
-    public RobotCommands tick(EnvFSMContext context) {
+    public RobotCommand tick(EnvFSMContext context) {
         if (baseState == null
                 || headState == null
                 || baseState.completed()
@@ -617,8 +618,12 @@ public class CoordinatedMotionState implements EnvFSMState {
             AgentAction actionId = context.nextAction();
             changeActions(context, actionId);
         }
-        RobotCommands baseCmd = baseState.tick(context);
-        RobotCommands headCmd = headState.tick(context);
+        RobotCommand baseCmd = baseState.tick(context);
+        RobotCommand headCmd = headState.tick(context);
+        throw new NotImplementedException();
+        /* TODO
         return RobotCommands.merge(baseCmd, headCmd);
+
+         */
     }
 }

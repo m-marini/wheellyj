@@ -29,7 +29,6 @@
 package org.mmarini.wheelly;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.reactivex.rxjava3.core.Flowable;
 import org.hamcrest.CustomMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -47,7 +46,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -64,14 +62,6 @@ import static org.mmarini.yaml.Utils.fromResource;
 public interface TestFunctions {
     static Predicate<? super WheellyMessage> after(long time) {
         return msg -> msg.time() > time;
-    }
-
-    static Predicate<? super WheellyMessage> before(long time) {
-        return msg -> msg.time() < time;
-    }
-
-    static <T extends WheellyMessage> T findMessage(List<T> messages, Predicate<? super WheellyMessage> pred) {
-        return messages.stream().filter(pred).findFirst().orElse(null);
     }
 
     static ArgumentJsonParser jsonFileArguments(String resource) throws IOException {
@@ -117,24 +107,25 @@ public interface TestFunctions {
         };
     }
 
-    static Predicate<WheellyMessage> notBefore(long time) {
-        return msg -> msg.time() >= time;
-    }
-
     static String text(String... lines) {
         return String.join("\n", lines) + "\n";
     }
 
-    static <T extends WheellyMessage> void waitFor(Flowable<T> messages, Predicate<T> pred, long timeout) {
-        messages.filter(pred::test)
-                .firstElement()
-                .timeout(timeout, TimeUnit.MILLISECONDS)
-                .blockingGet();
-    }
-
+    /**
+     * Blocks execution and repeatedly invokes the designated simulation stepping routine
+     * until at least one of the tracked message destination lists registers an incoming packet.
+     * <p>
+     * This utility tracks initial list counts to detect changes across concurrent reactive
+     * streams during verification testing loops.
+     * </p>
+     *
+     * @param <T>      the underlying generic data type handled by the message registries
+     * @param stepOver the functional execution routine responsible for advancing the clock cycle
+     * @param messages a variable array of generic {@link List} instances to monitor for message arrival
+     */
     static <T> void waitForMessages(Runnable stepOver, List<T>... messages) {
         int[] n = Arrays.stream(messages)
-                .mapToInt(l -> l.size())
+                .mapToInt(List::size)
                 .toArray();
         do {
             stepOver.run();

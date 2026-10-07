@@ -213,8 +213,8 @@
         </dependency>
         <dependency>
             <groupId>com.github.akarnokd</groupId>
-            <artifactId>rxjava3-bridge</artifactId>
-            <version>3.0.2</version>
+            <artifactId>rxjava3-swing</artifactId>
+            <version>3.1.1</version>
         </dependency>
         <dependency>
             <groupId>io.github.sashirestela</groupId>

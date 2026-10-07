@@ -30,7 +30,7 @@ package org.mmarini.wheelly.fsm;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.util.ArrayList;
@@ -60,7 +60,7 @@ class HeadScanStateTest {
         this.state = new HeadScanState(COMMITMENT_TIME, SCAN_INTERVAL, ANGLE_INTERVAL_DEG)
                 .onCompletion(ctx -> {
                     onCompletionContexts.add(ctx);
-                    return RobotCommands.halt();
+                    return RobotCommand.halt();
                 });
     }
 
@@ -104,9 +104,9 @@ class HeadScanStateTest {
         //--------
         // When 1st tick
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then command should scan at 1st direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd.scanDirection());
+        assertEquals(SCAN_HEAD_DEG[0], cmd.headStatus().direction());
         // And no committed
         assertFalse(state.expired(ctx));
         // And no completed
@@ -119,7 +119,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 1st direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd.scanDirection());
+        assertEquals(SCAN_HEAD_DEG[0], cmd.headStatus().direction());
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -132,7 +132,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 2nd direction
-        assertEquals(SCAN_HEAD_DEG[1], cmd.scanDirection());
+        assertEquals(SCAN_HEAD_DEG[1], cmd.headStatus().direction());
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -144,7 +144,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(SCAN_HEAD_DEG[2], cmd.scanDirection());
+        assertEquals(SCAN_HEAD_DEG[2], cmd.headStatus().direction());
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -157,7 +157,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(SCAN_HEAD_DEG[2], cmd.scanDirection());
+        assertEquals(SCAN_HEAD_DEG[2], cmd.headStatus().direction());
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -170,7 +170,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(0, cmd.headStatus().direction());
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -183,7 +183,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(0, cmd.headStatus().direction());
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed

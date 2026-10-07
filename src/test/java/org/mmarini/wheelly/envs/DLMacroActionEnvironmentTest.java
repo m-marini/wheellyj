@@ -202,7 +202,7 @@ class DLMacroActionEnvironmentTest {
         };
         WorldModellerApi mockModeller = new WorldModellerApi() {
             @Override
-            public void addOnInference(Consumer<Tuple2<WorldModel, RobotCommands>> callback) {
+            public void addOnInference(Consumer<Tuple2<WorldModel, RobotCommand>> callback) {
 
             }
 
@@ -261,17 +261,17 @@ class DLMacroActionEnvironmentTest {
         Complex robotHead = Complex.direction(target, marker).add(HEAD_DIR);
 
         // When 1st inference
-        RobotCommands cmd = markerEnv.onInference(builder.build());
+        RobotCommand cmd = markerEnv.onInference(builder.build());
         // Then command should be halt waiting for path
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
 
         // When 2nd inference
         Completable.timer(BUILDING_PATH_TIME, TimeUnit.MILLISECONDS).blockingAwait();
         cmd = markerEnv.onInference(builder.addTime(INFERENCE_INTERVAL).build());
         // Then command should be backward to target
-        assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target, MM));
+        assertEquals(BACKWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(target, MM));
 
         // When 3nd inference robot at target
         cmd = markerEnv.onInference(builder.addTime(INFERENCE_INTERVAL)
@@ -279,8 +279,8 @@ class DLMacroActionEnvironmentTest {
                 .robotDir(robotHead)
                 .build());
         // Then command should be backward to target
-        assertEquals(HALT, cmd.status());
-        assertThat(Complex.fromDeg(cmd.scanDirection()), angleCloseTo(HEAD_DIR.neg(), 2));
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertThat(cmd.headStatus().direction(), angleCloseTo(HEAD_DIR.neg(), 2));
     }
 
     @Test
@@ -309,25 +309,25 @@ class DLMacroActionEnvironmentTest {
         Point2D target = new Point2D.Double(-1.2, 1.4);
 
         // When 1st inference
-        RobotCommands cmd = exploreEnv.onInference(builder.build());
+        RobotCommand cmd = exploreEnv.onInference(builder.build());
         // Then command should be halt waiting for path
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
 
         // When 2nd inference
         Completable.timer(BUILDING_PATH_TIME, TimeUnit.MILLISECONDS).blockingAwait();
         cmd = exploreEnv.onInference(builder.addTime(INFERENCE_INTERVAL).build());
         // Then command should be backward to target
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target, MM));
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(target, MM));
 
         // When 3nd inference robot at target
         cmd = exploreEnv.onInference(builder.addTime(INFERENCE_INTERVAL)
                 .robotLocation(target)
                 .build());
         // Then command should be backward to target
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
     }
 
     @Test

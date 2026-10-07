@@ -46,11 +46,4 @@ public interface RobotControllerStatusApi {
      * Returns true if the controller is started
      */
     boolean started();
-
-    /**
-     * Returns true if sync is required
-     *
-     * @param time the current time
-     */
-    boolean syncRequired(long time);
 }

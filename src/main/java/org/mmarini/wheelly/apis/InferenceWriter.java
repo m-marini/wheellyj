@@ -28,6 +28,8 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.mmarini.NotImplementedException;
+
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.Map;
@@ -61,16 +63,20 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     /**
      * Writes robot command
      *
-     * @param commands the command
+     * @param command the command
      */
-    default <T extends InferenceWriter> T write(RobotCommands commands) throws IOException {
+    default <T extends InferenceWriter> T write(RobotCommand command) throws IOException {
+        throw new NotImplementedException();
+        /* TODO
         write(commands.status().ordinal())
                 .write(commands.scanDirection());
         switch (commands.status()) {
             case ROTATE -> write(commands.rotationDirection());
-            case FORWARD, BACKWARD -> write(commands.target());
+            case FORWARD, BACKWARD -> write(commands.moveTarget());
         }
         return (T) this;
+
+         */
     }
 
     /**
@@ -116,7 +122,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                 .write((float) motion.leftPps())
                 .write((float) motion.rightPps())
                 .write(motion.imuFailure())
-                .write(motion.halt())
+                .write(motion.status().ordinal())
                 .write(motion.leftTargetPps())
                 .write(motion.rightTargetPps())
                 .write(motion.leftPower())
@@ -142,12 +148,12 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     /**
      * Writes the model
      *
-     * @param model    the model
-     * @param commands the command
+     * @param model   the model
+     * @param command the command
      */
-    default <T extends InferenceWriter> T write(WorldModel model, RobotCommands commands) throws IOException {
+    default <T extends InferenceWriter> T write(WorldModel model, RobotCommand command) throws IOException {
         return write(model)
-                .write(commands);
+                .write(command);
     }
 
     /**

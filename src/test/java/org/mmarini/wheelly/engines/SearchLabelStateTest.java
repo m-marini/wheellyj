@@ -28,11 +28,13 @@
 
 package org.mmarini.wheelly.engines;
 
+import io.reactivex.rxjava3.core.Completable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.awt.geom.Point2D;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -95,6 +97,8 @@ class SearchLabelStateTest {
         // When ...
         state.init(ctx);
         state.entry(ctx);
+        // Wait for timer
+        Completable.timer(500, TimeUnit.MILLISECONDS).blockingAwait();
 
         // Then ...
         List<Point2D> path = state.path();

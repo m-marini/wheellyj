@@ -36,7 +36,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
@@ -140,11 +140,11 @@ public class TrackTest {
 
         // When 1 - 1st tick no track
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
         assertEquals(EXPLORE_NEAREST_UNKNOWN_AREA, state.moveAction());
         // And
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(1, ctx.nextActionCount());
 
         // When 2 - before commitment
@@ -153,7 +153,7 @@ public class TrackTest {
         // Then
         assertEquals(EXPLORE_NEAREST_UNKNOWN_AREA, state.moveAction());
         // And
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(0, ctx.nextActionCount());
 
         // When 3 - at commitment
@@ -162,7 +162,7 @@ public class TrackTest {
         // Then
         assertEquals(EXPLORE_NEAREST_UNKNOWN_AREA, state.moveAction());
         // And
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(1, ctx.nextActionCount());
 
         // When 4 - after path
@@ -172,8 +172,8 @@ public class TrackTest {
         // Then
         assertEquals(EXPLORE_NEAREST_UNKNOWN_AREA, state.moveAction());
         // And
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target0, MM));
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(target0, MM));
         assertEquals(1, ctx.nextActionCount());
 
         // When 5 - at target0
@@ -182,8 +182,8 @@ public class TrackTest {
         // Then
         assertEquals(EXPLORE_NEAREST_UNKNOWN_AREA, state.moveAction());
         // And
-        assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target1, MM));
+        assertEquals(BACKWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(target1, MM));
         assertEquals(1, ctx.nextActionCount());
 
         // When 6 - at target1
@@ -192,7 +192,7 @@ public class TrackTest {
         // Then
         assertEquals(HALT_ACTION, state.moveAction());
         // And
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(1, ctx.nextActionCount());
 
         // When 7 - after completion
@@ -201,7 +201,7 @@ public class TrackTest {
         // Then
         assertEquals(HALT_ACTION, state.moveAction());
         // And
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(1, ctx.nextActionCount());
     }
 
@@ -261,11 +261,11 @@ public class TrackTest {
 
         // When 1 - 1st tick no track
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
         assertEquals(TRACK_NEAREST_MARKER, state.moveAction());
         // And
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(1, ctx.nextActionCount());
 
         // When 2 - before commitment
@@ -274,7 +274,7 @@ public class TrackTest {
         // Then
         assertEquals(TRACK_NEAREST_MARKER, state.moveAction());
         // And
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(0, ctx.nextActionCount());
 
         // When 3 - at commitment
@@ -283,7 +283,7 @@ public class TrackTest {
         // Then
         assertEquals(TRACK_NEAREST_MARKER, state.moveAction());
         // And
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(1, ctx.nextActionCount());
 
         // When 4 - after path
@@ -293,8 +293,8 @@ public class TrackTest {
         // Then
         assertEquals(TRACK_NEAREST_MARKER, state.moveAction());
         // And
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target0, MM));
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(target0, MM));
         assertEquals(1, ctx.nextActionCount());
 
         // When 5 - at target0
@@ -303,8 +303,8 @@ public class TrackTest {
         // Then
         assertEquals(TRACK_NEAREST_MARKER, state.moveAction());
         // And
-        assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target1, MM));
+        assertEquals(BACKWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(target1, MM));
         assertEquals(1, ctx.nextActionCount());
 
         // When 6 - at target1
@@ -313,7 +313,7 @@ public class TrackTest {
         // Then
         assertEquals(HALT_ACTION, state.moveAction());
         // And
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(1, ctx.nextActionCount());
 
         // When 7 - after completion
@@ -322,7 +322,7 @@ public class TrackTest {
         // Then
         assertEquals(HALT_ACTION, state.moveAction());
         // And
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(1, ctx.nextActionCount());
     }
 }

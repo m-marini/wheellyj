@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
-import static org.mmarini.wheelly.apis.SimRobot.SAFE_DISTANCE;
+import static org.mmarini.wheelly.apis.SimRobot.*;
 import static org.mmarini.wheelly.apis.Utils.MM;
 
 class SimRobotObstacleTest {
@@ -64,6 +64,7 @@ class SimRobotObstacleTest {
     public static final long CHANGE_MAP_PERIOD = 100000L;
     public static final double MM10 = 10e-3;
     public static final int NUM_RANDOM_TEST_CASES = 100;
+    public static final Point2D.Double ORIGIN = new Point2D.Double();
 
     public static Stream<Arguments> dataAllDirection() {
         return RandomArgumentsGenerator.create(SEED)
@@ -101,11 +102,12 @@ class SimRobotObstacleTest {
      */
     private SimRobot createRobot(Point2D location, Complex robotDirection, Complex sensorDirection, MapBuilder mapBuilder) {
         Random random = new Random(SEED);
-        SimRobot simRobot = new SimRobot(DEFAULT_ROBOT_SPEC, random, random,
-                0, INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL,
-                0, 0,
-                List.of(mapBuilder), 0, 0, CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD,
-                SimRobot.DEFAULT_WORLD_SIZE);
+
+        SimRobot simRobot = new SimRobot(new SimRobot.SimRobotConfig(DEFAULT_ROBOT_SPEC, INTERVAL, INTERVAL, 0,
+                MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, CHANGE_MAP_PERIOD,
+                CHANGE_MAP_PERIOD, 0, 0, DEFAULT_WORLD_SIZE, 0, 0,
+                List.of(mapBuilder), DEFAULT_ANTI_GIMBAL_RADIUS),
+                random, random);
         simRobot.robotPos(location.getX(), location.getY());
         simRobot.robotDir(robotDirection);
         simRobot.sensorDirection(sensorDirection);
@@ -171,7 +173,7 @@ class SimRobotObstacleTest {
          *    -->O---->
          */
         Complex locationDir = Complex.fromDeg(locationDeg);
-        Point2D location = locationDir.at(new Point2D.Float(), DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS + MM10);
+        Point2D location = locationDir.at(ORIGIN, DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS + MM10);
         Complex robotDir = locationDir.opposite();
         robot = createRobot(location, robotDir);
 
@@ -179,7 +181,7 @@ class SimRobotObstacleTest {
          * When connect robot
          */
         robot.syncConnect();
-        robot.forward(new Point2D.Double());
+        robot.move(true, ORIGIN);
 
         /*
          When moving the robot to a given direction until contact
@@ -223,13 +225,13 @@ class SimRobotObstacleTest {
          *    -->O---->
          */
         Complex locationDir = Complex.fromDeg(locationDeg);
-        Point2D location = locationDir.at(new Point2D.Float(), DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS - MM1);
+        Point2D location = locationDir.at(ORIGIN, DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS - MM1);
         Complex robotDir = locationDir.opposite();
         robot = createRobot(location, robotDir);
         /*
          * And the robot location at contact point
          */
-        Point2D contactPoint = locationDir.at(new Point2D.Float(), DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS);
+        Point2D contactPoint = locationDir.at(ORIGIN, DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS);
 
         /*
          * When connect robot
@@ -237,7 +239,7 @@ class SimRobotObstacleTest {
         robot.syncConnect();
 
         // And when move ahead at max power
-        robot.forward(new Point2D.Double());
+        robot.move(true, ORIGIN);
         robot.simulate();
         robot.close();
         robot.simulate();
@@ -285,7 +287,7 @@ class SimRobotObstacleTest {
         Complex locationDir = Complex.fromDeg(locationDeg);
         // Obstacle center---Obstacle bound-----SafePoint---------Lidar--------------Head--------RobotCenter
         //      <---Obstacle radius--><----10mm----><-safe distance-><-Lidar distance-><-Head distance->
-        Point2D location = locationDir.at(new Point2D.Float(),
+        Point2D location = locationDir.at(ORIGIN,
                 DEFAULT_OBSTACLE_RADIUS + SAFE_DISTANCE + DEFAULT_HEAD_Y + DEFAULT_FRONT_LIDAR_DISTANCE + MM10);
         Complex robotDir = locationDir.opposite();
         robot = createRobot(location, robotDir, Complex.DEG0, 0, 0);
@@ -298,7 +300,7 @@ class SimRobotObstacleTest {
         /*
          When moving the robot to a given direction until contact
          */
-        robot.forward(new Point2D.Double());
+        robot.move(true, ORIGIN);
         long maxTime = 1500;
         do {
             robot.simulate();
@@ -351,7 +353,7 @@ class SimRobotObstacleTest {
          */
         long maxTime = 3000;
         do {
-            robot.forward(moveLocation);
+            robot.move(true, moveLocation);
             robot.simulate();
         } while (!(robot.robotTime() >= maxTime));
         robot.close();
@@ -389,7 +391,7 @@ class SimRobotObstacleTest {
          *    -->O---->
          */
         Complex locationDir = Complex.fromDeg(locationDeg);
-        Point2D location = locationDir.at(new Point2D.Float(), DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS + MM10);
+        Point2D location = locationDir.at(ORIGIN, DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS + MM10);
         robot = createRobot(location, locationDir);
 
         /*
@@ -400,7 +402,7 @@ class SimRobotObstacleTest {
         /*
          When moving the robot backward the given direction until contact
          */
-        robot.backward(new Point2D.Double());
+        robot.move(false, ORIGIN);
         long maxTime = 1500;
         do {
             robot.simulate();
@@ -442,12 +444,12 @@ class SimRobotObstacleTest {
          *    -->O---->
          */
         Complex locationDir = Complex.fromDeg(locationDeg);
-        Point2D location = locationDir.at(new Point2D.Float(), DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS - MM1);
+        Point2D location = locationDir.at(ORIGIN, DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS - MM1);
         robot = createRobot(location, locationDir);
         /*
          * And the robot location at contact point
          */
-        Point2D contactPoint = locationDir.at(new Point2D.Float(), DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS);
+        Point2D contactPoint = locationDir.at(ORIGIN, DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS);
 
         /*
          * When connect robot
@@ -455,7 +457,7 @@ class SimRobotObstacleTest {
         robot.syncConnect();
 
         // And when move backward at max power
-        robot.backward(new Point2D.Double());
+        robot.move(false, ORIGIN);
         robot.simulate();
         robot.close();
         robot.simulate();
@@ -505,7 +507,7 @@ class SimRobotObstacleTest {
         //                                                              <--------Head distance------->
         //      <---Obstacle radius--><----10mm----><--------safe distance---------><-Lidar distance->
         //
-        Point2D location = locationDir.at(new Point2D.Float(),
+        Point2D location = locationDir.at(ORIGIN,
                 DEFAULT_OBSTACLE_RADIUS + MM10 + SAFE_DISTANCE + DEFAULT_REAR_LIDAR_DISTANCE - DEFAULT_HEAD_Y);
         robot = createRobot(location, locationDir, Complex.DEG0, 0, 0);
 
@@ -517,7 +519,7 @@ class SimRobotObstacleTest {
         /*
          When moving the robot to a given direction until contact
          */
-        robot.backward(new Point2D.Double());
+        robot.move(false, ORIGIN);
         long maxTime = 1500;
         do {
             robot.simulate();
@@ -559,7 +561,7 @@ class SimRobotObstacleTest {
         Complex locationDir = Complex.fromDeg(locationDeg);
         // Obstacle center---Obstacle bound-----SafePoint---------Lidar--------------Head--------RobotCenter
         //      <---Obstacle radius--><---- -1 mm----><-safe distance-><-Lidar distance-><-Head distance->
-        Point2D location = locationDir.at(new Point2D.Float(),
+        Point2D location = locationDir.at(ORIGIN,
                 DEFAULT_OBSTACLE_RADIUS + SAFE_DISTANCE + DEFAULT_HEAD_Y + DEFAULT_FRONT_LIDAR_DISTANCE - MM1);
         Complex robotDir = locationDir.opposite();
         robot = createRobot(location, robotDir, Complex.DEG0, 0, 0);
@@ -577,7 +579,7 @@ class SimRobotObstacleTest {
         // When moving backward
         long maxTime = 1500;
         do {
-            robot.backward(target);
+            robot.move(false, target);
             robot.simulate();
         } while (!(robot.robotTime() >= maxTime
                 || robot.canMoveForward() && robot.canMoveBackward()));
@@ -609,7 +611,7 @@ class SimRobotObstacleTest {
          *    -->O---->
          */
         Complex locationDir = Complex.fromDeg(locationDeg);
-        Point2D location = locationDir.at(new Point2D.Float(), DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS - MM1);
+        Point2D location = locationDir.at(ORIGIN, DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS - MM1);
         Complex robotDir = locationDir.opposite();
         robot = createRobot(location, robotDir);
         Point2D target = locationDir.at(location, SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
@@ -625,7 +627,7 @@ class SimRobotObstacleTest {
         assertTrue(robot.canMoveBackward());
 
         // When moving backward
-        robot.backward(target);
+        robot.move(false, target);
         long maxTime = 1500;
         do {
             robot.simulate();
@@ -663,7 +665,7 @@ class SimRobotObstacleTest {
         //                                                              <--------Head distance------->
         //      <---Obstacle radius--><---- -1 mm----><--------safe distance---------><-Lidar distance->
         //
-        Point2D location = locationDir.at(new Point2D.Float(),
+        Point2D location = locationDir.at(ORIGIN,
                 DEFAULT_OBSTACLE_RADIUS - MM + SAFE_DISTANCE + DEFAULT_REAR_LIDAR_DISTANCE - DEFAULT_HEAD_Y);
         robot = createRobot(location, locationDir, Complex.DEG0, 0, 0);
         Point2D target = locationDir.at(location, SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
@@ -680,7 +682,7 @@ class SimRobotObstacleTest {
         // When moving forward
         long maxTime = 1500;
         do {
-            robot.forward(target);
+            robot.move(true, target);
             robot.simulate();
         } while (!(robot.robotTime() >= maxTime
                 || robot.canMoveForward() && robot.canMoveBackward()));
@@ -714,7 +716,7 @@ class SimRobotObstacleTest {
          *    -->O---->
          */
         Complex locationDir = Complex.fromDeg(locationDeg);
-        Point2D location = locationDir.at(new Point2D.Float(), DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS - MM1);
+        Point2D location = locationDir.at(ORIGIN, DEFAULT_OBSTACLE_RADIUS + ROBOT_RADIUS - MM1);
         robot = createRobot(location, locationDir);
         Point2D target = locationDir.at(location, SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
 
@@ -730,7 +732,7 @@ class SimRobotObstacleTest {
         // When moving forward
         long maxTime = 1500;
         do {
-            robot.forward(target);
+            robot.move(true, target);
             robot.simulate();
         } while (!(robot.robotTime() >= maxTime
                 || robot.frontSensor() && robot.rearSensor()));

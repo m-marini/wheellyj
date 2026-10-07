@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.apis.WorldModel;
@@ -113,12 +113,12 @@ public class MovePathState extends TimeOutState {
     /**
      * Create the abstract node
      *
-     * @param id               the node identifier
-     * @param onInit           the initialisation command or null if none
-     * @param onEntry          the entry command or null if none
-     * @param onExit           the exit command or null if none
-     * @param timeout          the timeout (ms)
-     * @param defaultPath      the default path
+     * @param id          the node identifier
+     * @param onInit      the initialisation command or null if none
+     * @param onEntry     the entry command or null if none
+     * @param onExit      the exit command or null if none
+     * @param timeout     the timeout (ms)
+     * @param defaultPath the default path
      */
     public MovePathState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit, long timeout, List<Point2D> defaultPath) {
         super(id, onInit, onEntry, onExit, timeout);
@@ -157,7 +157,7 @@ public class MovePathState extends TimeOutState {
             logger.atDebug().log("Target reached");
             return nextLocation(context);
         }
-        return new StateResult(NONE_EXIT, RobotCommands.forward(target));
+        return new StateResult(NONE_EXIT, RobotCommand.forward(target));
     }
 
     /**
@@ -175,7 +175,7 @@ public class MovePathState extends TimeOutState {
         }
         Point2D target = path.get(targetIndex);
         logger.atDebug().log("Move to {}", target);
-        return new StateResult(NONE_EXIT, RobotCommands.forward(target));
+        return new StateResult(NONE_EXIT, RobotCommand.forward(target));
     }
 
     @Override

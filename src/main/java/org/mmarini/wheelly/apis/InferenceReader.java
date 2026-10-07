@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
@@ -44,17 +45,16 @@ import java.util.stream.Collectors;
 public interface InferenceReader extends AutoCloseable, DataReader {
 
     /**
-     * Returns the world model from file or null if end of file
+     * Returns the camera event
+     *
+     * @throws IOException in case of error
      */
-    default Tuple2<WorldModelSpec, GridTopology> readHeader() throws IOException {
-        return Tuple2.of(readWorldSpec(), readTopology());
-    }
-
-    default Point2D readPoint2D() throws IOException {
-        return new Point2D.Double(
-                readDouble(),
-                readDouble()
-        );
+    default CameraEvent readCamera() throws IOException {
+        long timestamp = readLong();
+        String qrCode = readString();
+        int width = readInt();
+        int height = readInt();
+        return new CameraEvent(timestamp, qrCode, width, height, null, Complex.DEG0);
     }
 
     /**
@@ -63,32 +63,32 @@ public interface InferenceReader extends AutoCloseable, DataReader {
      * @throws IOException in case of error
      */
     default RobotCommands readCommands() throws IOException {
-        RobotStatusId status = RobotStatusId.values()[readInt()];
-        int headDeg = readInt();
+        throw new NotImplementedException();
+            /* TODO
+
         return switch (status) {
             case HALT -> RobotCommands.halt(headDeg);
             case ROTATE -> RobotCommands.rotate(headDeg, readInt());
             case FORWARD -> RobotCommands.forward(headDeg, readPoint2D());
             case BACKWARD -> RobotCommands.backward(headDeg, readPoint2D());
         };
+
+             */
     }
 
     /**
-     * Returns the world model from file or null if end of file
+     * Returns the contact message
      *
      * @throws IOException in case of error
      */
-    default Tuple2<WorldModel, RobotCommands> readRecord() throws IOException {
-        WorldModel model = readModel();
-        RobotCommands commands = readCommands();
-        return Tuple2.of(model, commands);
-    }
-
-    default GridTopology readTopology() throws IOException {
-        return GridTopology.create(readPoint2D(),
-                readInt(),
-                readInt(),
-                readDouble());
+    default WheellyContactsMessage readContacts() throws IOException {
+        long simulationTime = readLong();
+        boolean frontSensor = readBoolean();
+        boolean rearSensor = readBoolean();
+        boolean canMoveForward = readBoolean();
+        boolean canMoveBackward = readBoolean();
+        return new WheellyContactsMessage(simulationTime,
+                frontSensor, rearSensor, canMoveForward, canMoveBackward);
     }
 
     /**
@@ -110,31 +110,10 @@ public interface InferenceReader extends AutoCloseable, DataReader {
     }
 
     /**
-     * Returns the camera event
-     *
-     * @throws IOException in case of error
+     * Returns the world model from file or null if end of file
      */
-    default CameraEvent readCamera() throws IOException {
-        long timestamp = readLong();
-        String qrCode = readString();
-        int width = readInt();
-        int height = readInt();
-        return new CameraEvent(timestamp, qrCode, width, height, null, Complex.DEG0);
-    }
-
-    /**
-     * Returns the contact message
-     *
-     * @throws IOException in case of error
-     */
-    default WheellyContactsMessage readContacts() throws IOException {
-        long simulationTime = readLong();
-        boolean frontSensor = readBoolean();
-        boolean rearSensor = readBoolean();
-        boolean canMoveForward = readBoolean();
-        boolean canMoveBackward = readBoolean();
-        return new WheellyContactsMessage(simulationTime,
-                frontSensor, rearSensor, canMoveForward, canMoveBackward);
+    default Tuple2<WorldModelSpec, GridTopology> readHeader() throws IOException {
+        return Tuple2.of(readWorldSpec(), readTopology());
     }
 
     /**
@@ -148,7 +127,8 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         double xPulses = readDouble();
         double yPulses = readDouble();
         int robotYawDeg = readInt();
-        return new WheellyLidarMessage(simTime, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headDirectionDeg);
+        return new WheellyLidarMessage(simTime, frontDistance, rearDistance, xPulses, yPulses,
+                robotYawDeg, headDirectionDeg, HeadStatus.HeadStatusId.FIX_DIRECTION, 0, 0, 0);
     }
 
     /**
@@ -174,6 +154,60 @@ public interface InferenceReader extends AutoCloseable, DataReader {
                 ));
     }
 
+    /**
+     * Returns the model
+     *
+     * @throws IOException in case of error
+     */
+    WorldModel readModel() throws IOException;
+
+    /**
+     * Returns the motion message
+     *
+     * @throws IOException in case of error
+     */
+    default WheellyMotionMessage readMotion() throws IOException {
+        long simulationTime = readLong();
+        double xPulses = readFloat();
+        double yPulses = readFloat();
+        int directionDeg = readInt();
+        double leftPps = readFloat();
+        double rightPps = readFloat();
+        int imuFailure = readInt();
+        int status = readInt();
+        int leftTargetPps = readInt();
+        int rightTargetPps = readInt();
+        int leftPower = readInt();
+        int rightPower = readInt();
+        return new WheellyMotionMessage(simulationTime, xPulses, yPulses,
+                directionDeg, leftPps, rightPps, imuFailure, MotionStatus.MotionStatusId.HALT, 0, leftTargetPps, rightTargetPps, leftPower, rightPower, 0, 0);
+    }
+
+    default Point2D readPoint2D() throws IOException {
+        return new Point2D.Double(
+                readDouble(),
+                readDouble()
+        );
+    }
+
+    /**
+     * Returns the radar map
+     *
+     * @throws IOException in case of error
+     */
+    RadarMap readRadar() throws IOException;
+
+    /**
+     * Returns the world model from file or null if end of file
+     *
+     * @throws IOException in case of error
+     */
+    default Tuple2<WorldModel, RobotCommands> readRecord() throws IOException {
+        WorldModel model = readModel();
+        RobotCommands commands = readCommands();
+        return Tuple2.of(model, commands);
+    }
+
     default RobotSpec readRobotSpec() throws IOException {
         return new RobotSpec(readDouble(), // maxRadarDistance
                 readDeg(), // lidarFOV
@@ -195,53 +229,24 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         );
     }
 
-    default WorldModelSpec readWorldSpec() throws IOException {
-        RobotSpec robotSpec = readRobotSpec();
-        int numSector = readInt();
-        int gridSize = readInt();
-        return new WorldModelSpec(robotSpec, numSector, gridSize);
-    }
-
-    /**
-     * Returns the model
-     *
-     * @throws IOException in case of error
-     */
-    WorldModel readModel() throws IOException;
-
-    /**
-     * Returns the motion message
-     *
-     * @throws IOException in case of error
-     */
-    default WheellyMotionMessage readMotion() throws IOException {
-        long simulationTime = readLong();
-        double xPulses = readFloat();
-        double yPulses = readFloat();
-        int directionDeg = readInt();
-        double leftPps = readFloat();
-        double rightPps = readFloat();
-        int imuFailure = readInt();
-        boolean halt = readBoolean();
-        int leftTargetPps = readInt();
-        int rightTargetPps = readInt();
-        int leftPower = readInt();
-        int rightPower = readInt();
-        return new WheellyMotionMessage(simulationTime, xPulses, yPulses,
-                directionDeg, leftPps, rightPps, imuFailure, halt, leftTargetPps, rightTargetPps, leftPower, rightPower);
-    }
-
-    /**
-     * Returns the radar map
-     *
-     * @throws IOException in case of error
-     */
-    RadarMap readRadar() throws IOException;
-
     /**
      * Returns the robot status
      *
      * @throws IOException in case of error
      */
     RobotStatus readStatus() throws IOException;
+
+    default GridTopology readTopology() throws IOException {
+        return GridTopology.create(readPoint2D(),
+                readInt(),
+                readInt(),
+                readDouble());
+    }
+
+    default WorldModelSpec readWorldSpec() throws IOException {
+        RobotSpec robotSpec = readRobotSpec();
+        int numSector = readInt();
+        int gridSize = readInt();
+        return new WorldModelSpec(robotSpec, numSector, gridSize);
+    }
 }

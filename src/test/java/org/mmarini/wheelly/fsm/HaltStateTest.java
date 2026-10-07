@@ -30,6 +30,7 @@ package org.mmarini.wheelly.fsm;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
@@ -56,7 +57,7 @@ class HaltStateTest {
         this.state = new HaltState(COMMITMENT_TIME)
                 .onCompletion(ctx -> {
                     onCompletionContexts.add(ctx);
-                    return RobotCommands.halt();
+                    return RobotCommand.halt();
                 });
     }
 

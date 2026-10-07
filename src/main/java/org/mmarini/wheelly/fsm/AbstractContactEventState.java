@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.fsm;
 
 
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 
 import java.util.function.Function;
@@ -52,7 +53,7 @@ public abstract class AbstractContactEventState extends AbstractCompletableState
     /**
      * The callback function evaluated to supply reactive robot commands when contact is detected.
      */
-    private Function<EnvFSMContext, RobotCommands> onContact;
+    private Function<EnvFSMContext, RobotCommand> onContact;
 
     /**
      * Constructs an {@code AbstractContactEventState} with a specific commitment duration window.
@@ -97,7 +98,7 @@ public abstract class AbstractContactEventState extends AbstractCompletableState
      * @return this state instance cast to its concrete type for method chaining
      */
     @SuppressWarnings("unchecked")
-    public <T extends AbstractContactEventState> T onContact(Function<EnvFSMContext, RobotCommands> callback) {
+    public <T extends AbstractContactEventState> T onContact(Function<EnvFSMContext, RobotCommand> callback) {
         this.onContact = callback;
         return (T) this;
     }
@@ -113,10 +114,10 @@ public abstract class AbstractContactEventState extends AbstractCompletableState
      * @param context the {@link EnvFSMContext} tracking the shared operational data
      * @return the {@link RobotCommands} triggered by the contact event
      */
-    protected RobotCommands triggerContact(EnvFSMContext context) {
+    protected RobotCommand triggerContact(EnvFSMContext context) {
         contacted = true;
         return onContact != null
                 ? onContact.apply(context)
-                : RobotCommands.halt();
+                : RobotCommand.halt();
     }
 }

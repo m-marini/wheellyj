@@ -28,7 +28,9 @@
 
 package org.mmarini.wheelly.fsm;
 
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
@@ -128,12 +130,12 @@ public class LookAtTargetState extends AbstractCommitmentState implements EnvFSM
      * @throws NullPointerException if the internal target or provided context is null
      */
     @Override
-    public RobotCommands tick(EnvFSMContext context) {
+    public RobotCommand tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         Point2D headLocation = robotStatus.headLocation();
         if (headLocation.distance(target) <= minTargetDistance) {
             // Target too near
-            return RobotCommands.halt();
+            return RobotCommand.halt();
         }
         Complex robotDir = robotStatus.direction();
         Complex headTargetDir = Complex.direction(headLocation, target).sub(robotDir);
@@ -143,8 +145,12 @@ public class LookAtTargetState extends AbstractCommitmentState implements EnvFSM
         }
         if (!headTargetDir.isClose0(robotStatus.robotSpec().headFOV().toRad() / 2)) {
             // target not in head fov
-            return RobotCommands.halt();
+            return RobotCommand.halt();
         }
-        return RobotCommands.halt(headTargetDir.toIntDeg());
+        throw new NotImplementedException();
+            /* TODO
+return RobotCommands.halt(headTargetDir.toIntDeg());
+
+             */
     }
 }

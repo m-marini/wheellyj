@@ -37,6 +37,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
+import org.mmarini.NotImplementedException;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.swing.ComMonitor;
@@ -213,22 +214,34 @@ public class RobotCheckUp {
                     // Check for no test required
                     if (currentTest == directions.length) {
                         // Execute a halt move command
+                        throw new NotImplementedException();
+        /* TODO
                         controller.execute(command);
+
                         sensorPanel.setInfo("");
                         return results;
+
+         */
                     }
                     // move head
-                    controller.execute(command.scanDirection(directions[currentTest]));
+                    throw new NotImplementedException();
+        /* TODO
+controller.execute(command.scanDirection(directions[currentTest]));
+
                     // clean measures (time, counter, accumulator)
                     measureStart = time;
                     totFrontDistance = totRearDistance = 0;
                     sampleCount = 0;
                     measureFrontCount = measureRearCount = 0;
                     scannerMoveTime = 0;
+         */
                     // set scan command to the current test direction
-                    command = command.scanDirection(directions[currentTest]);
+        /* TODO
+command = command.scanDirection(directions[currentTest]);
+
                     logger.atInfo().log("Checking sensor to {} DEG ...", directions[currentTest]);
                     sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest]));
+         */
                 }
                 int sensDir = directions[currentTest];
                 Complex dir = status.headDirection();
@@ -266,12 +279,19 @@ public class RobotCheckUp {
                     currentTest++;
                     // Check for last direction test
                     if (currentTest >= directions.length) {
-                        controller.execute(command.scanDirection(0));
+                        throw new NotImplementedException();
+        /* TODO
+controller.execute(command.scanDirection(0));
+
                         sensorPanel.setInfo("");
                         return results;
+         */
                     }
                     // Move head the next direction
-                    controller.execute(command.scanDirection(directions[currentTest]));
+                    throw new NotImplementedException();
+        /* TODO
+controller.execute(command.scanDirection(directions[currentTest]));
+
                     logger.atInfo().log("Checking sensor to {} DEG ...", directions[currentTest]);
                     sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest]));
                     // reset all measures
@@ -280,6 +300,7 @@ public class RobotCheckUp {
                     sampleCount = 0;
                     measureFrontCount = measureRearCount = 0;
                     scannerMoveTime = 0;
+         */
                 }
                 return null;
             }
@@ -742,7 +763,10 @@ public class RobotCheckUp {
                         // store start location
                         startLocation = status.location();
                         moveStart = time;
-                        controller.execute(RobotCommands.backward(target));
+                        throw new NotImplementedException();
+        /* TODO
+controller.execute(RobotCommands.backward(target));
+
                         sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()));
                     }
                     // Check for maximum distance travelled or test timeout or obstacle found
@@ -759,8 +783,10 @@ public class RobotCheckUp {
                                 distance,
                                 status.imuFailure()));
                         sensorPanel.setInfo("");
-                        controller.execute(RobotCommands.halt());
+controller.execute(RobotCommands.halt());
+
                         return true;
+         */
                     }
                     return false;
                 }
@@ -787,7 +813,9 @@ public class RobotCheckUp {
                         // store start location
                         startLocation = status.location();
                         moveStart = time;
-                        controller.execute(RobotCommands.forward(target));
+                        throw new NotImplementedException();
+        /* TODO
+controller.execute(RobotCommands.forward(target));
                         sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()));
                     }
                     // Check for maximum distance travelled or test timeout or obstacle found
@@ -804,8 +832,12 @@ public class RobotCheckUp {
                                 distance,
                                 status.imuFailure()));
                         sensorPanel.setInfo("");
+                        throw new NotImplementedException();
+                        /* TODO
                         controller.execute(RobotCommands.halt());
                         return true;
+
+                         */
                     }
                     return false;
                 }
@@ -835,7 +867,9 @@ public class RobotCheckUp {
                         rotationStart = time;
                         startAngle = dir;
                         // Rotate to the desired direction
-                        controller.execute(RobotCommands.rotate(direction));
+                        throw new NotImplementedException();
+        /* TODO
+      controller.execute(RobotCommands.rotate(direction));
                         sensorPanel.setInfo(format("Checking rotation to %d DEG ...", direction.toIntDeg()));
                     }
                     // Check for rotation max duration
@@ -848,9 +882,14 @@ public class RobotCheckUp {
                         // Create the test result
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
                         // Stop robot
-                        controller.execute(RobotCommands.halt());
+                        throw new NotImplementedException();
+        /* TODO
+controller.execute(RobotCommands.halt());
+
                         sensorPanel.setInfo("");
                         return true;
+
+         */
                     }
                     // Check for robot moving
                     if (!status.halt()) {
@@ -869,17 +908,25 @@ public class RobotCheckUp {
                     if (directionError.isClose0(robot.robotSpec().directionRange())) {
                         // Rotation completed: generate the test result
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
-                        controller.execute(RobotCommands.halt());
+                        throw new NotImplementedException();
+        /* TODO
+controller.execute(RobotCommands.halt());
                         sensorPanel.setInfo("");
                         return true;
+
+         */
                     }
                     // Check for robot halt duration
                     if (time >= haltTime + HALT_TIMEOUT) {
                         // Halt timeout: generate test result
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
+                        throw new NotImplementedException();
+        /* TODO
                         controller.execute(RobotCommands.halt());
                         sensorPanel.setInfo("");
                         return true;
+
+         */
                     }
                     return false;
                 }

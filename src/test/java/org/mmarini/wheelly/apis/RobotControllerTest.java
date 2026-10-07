@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -110,7 +110,8 @@ class RobotControllerTest {
                 .filter(RobotControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
-        controller.execute(RobotCommands.backward(headDeg, target));
+        controller.motionStatus(MotionStatus.backward(target));
+        controller.headStatus(HeadStatus.scan(Complex.fromDeg(headDeg)));
         // Wait for 5 simulated seconds
         events.filter(s -> s.robotTime() >= TEST_DURATION)
                 .firstElement()
@@ -175,7 +176,8 @@ class RobotControllerTest {
                 .filter(RobotControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
-        controller.execute(RobotCommands.forward(headDeg, target));
+        controller.motionStatus(MotionStatus.forward(target));
+        controller.headStatus(HeadStatus.scan(Complex.fromDeg(headDeg)));
         // Wait for 5 simulated seconds
         events.filter(s -> s.robotTime() >= TEST_DURATION)
                 .firstElement()
@@ -241,7 +243,8 @@ class RobotControllerTest {
                 .filter(RobotControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
-        controller.execute(RobotCommands.rotate(headDeg, targetDeg));
+        controller.motionStatus(MotionStatus.rotate(Complex.fromDeg(targetDeg)));
+        controller.headStatus(HeadStatus.scan(Complex.fromDeg(headDeg)));
         // Wait for 5 robot seconds
         events.filter(s -> s.robotTime() >= TEST_DURATION)
                 .firstElement()
@@ -274,7 +277,7 @@ class RobotControllerTest {
                 .filter(RobotControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
-        controller.execute(RobotCommands.halt(headDeg));
+        controller.headStatus(HeadStatus.scan(Complex.fromDeg(headDeg)));
         // Wait for 5 simulated seconds
         events.filter(s -> s.robotTime() >= 5000)
                 .firstElement()

@@ -86,7 +86,7 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
     private RewardFunction rewardFunc;
     private AgentConnector agent;
     private BasicEnvState prevState;
-    private RobotCommands prevCommands;
+    private RobotCommand prevCommands;
     private Map<String, Signal> signals0;
     private Map<String, Signal> prevActions;
     private DoubleConsumer onReward;
@@ -130,7 +130,7 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
     }
 
     @Override
-    public RobotCommands onInference(WorldModel model) {
+    public RobotCommand onInference(WorldModel model) {
         requireNonNull(model);
         requireNonNull(agent);
         requireNonNull(stateFunc);
@@ -138,7 +138,7 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
         BasicEnvState s1 = new BasicEnvState(model);
         Map<String, Signal> signals1 = state(s1);
         Map<String, Signal> actions = agent.act(signals1);
-        RobotCommands commands = actionFunc.commands(actions, model).getFirst();
+        RobotCommand commands = actionFunc.commands(actions, model).getFirst();
 
         if (prevState != null) {
             double reward = reward(prevState, prevCommands, s1);

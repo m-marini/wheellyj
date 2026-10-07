@@ -287,7 +287,6 @@ public class Wheelly {
         toolBar.relocateButton().addActionListener(this::onRelocateButton);
         toolBar.learningButton().addActionListener(this::onLearningToggle);
         controller.addOnRobotStatus(this::onStatusReady);
-        controller.addOnCommand(sensorMonitor::onCommand);
         controller.readErrors().subscribe(err -> {
             comMonitor.onError(err);
             logger.atError().setCause(err).log();
@@ -463,7 +462,7 @@ public class Wheelly {
      *
      * @param inferenceResult the inference result
      */
-    private void onInference(Tuple2<WorldModel, RobotCommands> inferenceResult) {
+    private void onInference(Tuple2<WorldModel, RobotCommand> inferenceResult) {
         logger.atDebug().log("on Inference");
         WorldModel worldModel = inferenceResult._1;
         RobotStatus robotStatus = worldModel.robotStatus();
@@ -509,10 +508,10 @@ public class Wheelly {
         logger.atDebug().log("on Inference end");
     }
 
-    private RobotCommands onInferenceProcess(WorldModel state) {
+    private RobotCommand onInferenceProcess(WorldModel state) {
         return active.get()
                 ? environment.onInference(state)
-                : RobotCommands.halt();
+                : RobotCommand.halt();
     }
 
     /**

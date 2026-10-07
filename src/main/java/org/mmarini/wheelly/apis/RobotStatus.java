@@ -34,6 +34,7 @@ import java.util.Optional;
 import java.util.function.IntToDoubleFunction;
 
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.HALT;
 import static org.mmarini.wheelly.apis.RobotSpec.distance2Pulse;
 import static org.mmarini.wheelly.apis.Utils.m2mm;
 import static org.mmarini.wheelly.apis.Utils.mm2m;
@@ -42,7 +43,7 @@ import static org.mmarini.wheelly.apis.Utils.mm2m;
  * Creates the robot status
  *
  * @param robotSpec       the robot specification
- * @param robotTime  the simulated markerTime (ms)
+ * @param robotTime       the simulated markerTime (ms)
  * @param motionMessage   the motion message
  * @param contactsMessage the contact's message
  * @param supplyMessage   the supply message
@@ -148,7 +149,7 @@ public record RobotStatus(RobotSpec robotSpec, long robotTime, WheellyMotionMess
      * Returns true if robot is halted
      */
     public boolean halt() {
-        return motionMessage.halt();
+        return HALT.equals(motionMessage.status());
     }
 
     /**
@@ -201,7 +202,7 @@ public record RobotStatus(RobotSpec robotSpec, long robotTime, WheellyMotionMess
      * Returns the location of robot (m)
      */
     public Point2D location() {
-        return motionMessage.robotLocation();
+        return motionMessage.location();
     }
 
     /**
@@ -335,7 +336,7 @@ public record RobotStatus(RobotSpec robotSpec, long robotTime, WheellyMotionMess
      */
     public RobotStatus setHalt(boolean halt) {
         return setMotionMessage(
-                motionMessage.halt(halt)
+                motionMessage.status(HALT)
                         .time(robotTime));
     }
 

@@ -175,8 +175,9 @@ public class AvoidingState extends TimeOutState {
             logger.atDebug().log("Safe point at {}", safePoint);
             return new StateResult(NONE_EXIT,
                     forwardEscape
-                            ? RobotCommands.forward(safePoint)
-                            : RobotCommands.backward(safePoint));
+                            ? RobotCommand.forward(safePoint)
+                            : RobotCommand.backward(safePoint));
+
         }
         // No contacts
         if (!avoidingByRadar) {
@@ -192,8 +193,9 @@ public class AvoidingState extends TimeOutState {
             logger.atDebug().log("approaching safe point at {}", safePoint);
             return new StateResult(NONE_EXIT,
                     forwardEscape
-                            ? RobotCommands.forward(safePoint)
-                            : RobotCommands.backward(safePoint));
+                            ? RobotCommand.forward(safePoint)
+                            : RobotCommand.backward(safePoint));
+
         }
         // Robot at safe distance: halt at exit
         double contactDistance = robotLocation.distance(contactPoint);

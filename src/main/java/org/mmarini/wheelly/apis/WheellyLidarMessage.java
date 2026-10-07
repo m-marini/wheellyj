@@ -40,43 +40,55 @@ import static org.mmarini.wheelly.apis.RobotSpec.location2Pulses;
 import static org.mmarini.wheelly.apis.RobotSpec.pulses2Location;
 
 /**
- * Contains the lidar sensor information
+ * Contains the telemetry and tracking information emitted by the lidar sensor of the Wheelly robot.
+ * This record captures distances, headings, alignment states, and spatial telemetry during a sensor ping.
  *
- * @param time             the simulation markerTime (ms)
- * @param headDirectionDeg the sensor direction at ping (DEG)
- * @param headDirection    the sensor direction at ping
- * @param frontDistance    the front distance (mm)
- * @param rearDistance     the rear distance (mm)
- * @param xPulses          the x robot location pulses at hasObstacle ping
- * @param yPulses          the y robot location pulses at hasObstacle ping
- * @param robotYawDeg      the robot direction at ping (DEG)
- * @param robotYaw         the robot direction at ping
+ * @param time             the simulation marker time in milliseconds (ms)
+ * @param headDirectionDeg the sensor head direction alignment angle in degrees (DEG) at the time of the ping
+ * @param frontDistance    the measured range to the obstacle in front of the sensor in millimetres (mm)
+ * @param rearDistance     the measured range to the obstacle behind the sensor in millimetres (mm)
+ * @param xPulses          the robot location coordinates along the X axis measured in pulses at the time of the obstacle ping
+ * @param yPulses          the robot location coordinates along the Y axis measured in pulses at the time of the obstacle ping
+ * @param robotYawDeg      the absolute robot heading/yaw orientation angle in degrees (DEG) at the time of the ping
+ * @param headTargetDeg    the targeted head heading angle in degrees (DEG)
+ * @param trackingState    the current tracking operating profile or state of the sensor head
+ * @param xTarget          the targeted sensor position coordinates along the X axis measured in pulses
+ * @param yTarget          the targeted sensor position coordinates along the Y axis measured in pulses
+ * @param headDirection    the computed complex vector representing the sensor head direction at the time of the ping
+ * @param robotYaw         the computed complex vector representing the robot absolute orientation at the time of the ping
+ * @param headTarget       the computed complex vector representing the targeted head direction alignment
+ * @param robotLocation    the mapped 2D coordinate point representing the robot position at the time of the ping
+ * @param target           the mapped 2D coordinate point representing the sensor target position
  */
 public record WheellyLidarMessage(long time,
-                                  int headDirectionDeg, Complex headDirection,
-                                  int frontDistance,
-                                  int rearDistance,
-                                  double xPulses, double yPulses, int robotYawDeg,
-                                  Complex robotYaw) implements WheellyMessage {
-    // [sampleTime] [headDirectionDeg (DEG) ] [distance (mm)] [distance (mm)] [xLocation (pulses)] [yLocation (pulses)] [yaw (DEG)]
-    public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(\\d+),(\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+)$");
-    public static final WheellyLidarMessage DEFAULT_MESSAGE = new WheellyLidarMessage(0, 0, 0, 0, 0, 0, 0);
+                                  int headDirectionDeg, int frontDistance, int rearDistance, double xPulses,
+                                  double yPulses, int robotYawDeg, int headTargetDeg,
+                                  HeadStatus.HeadStatusId trackingState,
+                                  double xTarget,
+                                  double yTarget, Complex headDirection,
+                                  Complex robotYaw, Complex headTarget, Point2D robotLocation,
+                                  Point2D target) implements WheellyMessage {
+    /**
+     * The regular expression pattern utilised to validate and parse structured lidar argument strings.
+     */
+    public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(\\d+),(\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+),(-?\\d+),(\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*)$");
+    /**
+     * A default lidar telemetry template initialised with baseline values.
+     */
+    public static final WheellyLidarMessage DEFAULT_MESSAGE = new WheellyLidarMessage(
+            0, 0, 0, 0, 0, 0, 0,
+            HeadStatus.HeadStatusId.FIX_DIRECTION, 0, 0, 0);
 
     /**
-     * Returns the lidar message from argument string
-     * The string status is formatted as:
-     * <pre>
-     *     [sampleTime]
-     *     [distance (mm)]
-     *     [rearDistance (mm)]
-     *     [xLocation (pulses)]
-     *     [yLocation (pulses)]
-     *     [robot yaw (DEG)]
-     *     [headDirectionDeg (DEG)]
-     * </pre>
+     * Parses a structured comma-separated argument telemetry string to build a lidar status message.
+     * <p>
+     * The incoming telemetry payload parameter structure must align with {@link #ARG_PATTERN}.
+     * </p>
      *
-     * @param simTime the simulation time
-     * @param arg     the status string
+     * @param simTime the designated simulation timeline coordinate value (ms)
+     * @param arg     the incoming raw comma-separated payload argument string
+     * @return the parsed and initialised lidar message instance
+     * @throws IllegalArgumentException if the text argument structure does not match the validation regex pattern
      */
     public static WheellyLidarMessage parse(long simTime, String arg) {
         Matcher m = ARG_PATTERN.matcher(arg);
@@ -89,137 +101,165 @@ public record WheellyLidarMessage(long time,
         double y = parseDouble(m.group(4));
         int robotYaw = parseInt(m.group(5));
         int direction = parseInt(m.group(6));
-        return new WheellyLidarMessage(simTime, frontDistance, rearDistance, x, y, robotYaw, direction);
+        int headTargetDeg = parseInt(m.group(7));
+        HeadStatus.HeadStatusId trackingState = HeadStatus.HeadStatusId.values()[parseInt(m.group(8))];
+        double xTarget = parseDouble(m.group(9));
+        double yTarget = parseDouble(m.group(10));
+        return new WheellyLidarMessage(simTime, frontDistance, rearDistance, x, y,
+                robotYaw, direction, trackingState, headTargetDeg, xTarget, yTarget);
     }
 
     /**
-     * Creates the message
+     * Initialises a {@link WheellyLidarMessage} with a reduced set of parameters,
+     * automatically computing the directional complex vectors and 2D coordinate positions
+     * from the raw pulses and angles provided.
      *
-     * @param time             the message time (ms)
-     * @param frontDistance    the front distance (mm)
-     * @param rearDistance     the rear distance (mm)
-     * @param xPulses          the x robot location pulses at hasObstacle ping
-     * @param yPulses          the y robot location pulses at hasObstacle ping
-     * @param robotYawDeg      the robot direction at ping (DEG)
-     * @param headDirectionDeg the sensor direction at ping (DEG)
+     * @param time             the message timestamp in milliseconds (ms)
+     * @param frontDistance    the measured range to the front obstacle in millimetres (mm)
+     * @param rearDistance     the measured range to the rear obstacle in millimetres (mm)
+     * @param xPulses          the robot location coordinates along the X axis measured in pulses
+     * @param yPulses          the robot location coordinates along the Y axis measured in pulses
+     * @param robotYawDeg      the absolute robot heading/yaw orientation angle in degrees (DEG)
+     * @param headDirectionDeg the sensor head direction alignment angle in degrees (DEG)
+     * @param trackingState    the current tracking operating profile of the sensor head
+     * @param headTargetDeg    the targeted head heading angle in degrees (DEG)
+     * @param xTarget          the targeted sensor position coordinates along the X axis measured in pulses
+     * @param yTarget          the targeted sensor position coordinates along the Y axis measured in pulses
      */
-    public WheellyLidarMessage(long time, int frontDistance, int rearDistance, double xPulses, double yPulses, int robotYawDeg, int headDirectionDeg) {
-        this(time, headDirectionDeg, Complex.fromDeg(headDirectionDeg), frontDistance, rearDistance, xPulses, yPulses,
-                robotYawDeg, Complex.fromDeg(robotYawDeg));
+    public WheellyLidarMessage(long time, int frontDistance, int rearDistance, double xPulses, double yPulses, int robotYawDeg, int headDirectionDeg, HeadStatus.HeadStatusId trackingState, int headTargetDeg, double xTarget, double yTarget) {
+        this(time, headDirectionDeg, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headTargetDeg, trackingState, xTarget, yTarget, Complex.fromDeg(headDirectionDeg),
+                Complex.fromDeg(robotYawDeg), Complex.fromDeg(headTargetDeg), pulses2Location(xPulses, yPulses), pulses2Location(xTarget, yTarget));
     }
 
     /**
-     * Creates the lidar message
+     * Compact constructor for the {@link WheellyLidarMessage} record.
+     * Validates that all critical components are non-null upon instantiation.
      *
-     * @param time             the message time (ms)
-     * @param headDirectionDeg the sensor direction at ping (DEG)
-     * @param headDirection    the sensor direction at ping
-     * @param frontDistance    the front distance (mm)
-     * @param rearDistance     the rear distance (mm)
-     * @param xPulses          the x robot location pulses at hasObstacle ping
-     * @param yPulses          the y robot location pulses at hasObstacle ping
-     * @param robotYawDeg      the robot direction at ping (DEG)
-     * @param robotYaw         the robot direction at ping
+     * @throws NullPointerException if any of the object parameters is {@code null}
      */
-    public WheellyLidarMessage(long time, int headDirectionDeg, Complex headDirection,
-                               int frontDistance, int rearDistance,
-                               double xPulses, double yPulses, int robotYawDeg, Complex robotYaw) {
-        this.time = time;
-        this.headDirectionDeg = headDirectionDeg;
-        this.headDirection = requireNonNull(headDirection);
-        this.frontDistance = frontDistance;
-        this.rearDistance = rearDistance;
-        this.xPulses = xPulses;
-        this.yPulses = yPulses;
-        this.robotYawDeg = robotYawDeg;
-        this.robotYaw = requireNonNull(robotYaw);
+    public WheellyLidarMessage {
+        requireNonNull(trackingState);
+        requireNonNull(headDirection);
+        requireNonNull(robotYaw);
+        requireNonNull(headTarget);
+        requireNonNull(robotLocation);
+        requireNonNull(target);
     }
 
     /**
-     * Returns the proxy message with the front distance set
+     * Returns a copy of this message with the specified front obstacle distance,
+     * creating a new instance if the value differs from the current one.
      *
-     * @param frontDistance front distance (mm)
+     * @param frontDistance the new front distance in millimetres (mm)
+     * @return a {@link WheellyLidarMessage} instance with the updated front distance,
+     * or this instance if the distance is unchanged
      */
     public WheellyLidarMessage frontDistance(int frontDistance) {
         return frontDistance != this.frontDistance
-                ? new WheellyLidarMessage(time, headDirectionDeg, headDirection, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
+                ? new WheellyLidarMessage(time, headDirectionDeg, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headTargetDeg, trackingState, xTarget, yTarget, headDirection, robotYaw, headTarget, robotLocation, target)
                 : this;
     }
 
     /**
-     * Sets the head direction
+     * Returns a copy of this message with the updated sensor head direction,
+     * creating a new instance if the new orientation angle differs from the current one.
      *
-     * @param direction the direction
+     * @param direction the new complex vector representing head direction
+     * @return a {@link WheellyLidarMessage} instance with the updated head direction,
+     * or this instance if the direction is unchanged
      */
     public WheellyLidarMessage headDirection(Complex direction) {
         int headDirectionDeg = direction.toIntDeg();
         return headDirectionDeg != this.headDirectionDeg
-                ? new WheellyLidarMessage(time, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headDirectionDeg)
+                ? new WheellyLidarMessage(time, headDirectionDeg, frontDistance, rearDistance, xPulses, yPulses,
+                robotYawDeg, headTargetDeg, trackingState, xTarget, yTarget, Complex.fromDeg(headDirectionDeg),
+                robotYaw,
+                headTarget, robotLocation, target)
                 : this;
     }
 
     /**
-     * Returns the proxy message with the rear distance set
+     * Returns a copy of this message with the specified rear obstacle distance,
+     * creating a new instance if the value differs from the current one.
      *
-     * @param rearDistance rear distance (mm)
+     * @param rearDistance the new rear distance in millimetres (mm)
+     * @return a {@link WheellyLidarMessage} instance with the updated rear distance,
+     * or this instance if the distance is unchanged
      */
     public WheellyLidarMessage rearDistance(int rearDistance) {
         return rearDistance != this.rearDistance
-                ? new WheellyLidarMessage(time, headDirectionDeg, headDirection, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
+                ? new WheellyLidarMessage(time, headDirectionDeg, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headTargetDeg, trackingState, xTarget, yTarget, headDirection,
+                robotYaw,
+                headTarget, robotLocation, target)
                 : this;
     }
 
     /**
-     * Returns the sensor location (m)
-     */
-    public Point2D robotLocation() {
-        return pulses2Location(xPulses, yPulses);
-    }
-
-    /**
-     * Returns the lidar messahe with robot location set
+     * Returns a copy of this message with the updated robot position location coordinates,
+     * converting them into pulses and creating a new instance if the coordinates differ
+     * from the current ones.
      *
-     * @param robotLocation the robot location
+     * @param robotLocation the new 2D point representing the robot position
+     * @return a {@link WheellyLidarMessage} instance with the updated position parameters,
+     * or this instance if the location is unchanged
      */
     public WheellyLidarMessage robotLocation(Point2D robotLocation) {
         Point2D locationPulses = location2Pulses(robotLocation);
         return !(locationPulses.getX() == xPulses && locationPulses.getY() == yPulses)
-                ? new WheellyLidarMessage(time, headDirectionDeg, headDirection, frontDistance, rearDistance, locationPulses.getX(), locationPulses.getY(), robotYawDeg, robotYaw)
+                ? new WheellyLidarMessage(time, headDirectionDeg, frontDistance, rearDistance,
+                locationPulses.getX(), locationPulses.getY(), robotYawDeg, headTargetDeg, trackingState,
+                xTarget, yTarget, headDirection, robotYaw, headTarget, robotLocation, target)
                 : this;
 
     }
 
     /**
-     * Sets the robot yaw
+     * Returns a copy of this message with the updated robot absolute orientation,
+     * creating a new instance if the new orientation angle differs from the current one.
      *
-     * @param direction the direction
+     * @param direction the new complex vector representing the robot orientation/yaw
+     * @return a {@link WheellyLidarMessage} instance with the updated robot yaw,
+     * or this instance if the orientation is unchanged
      */
     public WheellyLidarMessage robotYaw(Complex direction) {
         int robotYawDeg = direction.toIntDeg();
         return robotYawDeg != this.robotYawDeg
-                ? new WheellyLidarMessage(time, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headDirectionDeg)
+                ? new WheellyLidarMessage(time, headDirectionDeg, frontDistance, rearDistance,
+                xPulses, yPulses, robotYawDeg, headTargetDeg, trackingState,
+                xTarget, yTarget, headDirection, direction, headTarget, robotLocation, target)
                 : this;
     }
 
     /**
-     * Returns the proxy message with the sensor direction set
+     * Returns a copy of this message with the specified sensor head direction,
+     * recalculating the complex directional vector if the new direction differs
+     * from the current one.
      *
-     * @param sensorDirectionDeg the sensor direction (DEG)
+     * @param headDeg the new sensor head direction angle in degrees (DEG)
+     * @return a {@link WheellyLidarMessage} instance with the updated sensor direction,
+     * or this instance if the direction is unchanged
      */
-    public WheellyLidarMessage sensorDirection(int sensorDirectionDeg) {
-        return sensorDirectionDeg != this.headDirectionDeg
-                ? new WheellyLidarMessage(time, sensorDirectionDeg, Complex.fromDeg(sensorDirectionDeg), frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
+    public WheellyLidarMessage sensorDirection(int headDeg) {
+        return headDeg != this.headDirectionDeg
+                ? new WheellyLidarMessage(time, headDeg, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg,
+                headTargetDeg, trackingState, xTarget, yTarget, Complex.fromDeg(headDeg),
+                robotYaw, headTarget, robotLocation, target)
                 : this;
     }
 
     /**
-     * Returns the proxy message with time
+     * Returns a copy of this message with the specified simulation marker time,
+     * creating a new instance if the time value differs from the current one.
      *
-     * @param time the message time (ms)
+     * @param time the new simulation marker time in milliseconds (ms)
+     * @return a {@link WheellyLidarMessage} instance with the updated time,
+     * or this instance if the time is unchanged
      */
     public WheellyLidarMessage time(long time) {
         return time != this.time
-                ? new WheellyLidarMessage(time, headDirectionDeg, Complex.fromDeg(headDirectionDeg), frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, robotYaw)
+                ? new WheellyLidarMessage(time, headDirectionDeg, frontDistance, rearDistance, xPulses, yPulses, robotYawDeg, headTargetDeg, trackingState, xTarget, yTarget, Complex.fromDeg(headDirectionDeg),
+                robotYaw, headTarget, robotLocation, target)
                 : this;
     }
+
 }

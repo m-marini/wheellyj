@@ -88,7 +88,7 @@ public class WorldModeller implements WorldModellerApi {
     private final RadarModeller radarModeller;
     private final PolarMapModeller polarModeller;
     private final MarkerLocator markerLocator;
-    private Consumer<Tuple2<WorldModel, RobotCommands>> onInferences;
+    private Consumer<Tuple2<WorldModel, RobotCommand>> onInferences;
     private WorldModelSpec worldSpec;
     private WorldModel currentModel;
     private RobotControllerConnector controller;
@@ -103,7 +103,8 @@ public class WorldModeller implements WorldModellerApi {
      * @param onInferences  the inference callback list
      * @param robotMapSize  the robot relative map size
      */
-    protected WorldModeller(RadarModeller radarModeller, PolarMapModeller polarModeller, MarkerLocator markerLocator, Consumer<Tuple2<WorldModel, RobotCommands>> onInferences, int robotMapSize) {
+    protected WorldModeller(RadarModeller radarModeller, PolarMapModeller polarModeller, MarkerLocator markerLocator,
+                            Consumer<Tuple2<WorldModel, RobotCommand>> onInferences, int robotMapSize) {
         this.radarModeller = requireNonNull(radarModeller);
         this.polarModeller = requireNonNull(polarModeller);
         this.onInferences = onInferences;
@@ -112,7 +113,7 @@ public class WorldModeller implements WorldModellerApi {
     }
 
     @Override
-    public void addOnInference(Consumer<Tuple2<WorldModel, RobotCommands>> callback) {
+    public void addOnInference(Consumer<Tuple2<WorldModel, RobotCommand>> callback) {
         requireNonNull(callback);
         onInferences = onInferences != null ? onInferences.andThen(callback) : callback;
     }
@@ -163,12 +164,14 @@ public class WorldModeller implements WorldModellerApi {
     public void onInference(RobotStatus robotStatus) {
         WorldModel model = this.updateForInference(this.currentModel);
         if (inference != null) {
-            RobotCommands commands = inference.onInference(model);
-            if (commands != null) {
-                controller.execute(commands);
+            RobotCommand command = inference.onInference(model);
+            if (command != null) {
+                controller.motionStatus(command.motionStatus());
+                controller.headStatus(command.headStatus());
                 if (onInferences != null) {
-                    onInferences.accept(Tuple2.of(model, commands));
+                    onInferences.accept(Tuple2.of(model, command));
                 }
+
             }
         }
     }

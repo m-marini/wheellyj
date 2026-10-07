@@ -35,7 +35,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.Utils;
 
@@ -45,10 +45,11 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.BACKWARD;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.FORWARD;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_TARGET_RANGE;
-import static org.mmarini.wheelly.apis.RobotStatusId.BACKWARD;
-import static org.mmarini.wheelly.apis.RobotStatusId.FORWARD;
 import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.engines.AvoidingState.DEFAULT_SAFE_DISTANCE;
 import static org.mmarini.wheelly.engines.StateResult.*;
@@ -153,15 +154,15 @@ class AvoidingStateTest {
         assertNotNull(result);
         assertEquals(NONE_EXIT, result.exitCode());
         // And the command should move backward to safe point
-        RobotCommands commands = result.commands();
-        assertEquals(BACKWARD, commands.status());
+        RobotCommand commands = result.command();
+        assertEquals(BACKWARD, commands.motionStatus().status());
         // And the target point must at the safety distance
         Complex robotDir = context.worldModel().robotStatus().direction();
         Point2D robotLocation = context.worldModel().robotStatus().location();
         Point2D safePoint = robotDir.opposite().at(robotLocation, DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
-        assertThat(commands.target(), pointCloseTo(safePoint, MM));
+        assertThat(commands.motionStatus().target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertEquals(0, commands.scanDirection());
+        assertThat(commands.headStatus().direction(), angleCloseTo(0));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -200,12 +201,12 @@ class AvoidingStateTest {
         assertNotNull(result);
         assertEquals(NONE_EXIT, result.exitCode());
         // And the command should move backward to safe point
-        RobotCommands commands = result.commands();
-        assertEquals(BACKWARD, commands.status());
+        RobotCommand commands = result.command();
+        assertEquals(BACKWARD, commands.motionStatus().status());
         // And the target point must at the safety distance
-        assertThat(commands.target(), pointCloseTo(safeX, safeY, MM));
+        assertThat(commands.motionStatus().target(), pointCloseTo(safeX, safeY, MM));
         // And the head should be frontal
-        assertEquals(0, commands.scanDirection());
+        assertThat(commands.headStatus().direction(), angleCloseTo(0));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -233,15 +234,15 @@ class AvoidingStateTest {
         assertNotNull(result);
         assertEquals(NONE_EXIT, result.exitCode());
         // And the command should move backward to safe point
-        RobotCommands commands = result.commands();
+        RobotCommand commands = result.command();
 
-        assertEquals(BACKWARD, commands.status());
+        assertEquals(BACKWARD, commands.motionStatus().status());
         // And the target point must at the safety distance
         RobotStatus status1 = context1.worldModel().robotStatus();
         Point2D safePoint = status1.direction().opposite().at(status1.location(), DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
-        assertThat(commands.target(), pointCloseTo(safePoint, MM));
+        assertThat(commands.motionStatus().target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertEquals(0, commands.scanDirection());
+        assertThat(commands.headStatus().direction(), angleCloseTo(0));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -266,7 +267,7 @@ class AvoidingStateTest {
         StateResult result = state.step(context1);
         // And stepping to safe target
         ProcessorContextApi context2 = builder
-                .robotLocation(result.commands().target())
+                .robotLocation(result.command().motionStatus().target())
                 .build();
         result = state.step(context2);
 
@@ -292,7 +293,7 @@ class AvoidingStateTest {
         // And second stepping state
         // And a next status with clear front sensor and robot at safe distance
         ProcessorContextApi context1 = builder.frontSensor(true).canMoveForward(true)
-                .robotLocation(result.commands().target())
+                .robotLocation(result.command().motionStatus().target())
                 .build();
         // And the processor context with the robot status
         result = state.step(context1);
@@ -319,7 +320,7 @@ class AvoidingStateTest {
         // and timeout elapsed
         ProcessorContextApi context1 = builder0
                 .simulationTime(TIMEOUT + 1)
-                .robotLocation(result.commands().target())
+                .robotLocation(result.command().motionStatus().target())
                 .frontSensor(true)
                 .rearSensor(true)
                 .build();
@@ -347,15 +348,15 @@ class AvoidingStateTest {
         assertNotNull(result);
         assertEquals(NONE_EXIT, result.exitCode());
         // And the command should move backward to safe point
-        RobotCommands commands = result.commands();
-        assertEquals(FORWARD, commands.status());
+        RobotCommand commands = result.command();
+        assertEquals(FORWARD, commands.motionStatus().status());
         // And the target point must at the safety distance
         Complex robotDir = context.worldModel().robotStatus().direction();
         Point2D robotLocation = context.worldModel().robotStatus().location();
         Point2D safePoint = robotDir.at(robotLocation, DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
-        assertThat(commands.target(), pointCloseTo(safePoint, MM));
+        assertThat(commands.motionStatus().target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertEquals(0, commands.scanDirection());
+        assertThat(commands.headStatus().direction(), angleCloseTo(0));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -395,12 +396,12 @@ class AvoidingStateTest {
         assertNotNull(result);
         assertEquals(NONE_EXIT, result.exitCode());
         // And the command should move backward to safe point
-        RobotCommands commands = result.commands();
-        assertEquals(FORWARD, commands.status());
+        RobotCommand commands = result.command();
+        assertEquals(FORWARD, commands.motionStatus().status());
         // And the target point must at the safety distance
-        assertThat(commands.target(), pointCloseTo(safeX, safeY, MM));
+        assertThat(commands.motionStatus().target(), pointCloseTo(safeX, safeY, MM));
         // And the head should be frontal
-        assertEquals(0, commands.scanDirection());
+        assertThat(commands.headStatus().direction(), angleCloseTo(0));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -428,16 +429,16 @@ class AvoidingStateTest {
         assertNotNull(result);
         assertEquals(NONE_EXIT, result.exitCode());
         // And the command should move backward to safe point
-        RobotCommands commands = result.commands();
-        assertEquals(FORWARD, commands.status());
+        RobotCommand commands = result.command();
+        assertEquals(FORWARD, commands.motionStatus().status());
         // And the target point must at the safety distance
         RobotStatus status1 = context1.worldModel().robotStatus();
         Point2D safePoint = status1.direction()
                 .at(status1.location(),
                         DEFAULT_SAFE_DISTANCE + DEFAULT_TARGET_RANGE);
-        assertThat(commands.target(), pointCloseTo(safePoint, MM));
+        assertThat(commands.motionStatus().target(), pointCloseTo(safePoint, MM));
         // And the head should be frontal
-        assertEquals(0, commands.scanDirection());
+        assertThat(commands.headStatus().direction(), angleCloseTo(0));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -458,7 +459,7 @@ class AvoidingStateTest {
         // And second stepping state
         // And a next status with clear front sensor and robot at safe distance
         ProcessorContextApi context1 = builder.rearSensor(true).canMoveBackward(true)
-                .robotLocation(result.commands().target())
+                .robotLocation(result.command().motionStatus().target())
                 .build();
         // And the processor context with the robot status
         result = state.step(context1);

@@ -193,19 +193,19 @@ public class LabelStuckState extends TimeOutState {
         if (robotMarkerDistance < minDistance) {
             // the robot is too close, move backward
             logger.atDebug().log("Robot to close {} m, move backward to {} M @{}", lidarMarkerDistance, robotOptimalLocation, marker);
-            return new StateResult(NONE_EXIT, RobotCommands.backward(headAngle, robotOptimalLocation));
+            return new StateResult(NONE_EXIT, RobotCommand.backward(robotOptimalLocation, headAngle));
         }
         // Check for label too far
         if (robotMarkerDistance > maxDistance) {
             // the robot is too far, move forward
             logger.atDebug().log("Robot to far {} m, move forward to {} M @{}", lidarMarkerDistance, robotOptimalLocation, marker);
-            return new StateResult(NONE_EXIT, RobotCommands.forward(headAngle, robotOptimalLocation));
+            return new StateResult(NONE_EXIT, RobotCommand.forward(robotOptimalLocation, headAngle));
         }
         // Check for robot not pointing label
         if (!robotMarkerDir.isCloseTo(robotDir, directionRange)) {
             // The robot is not directed to the label, rotate toward the label
             logger.atDebug().log("Rotate toward label {}", lidarMarkerDir.toIntDeg());
-            return new StateResult(NONE_EXIT, RobotCommands.rotate(headAngle, robotMarkerDir));
+            return new StateResult(NONE_EXIT, RobotCommand.rotate(robotMarkerDir, headAngle));
         }
         double frontDistance = status.frontDistance();
         // Check for sensor signal and head direction
@@ -218,6 +218,6 @@ public class LabelStuckState extends TimeOutState {
             return notFound();
         }
         // halt the robot and move head toward the target label
-        return new StateResult(NONE_EXIT, RobotCommands.halt(headAngle));
+        return new StateResult(NONE_EXIT, RobotCommand.halt(headAngle));
     }
 }

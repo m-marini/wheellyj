@@ -36,7 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.MapCell;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
@@ -134,11 +134,11 @@ public class LookObstacleTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
         assertEquals(LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION, state.headAction());
-        assertEquals(HALT, cmd.status());
-        assertEquals(headDir.toIntDeg(), cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(headDir.toIntDeg(), cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
     }
 
@@ -165,11 +165,11 @@ public class LookObstacleTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
         assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
 
         // When tick after completion
@@ -177,8 +177,8 @@ public class LookObstacleTest {
         cmd = state.tick(ctx);
         // Then
         assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
     }
 
@@ -221,11 +221,11 @@ public class LookObstacleTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
         assertEquals(LOOK_REAR_AT_NEAREST_OBSTACLE_ACTION, state.headAction());
-        assertEquals(HALT, cmd.status());
-        assertEquals(headDir.toIntDeg(), cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(headDir.toIntDeg(), cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
     }
 
@@ -252,11 +252,11 @@ public class LookObstacleTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
         assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
 
         // When tick after completion
@@ -264,8 +264,8 @@ public class LookObstacleTest {
         cmd = state.tick(ctx);
         // Then
         assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
     }
 }
