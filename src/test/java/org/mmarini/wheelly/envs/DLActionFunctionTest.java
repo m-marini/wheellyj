@@ -35,11 +35,13 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.rl.envs.IntSignal;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.rl.envs.*;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.WorldModelBuilder;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 
 import java.awt.geom.Point2D;
 import java.util.List;
@@ -53,8 +55,9 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.HALT;
-import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.ROTATE;
+import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
+import static org.mmarini.wheelly.apis.HeadStatus.HeadStatusId.FIX_DIRECTION;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.*;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_HEAD_FOV_DEG;
 import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.envs.DLActionFunction.HEAD_ACTION_ID;
@@ -214,18 +217,12 @@ class DLActionFunctionTest {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
         Point2D target = new Point2D.Double(targetX, targetY);
-        // TODO
-        fail();
-//        RobotCommands cmd = RobotCommands.backward(target);
+        RobotCommand cmd = RobotCommand.backward(target);
         // When ...
-        fail();
-        /* TODO
         int idx = function.moveIndex(cmd, model);
 
         // Then ...
         assertEquals(expectedIndex, idx);
-
-         */
     }
 
 
@@ -264,9 +261,7 @@ class DLActionFunctionTest {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
         Point2D target = new Point2D.Double(targetX, targetY);
-        fail();
-        /* TODO
-        RobotCommands cmd = RobotCommands.backward(target);
+        RobotCommand cmd = RobotCommand.backward(target);
         // When ...
         Map<String, INDArray> masks = function.actionMasks(
                 List.of(model, model),
@@ -282,14 +277,11 @@ class DLActionFunctionTest {
         expected.putScalar(1, expectedIndex, 1);
         assertThat(mask, matrixCloseTo(expected, 1e-3));
 
-        /*
         mask = masks.get(HEAD_ACTION_ID);
         expected = Nd4j.zeros(2, DEFAULT_NUM_HEAD_ROTATIONS);
-        expected.putScalar(0, expectedIndex, 1);
-        expected.putScalar(1, expectedIndex, 1);
+        expected.putScalar(0, 6, 1);
+        expected.putScalar(1, 6, 1);
         assertThat(mask, matrixCloseTo(expected, 1e-3));
-
-         */
     }
 
     @ParameterizedTest(name = "[{index}], Robot @({0},{1}) R{2}, headCmd={3}")
@@ -311,10 +303,12 @@ class DLActionFunctionTest {
         // Then ...
         assertNotNull(cmd);
         assertThat(cmd, hasSize(2));
-        assertEquals(HALT, cmd.getFirst().headStatus());
-        assertEquals(HALT, cmd.getLast().headStatus());
-        assertEquals(expectedHead, cmd.getFirst().headStatus().direction());
-        assertEquals(expectedHead, cmd.getLast().headStatus().direction());
+        assertEquals(HALT, cmd.getFirst().motionStatus().status());
+        assertEquals(HALT, cmd.getLast().motionStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getLast().headStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getFirst().headStatus().status());
+        assertThat(cmd.getFirst().headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.getLast().headStatus().direction(), angleCloseTo(expectedHead));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
@@ -341,10 +335,12 @@ class DLActionFunctionTest {
         assertThat(cmd, hasSize(2));
         assertEquals(ROTATE, cmd.getFirst().motionStatus().status());
         assertEquals(ROTATE, cmd.getLast().motionStatus().status());
-        assertEquals(expectedHead, cmd.getFirst().headStatus().direction());
-        assertEquals(expectedHead, cmd.getLast().headStatus().direction());
-        assertEquals(expectedDir, cmd.getFirst().motionStatus().targetDir());
-        assertEquals(expectedDir, cmd.getLast().motionStatus().targetDir());
+        assertEquals(FIX_DIRECTION, cmd.getFirst().headStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getLast().headStatus().status());
+        assertThat(cmd.getFirst().headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.getLast().headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.getFirst().motionStatus().targetDir(), angleCloseTo(expectedDir));
+        assertThat(cmd.getLast().motionStatus().targetDir(), angleCloseTo(expectedDir));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
@@ -367,10 +363,12 @@ class DLActionFunctionTest {
         // Then ...
         assertNotNull(cmd);
         assertThat(cmd, hasSize(2));
-        assertEquals(RobotStatusId.BACKWARD, cmd.getFirst().motionStatus().status());
-        assertEquals(RobotStatusId.BACKWARD, cmd.getLast().motionStatus().status());
-        assertEquals(expectedHead, cmd.getFirst().headStatus().direction());
-        assertEquals(expectedHead, cmd.getLast().headStatus().direction());
+        assertEquals(BACKWARD, cmd.getFirst().motionStatus().status());
+        assertEquals(BACKWARD, cmd.getLast().motionStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getFirst().headStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getLast().headStatus().status());
+        assertThat(cmd.getFirst().headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.getLast().headStatus().direction(), angleCloseTo(expectedHead));
         assertThat(cmd.getFirst().motionStatus().target(), pointCloseTo(target, MM));
         assertThat(cmd.getLast().motionStatus().target(), pointCloseTo(target, MM));
     }
@@ -395,12 +393,14 @@ class DLActionFunctionTest {
         // Then ...
         assertNotNull(cmd);
         assertThat(cmd, hasSize(2));
-        assertEquals(RobotStatusId.FORWARD, cmd.getFirst().motionStatus().status());
-        assertEquals(RobotStatusId.FORWARD, cmd.getLast().motionStatus().status());
-        assertEquals(expectedHead, cmd.getFirst().headStatus().direction());
-        assertEquals(expectedHead, cmd.getLast().headStatus().direction());
+        assertEquals(FORWARD, cmd.getFirst().motionStatus().status());
+        assertEquals(FORWARD, cmd.getLast().motionStatus().status());
         assertThat(cmd.getFirst().motionStatus().target(), pointCloseTo(target, MM));
         assertThat(cmd.getLast().motionStatus().target(), pointCloseTo(target, MM));
+        assertEquals(FIX_DIRECTION, cmd.getFirst().headStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getLast().headStatus().status());
+        assertThat(cmd.getFirst().headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.getLast().headStatus().direction(), angleCloseTo(expectedHead));
     }
 
     @ParameterizedTest
@@ -466,9 +466,10 @@ class DLActionFunctionTest {
 
         // Then ...
         assertNotNull(cmd);
-        assertEquals(RobotStatusId.BACKWARD, cmd.motionStatus().status());
-        assertEquals(expectedHead, cmd.headStatus().direction());
+        assertEquals(BACKWARD, cmd.motionStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.headStatus().status());
         assertThat(cmd.motionStatus().target(), pointCloseTo(target, MM));
+        assertThat(cmd.headStatus().direction(), angleCloseTo(expectedHead));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
@@ -486,8 +487,9 @@ class DLActionFunctionTest {
 
         // Then ...
         assertNotNull(cmd);
-        assertEquals(RobotStatusId.FORWARD, cmd.motionStatus().status());
-        assertEquals(expectedHead, cmd.headStatus().direction());
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.headStatus().status());
+        assertThat(cmd.headStatus().direction(), angleCloseTo(expectedHead));
         assertThat(cmd.motionStatus().target(), pointCloseTo(target, MM));
     }
 
@@ -504,7 +506,7 @@ class DLActionFunctionTest {
         // Then ...
         assertNotNull(cmd);
         assertEquals(HALT, cmd.motionStatus().status());
-        assertEquals(expectedHead, cmd.headStatus().direction());
+        assertThat(cmd.headStatus().direction(), angleCloseTo(expectedHead));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
@@ -525,8 +527,9 @@ class DLActionFunctionTest {
         // Then ...
         assertNotNull(cmd);
         assertEquals(ROTATE, cmd.motionStatus().status());
-        assertEquals(expectedHead, cmd.headStatus().direction());
-        assertEquals(expectedDir, cmd.motionStatus().targetDir());
+        assertEquals(FIX_DIRECTION, cmd.headStatus().status());
+        assertThat(cmd.headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(expectedDir));
     }
 
     @Test
@@ -660,16 +663,12 @@ class DLActionFunctionTest {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
         Point2D target = new Point2D.Double(targetX, targetY);
-        fail();
-        /* TODO
-        RobotCommands cmd = RobotCommands.forward(target);
+        RobotCommand cmd = RobotCommand.forward(target);
         // When ...
         int idx = function.moveIndex(cmd, model);
 
         // Then ...
         assertEquals(expectedIndex, idx);
-
-         */
     }
 
     @ParameterizedTest
@@ -707,10 +706,8 @@ class DLActionFunctionTest {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
         Point2D target = new Point2D.Double(targetX, targetY);
-        fail();
-        /* TODO
 
-        RobotCommands cmd = RobotCommands.forward(target);
+        RobotCommand cmd = RobotCommand.forward(target);
         // When ...
         Map<String, INDArray> masks = function.actionMasks(
                 List.of(model, model),
@@ -725,8 +722,6 @@ class DLActionFunctionTest {
         expected.putScalar(0, expectedIndex, 1);
         expected.putScalar(1, expectedIndex, 1);
         assertThat(mask, matrixCloseTo(expected, 1e-3));
-
-         */
     }
 
     @ParameterizedTest(name = "[{index}] Robot R{0}, H {1} DEG")
@@ -774,10 +769,7 @@ class DLActionFunctionTest {
     void testHaltActionMasks(int robotDeg, int headDeg, int expectedCommand) {
         // Given the world model
         createWorldModel(0, 0, robotDeg);
-        fail();
-        /* TODO
-
-        RobotCommands cmd = RobotCommands.halt(headDeg);
+        RobotCommand cmd = RobotCommand.halt(Complex.fromDeg(headDeg));
 
         // When ...
         Map<String, INDArray> masks = function.actionMasks(
@@ -799,8 +791,6 @@ class DLActionFunctionTest {
         expected.putScalar(0, expectedCommand, 1);
         expected.putScalar(1, expectedCommand, 1);
         assertThat(mask, matrixCloseTo(expected, 1e-3));
-
-         */
     }
 
     @ParameterizedTest(name = "[{index}] Robot R{0}, H {1} DEG")
@@ -848,9 +838,7 @@ class DLActionFunctionTest {
     void testHaltActions(int robotDeg, int headDeg, int expectedCommand) {
         // Given the world model
         createWorldModel(0, 0, robotDeg);
-        fail();
-        /* TODO
-        RobotCommands cmd = RobotCommands.halt(headDeg);
+        RobotCommand cmd = RobotCommand.halt(Complex.fromDeg(headDeg));
 
         // When ...
         Map<String, Signal> actions = function.actions(cmd, model);
@@ -868,8 +856,6 @@ class DLActionFunctionTest {
 
         value = (ArraySignal) actions.get(HEAD_ACTION_ID);
         assertThat(value.toINDArray(), matrixCloseTo(new long[]{1, 1}, EPSILON, expectedCommand));
-
-         */
     }
 
     @ParameterizedTest
@@ -883,7 +869,7 @@ class DLActionFunctionTest {
     void testHaltIndex(double robotX, double robotY, int robotDeg) {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
-        RobotCommands cmd = RobotCommands.halt();
+        RobotCommand cmd = RobotCommand.halt();
         // When ...
         int idx = function.moveIndex(cmd, model);
 
@@ -908,7 +894,7 @@ class DLActionFunctionTest {
         Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
         int expected = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
         expected = clamp(expected, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
-        assertEquals(expected, function.headAngle(headCommand, model));
+        assertThat(function.headAngle(headCommand, model), angleCloseTo(expected));
     }
 
     @ParameterizedTest
@@ -1012,32 +998,29 @@ class DLActionFunctionTest {
         createWorldModel(0, 0, robotDeg);
 
         // When ...
-        fail();
-        /* TODO
-        int cmd = function.headIndex(RobotCommands.halt(headDeg), model);
+        Complex headAngle = Complex.fromDeg(headDeg);
+        int cmd = function.headIndex(RobotCommand.halt(headAngle), model);
 
         // Then ...
         assertEquals(expectedCommand, cmd);
 
         // When ...
-        cmd = function.headIndex(RobotCommands.rotate(headDeg, 0), model);
+        cmd = function.headIndex(RobotCommand.rotate(Complex.DEG0, headAngle), model);
 
         // Then ...
         assertEquals(expectedCommand, cmd);
 
         // When ...
-        cmd = function.headIndex(RobotCommands.forward(headDeg, new Point2D.Double()), model);
+        cmd = function.headIndex(RobotCommand.forward(new Point2D.Double(), headAngle), model);
 
         // Then ...
         assertEquals(expectedCommand, cmd);
 
         // When ...
-        cmd = function.headIndex(RobotCommands.backward(headDeg, new Point2D.Double()), model);
+        cmd = function.headIndex(RobotCommand.backward(new Point2D.Double(), headAngle), model);
 
         // Then ...
         assertEquals(expectedCommand, cmd);
-
-         */
     }
 
     @ParameterizedTest
@@ -1219,16 +1202,12 @@ class DLActionFunctionTest {
     void testRotateIndex(double robotX, double robotY, int robotDeg, int rotDeg, int expectedIndex) {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
-        fail();
-        /* TODO
-        RobotCommands cmd = RobotCommands.rotate(rotDeg);
+        RobotCommand cmd = RobotCommand.rotate(Complex.fromDeg(rotDeg));
         // When ...
         int idx = function.moveIndex(cmd, model);
 
         // Then ...
         assertEquals(expectedIndex, idx);
-
-         */
     }
 
     @ParameterizedTest
@@ -1274,15 +1253,11 @@ class DLActionFunctionTest {
     void testRotateMask(double robotX, double robotY, int robotDeg, int rotDeg, int expectedMoveIndex) {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
-        fail();
-        /* TODO
-        RobotCommands cmd = RobotCommands.rotate(rotDeg);
+        RobotCommand cmd = RobotCommand.rotate(Complex.fromDeg(rotDeg));
         // When ...
         Map<String, INDArray> masks = function.actionMasks(
                 List.of(model, model),
                 List.of(cmd, cmd));
-
-        // Then ...
 
         // Then ...
         assertNotNull(masks);
@@ -1293,14 +1268,14 @@ class DLActionFunctionTest {
         expected.putScalar(0, expectedMoveIndex, 1);
         expected.putScalar(1, expectedMoveIndex, 1);
         assertThat(mask, matrixCloseTo(expected, 1e-3));
-        /*
+/*
         mask = masks.get(HEAD_ACTION_ID);
         expected = Nd4j.zeros(2, DEFAULT_NUM_HEAD_ROTATIONS);
-        expected.putScalar(0, 9, 1);
-        expected.putScalar(1, 9, 1);
+        expected.putScalar(0, 6, 1);
+        expected.putScalar(1, 6, 1);
         assertThat(mask, matrixCloseTo(expected, 1e-3));
 
-         */
+ */
     }
 
     @ParameterizedTest

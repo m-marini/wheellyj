@@ -35,7 +35,7 @@ import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.apis.InferenceFileReader;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.apis.WorldModeller;
 import org.mmarini.wheelly.envs.BasicEnvState;
@@ -111,14 +111,18 @@ public class DatasetBuilder {
 
         // Reads the inference records and convert to signals, actin masks and rewards
         DLActionFunction actionFunction = (DLActionFunction) env.actionFunction();
-        Tuple2<WorldModel, RobotCommands> record;
+        Tuple2<WorldModel, RobotCommand> record = null;
         BasicEnvState s0 = null;
-        RobotCommands commands = null;
+        RobotCommand commands = null;
         int tot = reader.available() / KB;
         try (INDArray reward = Nd4j.create(1, 1)) {
             for (; ; ) {
                 try {
+                    /* TODO
+
                     record = reader.readRecord();
+
+                     */
                     // Write states
                     WorldModel w1 = modeller.updateForInference(record._1);
                     BasicEnvState s1 = new BasicEnvState(w1);

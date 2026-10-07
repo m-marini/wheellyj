@@ -28,7 +28,6 @@
 
 package org.mmarini.wheelly.envs;
 
-import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 import org.mmarini.Utils;
 import org.mmarini.rl.envs.ArraySignal;
@@ -67,7 +66,7 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     private static final Logger logger = LoggerFactory.getLogger(DLActionFunction.class);
 
     /**
-     * Returns the deep learning xircular action function
+     * Returns the deep learning circular action function
      *
      * @param numRotations     the number of robot rotations
      * @param numHeadRotations the number of head rotations
@@ -88,11 +87,9 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * Creates the DLActionFunction
      *
      */
-    public DLActionFunction(Map<String, SignalSpec> spec, int numRotations, int numHeadRotations, List<Point2D> indicesMap) {
-        this.spec = requireNonNull(spec);
-        this.numRotations = numRotations;
-        this.numHeadRotations = numHeadRotations;
-        this.indicesMap = requireNonNull(indicesMap);
+    public DLActionFunction {
+        requireNonNull(spec);
+        requireNonNull(indicesMap);
         logger.atDebug().log("Created");
     }
 
@@ -102,14 +99,14 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param states   the states
      * @param commands the
      */
-    public Map<String, INDArray> actionMasks(List<WorldModel> states, List<RobotCommands> commands) {
+    public Map<String, INDArray> actionMasks(List<WorldModel> states, List<RobotCommand> commands) {
         int n = min(states.size(), commands.size());
         long numMoves = ((IntSignalSpec) spec.get(MOVE_ACTION_ID)).numValues();
         long numHeads = ((IntSignalSpec) spec.get(HEAD_ACTION_ID)).numValues();
         INDArray moveAction = Nd4j.zeros(DataType.FLOAT, n, numMoves);
         INDArray headAction = Nd4j.zeros(DataType.FLOAT, n, numHeads);
         for (int i = 0; i < n; i++) {
-            RobotCommands cmd = commands.get(i);
+            RobotCommand cmd = commands.get(i);
             WorldModel model = states.get(i);
             int moveIdx = moveIndex(cmd, model);
             moveAction.putScalar(i, moveIdx, 1);
@@ -129,7 +126,7 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param commands the command
      * @param model    the world model (state of environment)
      */
-    public Map<String, Signal> actions(RobotCommands commands, WorldModel model) {
+    public Map<String, Signal> actions(RobotCommand commands, WorldModel model) {
         INDArray moveAction = Nd4j.zeros(DataType.FLOAT, 1, 1);
         INDArray headAction = Nd4j.zeros(DataType.FLOAT, 1, 1);
         int moveIdx = moveIndex(commands, model);
@@ -167,24 +164,20 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param model   the world model
      */
     RobotCommand decodeCommand(int headIdx, int moveIdx, WorldModel model) {
-        throw new NotImplementedException();
-            /* TODO
-        int headDeg = headAngle(headIdx, model);
+        Complex headDir = headAngle(headIdx, model);
         if (isHalt(moveIdx)) {
-            return RobotCommands.halt(headDeg);
+            return RobotCommand.halt(headDir);
         } else if (isRotate(moveIdx)) {
             Complex mapDir = model.gridMap().direction();
-            int rotDeg = rotation(moveIdx).add(mapDir).toIntDeg();
-            return RobotCommands.rotate(headDeg, rotDeg);
+            Complex rotDir = rotation(moveIdx).add(mapDir);
+            return RobotCommand.rotate(rotDir, headDir);
         } else if (isForward(moveIdx)) {
             Point2D target = target(moveIdx, model.gridMap());
-            return RobotCommands.forward(headDeg, target);
+            return RobotCommand.forward(target, headDir);
         } else {
             Point2D target = target(moveIdx, model.gridMap());
-            return RobotCommands.backward(headDeg, target);
+            return RobotCommand.backward(target, headDir);
         }
-
-             */
     }
 
     /**
@@ -193,12 +186,12 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param headIndex the head rotation command index
      * @param model     the world model
      */
-    int headAngle(int headIndex, WorldModel model) {
+    Complex headAngle(int headIndex, WorldModel model) {
         Complex headRelAngle = headAngle(headIndex);
         Complex absoluteDirection = headRelAngle.add(model.gridMap().direction());
         Complex sensDir = absoluteDirection.sub(model.robotStatus().direction());
         int headMaxDeg = model.robotStatus().robotSpec().headFOV().toIntDeg() / 2;
-        return clamp(sensDir.toIntDeg(), -headMaxDeg, headMaxDeg);
+        return Complex.fromDeg(clamp(sensDir.toIntDeg(), -headMaxDeg, headMaxDeg));
     }
 
     /**
@@ -218,9 +211,10 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param commands the commands
      * @param model    the world model
      */
-    int headIndex(RobotCommands commands, WorldModel model) {
+    int headIndex(RobotCommand commands, WorldModel model) {
         // hr = hd - md + rd
-        Complex headRelAngle = Complex.fromDeg(commands.scanDirection())
+        HeadStatus headStatus = commands.headStatus();
+        Complex headRelAngle = headStatus.direction()
                 .sub(model.gridMap().direction())
                 .add(model.robotStatus().direction());
         return headIndex(headRelAngle);
@@ -268,15 +262,16 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     /**
      * Returns the head command index from robot commands
      *
-     * @param commands the commands
-     * @param model    the world model
+     * @param command the commands
+     * @param model   the world model
      */
-    int moveIndex(RobotCommands commands, WorldModel model) {
-        return switch (commands.status()) {
-            case ROTATE -> rotationIndex(Complex.fromDeg(commands.rotationDirection())
+    int moveIndex(RobotCommand command, WorldModel model) {
+        MotionStatus motionStatus = command.motionStatus();
+        return switch (motionStatus.status()) {
+            case ROTATE -> rotationIndex(motionStatus.targetDir()
                     .sub(model.gridMap().direction())) + 1;
-            case FORWARD -> targetIndex(commands.moveTarget(), model) + numRotations + 1;
-            case BACKWARD -> targetIndex(commands.moveTarget(), model) + numRotations + 1 + indicesMap.size();
+            case FORWARD -> targetIndex(motionStatus.target(), model) + numRotations + 1;
+            case BACKWARD -> targetIndex(motionStatus.target(), model) + numRotations + 1 + indicesMap.size();
             default -> 0;
         };
     }
