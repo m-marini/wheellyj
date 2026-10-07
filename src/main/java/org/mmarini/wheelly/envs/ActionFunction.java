@@ -37,20 +37,35 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Converts the signal action to robot command
+ * Converts reinforcement learning action signals to concrete robot instructions.
+ * <p>
+ * Implementations of this interface characterise the behaviour mapping required to
+ * transform continuous or discrete agent outputs into physical machine commands.
+ * </p>
  */
 public interface ActionFunction {
 
     /**
-     * Returns the robot commands for the given action signals in the given world context
+     * Decodes the target action signals into a sequential list of concrete robot commands.
+     * <p>
+     * This method evaluates the raw multi-channel action signals relative to the provided
+     * environmental contexts to synthesise the appropriate execution path.
+     * </p>
      *
-     * @param states  the world contexts
-     * @param actions the actions
+     * @param actions the map containing the structured reinforcement learning action signals
+     * @param states  the sequential world contexts or states matching the action timeline
+     * @return a reconstructed list of executable {@code RobotCommand} instructions
      */
     List<RobotCommand> commands(Map<String, Signal> actions, WorldModel... states);
 
     /**
-     * Returns the action signal specification
+     * Retrieves the structural specification defining the expected action signals.
+     * <p>
+     * This map configuration describes the valid limits, shapes, and boundaries for each
+     * registered action channel within the processing environment.
+     * </p>
+     *
+     * @return the map containing named key entries coupled with their {@code SignalSpec}
      */
     Map<String, SignalSpec> spec();
 }

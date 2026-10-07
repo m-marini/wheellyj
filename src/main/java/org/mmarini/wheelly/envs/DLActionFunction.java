@@ -52,12 +52,17 @@ import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Converts action signals to robot commands and vice versa
+ * Converts action signals to robot commands and vice versa.
+ * <p>
+ * This record facilitates the translation between reinforcement learning deep learning
+ * action spaces and concrete physical instructions for the robot, helping to optimise
+ * and standardise movement and sensor behaviours.
+ * </p>
  *
- * @param spec             the signal specification
- * @param numRotations     the number of rotations
- * @param numHeadRotations the number of head rotations
- * @param indicesMap       the map of action indices to move action target index (coordinates)
+ * @param spec             the signal specification defining the structure of action spaces
+ * @param numRotations     the total number of discrete robot rotations available
+ * @param numHeadRotations the total number of discrete sensor head rotations available
+ * @param indicesMap       the ordered list mapping action indices to spatial target coordinates
  */
 public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, int numHeadRotations,
                                List<Point2D> indicesMap) implements ActionFunction {
@@ -66,11 +71,16 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     private static final Logger logger = LoggerFactory.getLogger(DLActionFunction.class);
 
     /**
-     * Returns the deep learning circular action function
+     * Creates and initialises a deep learning action function instance.
+     * <p>
+     * This method initialises the action specifications based on the total number of
+     * available combinations for moving and positioning the sensor head.
+     * </p>
      *
-     * @param numRotations     the number of robot rotations
-     * @param numHeadRotations the number of head rotations
-     * @param map              the move targets map
+     * @param numRotations     the number of discrete robot rotations
+     * @param numHeadRotations the number of discrete sensor head rotations
+     * @param map              the list of target points used to characterisationalise movement options
+     * @return a fully initialised {@code DLActionFunction} instance
      */
     public static DLActionFunction create(int numRotations, int numHeadRotations,
                                           List<Point2D> map) {
@@ -84,8 +94,13 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Creates the DLActionFunction
+     * Validates and constructs the {@code DLActionFunction} record.
+     * <p>
+     * This constructor ensures that all structural parameters are properly synchronised
+     * and that non-null constraints are rigorously enforced upon initialisation.
+     * </p>
      *
+     * @throws NullPointerException if {@code spec} or {@code indicesMap} is null
      */
     public DLActionFunction {
         requireNonNull(spec);
@@ -94,10 +109,15 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns the action mask
+     * Generates the action masks based on the current environment states and target commands.
+     * <p>
+     * This method reviews the historical states and intended commands to return an
+     * initialised matrix representation of selected actions.
+     * </p>
      *
-     * @param states   the states
-     * @param commands the
+     * @param states   the historical list of environment world models
+     * @param commands the matching list of target robot commands
+     * @return a map containing the NDArray action masks for movement and head rotation
      */
     public Map<String, INDArray> actionMasks(List<WorldModel> states, List<RobotCommand> commands) {
         int n = min(states.size(), commands.size());
@@ -121,10 +141,11 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns the action signals relative to robot command
+     * Converts a specific robot command and world state into action signals.
      *
-     * @param commands the command
-     * @param model    the world model (state of environment)
+     * @param commands the current target robot command to encode
+     * @param model    the current status and model of the world environment
+     * @return a map containing the corresponding move and head signals
      */
     public Map<String, Signal> actions(RobotCommand commands, WorldModel model) {
         INDArray moveAction = Nd4j.zeros(DataType.FLOAT, 1, 1);
@@ -140,6 +161,13 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
         );
     }
 
+    /**
+     * Decodes multi-channel action signals into a sequential list of concrete robot commands.
+     *
+     * @param actions the map containing movement and head orientation signals
+     * @param states  the current environment world models matching the action sequences
+     * @return a reconstructed list of executable {@code RobotCommand} objects
+     */
     @Override
     public List<RobotCommand> commands(Map<String, Signal> actions, WorldModel... states) {
         List<RobotCommand> result = new ArrayList<>();
@@ -157,11 +185,16 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns the commands for the given head and move index
+     * Decodes the specific action indices into a single unified robot command.
+     * <p>
+     * This method evaluates behavioural logic paths to select whether to halt,
+     * rotate, or advance the chassis forward or backward.
+     * </p>
      *
-     * @param headIdx the head rotation command index
-     * @param moveIdx the move command index
-     * @param model   the world model
+     * @param headIdx the discrete sensor head rotation index
+     * @param moveIdx the discrete locomotion command index
+     * @param model   the current world model for spatial awareness context
+     * @return the resolved {@code RobotCommand} instruction
      */
     RobotCommand decodeCommand(int headIdx, int moveIdx, WorldModel model) {
         Complex headDir = headAngle(headIdx, model);
@@ -181,10 +214,15 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns the robot relative head direction for the given command
+     * Calculates the absolute head direction relative to the robot's hardware limits.
+     * <p>
+     * This method handles the angular conversions and ensures the target direction
+     * is clamped within the sensor's physical field of view.
+     * </p>
      *
-     * @param headIndex the head rotation command index
-     * @param model     the world model
+     * @param headIndex the target head action index
+     * @param model     the current world state containing robot positioning and specifications
+     * @return a {@code Complex} angular representation of the safe target head direction
      */
     Complex headAngle(int headIndex, WorldModel model) {
         Complex headRelAngle = headAngle(headIndex);
@@ -193,11 +231,11 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
         int headMaxDeg = model.robotStatus().robotSpec().headFOV().toIntDeg() / 2;
         return Complex.fromDeg(clamp(sensDir.toIntDeg(), -headMaxDeg, headMaxDeg));
     }
-
     /**
-     * Returns the head angle relative the grid map, of the head index
+     * Extrapolates the nominal sensor head angle from its mapped action index.
      *
-     * @param headIndex the head action index
+     * @param headIndex the discrete head action index
+     * @return a {@code Complex} angular offset relative to the base map direction
      */
     Complex headAngle(int headIndex) {
         int i = headIndex - (numHeadRotations - 1) / 2;
@@ -206,10 +244,15 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns the head command index from robot commands
+     * Identifies the appropriate head command index extracted from the robot instructions.
+     * <p>
+     * This method evaluates the current posture and orientation of the hardware to
+     * synchronise the sensor payload with the grid framework.
+     * </p>
      *
-     * @param commands the commands
-     * @param model    the world model
+     * @param commands the current target robot command to process
+     * @param model    the current status and model of the world environment
+     * @return the resolved index representing the target head rotation
      */
     int headIndex(RobotCommand commands, WorldModel model) {
         // hr = hd - md + rd
@@ -221,9 +264,14 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns the head command index
+     * Resolves the matching head command index for a specified complex angle.
+     * <p>
+     * The continuous angular input is discretised and clamped to guarantee that the
+     * returned index is constrained within valid array boundaries.
+     * </p>
      *
-     * @param angle the head angle
+     * @param angle the specific target head angle to transform
+     * @return the bounded integer index for the head action
      */
     int headIndex(Complex angle) {
         double idx1 = (angle.toDeg() + 90) * (numHeadRotations - 1) / 180;
@@ -232,9 +280,11 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns true if the command index is froward command
+     * Determines whether the specified command index represents a forward movement action.
      *
-     * @param commandIndex the command index
+     * @param commandIndex the internal action index to evaluate
+     * @return {@code true} if the index is categorised as a forward travel command;
+     *         {@code false} otherwise
      */
     boolean isForward(int commandIndex) {
         return commandIndex >= numRotations + 1 &&
@@ -242,28 +292,37 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns true if the command index is halt command
+     * Determines whether the specified command index represents a halt action.
      *
-     * @param commandIndex the command index
+     * @param commandIndex the internal action index to evaluate
+     * @return {@code true} if the index matches the halt instruction identifier;
+     *         {@code false} otherwise
      */
     boolean isHalt(int commandIndex) {
         return commandIndex == 0;
     }
 
     /**
-     * Returns true if command is rotate command
+     * Determines whether the specified command index represents a rotational movement action.
      *
-     * @param commandIndex the command index
+     * @param commandIndex the internal action index to evaluate
+     * @return {@code true} if the index falls into the designated rotation range;
+     *         {@code false} otherwise
      */
     boolean isRotate(int commandIndex) {
         return commandIndex >= 1 && commandIndex <= numRotations;
     }
 
     /**
-     * Returns the head command index from robot commands
+     * Extracts and computes the locomotion command index from the specified robot instruction.
+     * <p>
+     * This evaluates the execution paths of the underlying motion subsystem status to
+     * determine whether the vehicle is stationary, rotating, or advancing.
+     * </p>
      *
-     * @param command the commands
-     * @param model   the world model
+     * @param command the target robot command to decode
+     * @param model   the current world model providing environmental spatial context
+     * @return the computed integer identifier corresponding to the target action index
      */
     int moveIndex(RobotCommand command, WorldModel model) {
         MotionStatus motionStatus = command.motionStatus();
@@ -277,9 +336,10 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns the rotation direction for the given movement action index
+     * Computes the rotational direction corresponding to a given action index.
      *
-     * @param commandIndex the movement action index
+     * @param commandIndex the discrete rotational action index to evaluate
+     * @return a {@code Complex} angular representation of the rotation path in radians
      */
     Complex rotation(int commandIndex) {
         int dirIdx = commandIndex - 1;
@@ -288,25 +348,37 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns the rotation command index
+     * Resolves the discrete rotation command index for a specified direction angle.
      *
-     * @param direction the direction angle
+     * @param direction the target angular displacement to evaluate
+     * @return the matching normalised index for the rotation array
      */
     int rotationIndex(Complex direction) {
         double idx1 = (direction.toDeg() + 360) * numRotations / 360;
         return (int) round(idx1) % numRotations;
     }
 
+    /**
+     * Retrieves the structural signal specification map defined for this action processor.
+     *
+     * @return the map containing named key entries coupled with their {@code SignalSpec}
+     */
     @Override
     public Map<String, SignalSpec> spec() {
         return spec;
     }
 
+
     /**
-     * Returns the absolute target position of the command index
+     * Computes the absolute coordinates of a target point given a local command index.
+     * <p>
+     * This method applies affine transformations based on the coordinate framework
+     * and the spatial orientation of the map centre.
+     * </p>
      *
-     * @param moveIdx the command index
-     * @param gridMap the grid map
+     * @param moveIdx the discrete movement command index to transform
+     * @param gridMap the map layout specifying reference coordinates and headings
+     * @return the transformed {@code Point2D} in absolute world coordinates
      */
     Point2D target(int moveIdx, GridMap gridMap) {
         Point2D relativeTarget = target(moveIdx);
@@ -318,9 +390,10 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns the target relative location of command index
+     * Resolves the local relative target coordinate matching the specified command index.
      *
-     * @param commandIndex the command index
+     * @param commandIndex the locomotion command index to process
+     * @return the relative {@code Point2D} coordinate offset from the index map
      */
     Point2D target(int commandIndex) {
         int targetIdx = (commandIndex - 1 - numRotations) % indicesMap.size();
@@ -328,10 +401,15 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns the target index for the give absolute target
+     * Calculates the internal target index matching an absolute world coordinate point.
+     * <p>
+     * It maps the raw spatial location back onto the internal grid coordinate systems
+     * by applying inverse rotational transformations.
+     * </p>
      *
-     * @param target the absolute target
-     * @param model  the model
+     * @param target the absolute world target location to map
+     * @param model  the current world state configuration context
+     * @return the calculated index matching the spatial target point
      */
     int targetIndex(Point2D target, WorldModel model) {
         GridMap gridMap = model.gridMap();
@@ -343,9 +421,10 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     /**
-     * Returns the index of the closest point on the grid to the target
+     * Locates the index of the closest registered coordinate point relative to the target tracking path.
      *
-     * @param target the head angle
+     * @param target the target reference coordinate point
+     * @return the index corresponding to the nearest point found, or {@code -1} if none exists
      */
     int targetIndex(Point2D target) {
         return Utils.zipWithIndex(indicesMap)
