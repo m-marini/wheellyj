@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.engines;
 
+import io.reactivex.rxjava3.core.Completable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -35,6 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 
 import java.awt.geom.Point2D;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -83,8 +85,10 @@ class SearchUnknownStateTest {
         state.init(ctx);
         // And entering state
         state.entry(ctx);
+        Completable.timer(500, TimeUnit.MILLISECONDS).blockingAwait();
         // And stepping
         StateResult result = state.step(ctx);
+
 
         // Then the path should contain 2 points
         assertThat(state.path(), hasSize(2));
