@@ -57,7 +57,7 @@ class InferenceFileTest {
             0, 0, 0);
     public static final CameraEvent CAMERA_EVENT = new CameraEvent(0, "?", 3, 4, null, Complex.DEG0);
     public static final CorrelatedCameraEvent CORRELATED_CAMERA_EVENT = new CorrelatedCameraEvent(CAMERA_EVENT, LIDAR_MESSAGE);
-    public static final RobotCommands COMMANDS = RobotCommands.halt();
+    public static final RobotCommand COMMANDS = RobotCommand.halt();
     public static final int GRID_MAP_SIZE = 31;
     public static final RobotStatus ROBOT_STATUS = new RobotStatus(DEFAULT_ROBOT_SPEC, 1, MOTION_MESSAGE,
             CONTACTS_MESSAGE, InferenceFileReader.DEFAULT_SUPPLY_MESSAGE, InferenceFileReader.DEFAULT_DECODE_VOLTAGE, CORRELATED_CAMERA_EVENT, LIDAR_MESSAGE);

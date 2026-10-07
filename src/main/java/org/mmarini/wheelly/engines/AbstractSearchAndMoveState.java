@@ -30,7 +30,7 @@ package org.mmarini.wheelly.engines;
 
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.mmarini.NotImplementedException;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WorldModel;
 import org.mmarini.wheelly.rrt.RRTPathFinder;
@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.engines.StateResult.NONE_EXIT;
 import static org.mmarini.wheelly.engines.StateResult.notFound;
 
 /**
@@ -172,14 +173,10 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
         RobotStatus robotStatus = worldModel.robotStatus();
         Point2D robotLocation = robotStatus.location();
         double distance = robotLocation.distance(target);
-        throw new NotImplementedException();
-        /* TODO
         return distance <= robotStatus.robotSpec().targetRange()
                 // Target reached
                 ? nextLocation(context)
-                : new StateResult(NONE_EXIT, forward(target));
-
-         */
+                : new StateResult(NONE_EXIT, RobotCommand.forward(target));
     }
 
     /**

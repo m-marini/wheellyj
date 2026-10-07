@@ -29,11 +29,7 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.NotImplementedException;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -177,14 +173,11 @@ public class AvoidingState extends TimeOutState {
             ctx.target(safePoint);
             logger.atDebug().log("Contact at {}", contactPoint);
             logger.atDebug().log("Safe point at {}", safePoint);
-            throw new NotImplementedException();
-            /* TODO
             return new StateResult(NONE_EXIT,
                     forwardEscape
-                            ? RobotCommands.forward(safePoint)
-                            : RobotCommands.backward(safePoint));
+                            ? RobotCommand.forward(safePoint)
+                            : RobotCommand.backward(safePoint));
 
-             */
         }
         // No contacts
         if (!avoidingByRadar) {
@@ -198,14 +191,11 @@ public class AvoidingState extends TimeOutState {
         // Check for safe point reached
         if (safePoint.distance(robotLocation) > status.robotSpec().targetRange() + MM) {
             logger.atDebug().log("approaching safe point at {}", safePoint);
-            throw new NotImplementedException();
-            /* TODO
             return new StateResult(NONE_EXIT,
                     forwardEscape
-                            ? RobotCommands.forward(safePoint)
-                            : RobotCommands.backward(safePoint));
+                            ? RobotCommand.forward(safePoint)
+                            : RobotCommand.backward(safePoint));
 
-             */
         }
         // Robot at safe distance: halt at exit
         double contactDistance = robotLocation.distance(contactPoint);

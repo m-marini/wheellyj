@@ -247,7 +247,7 @@ public class SimRobot implements RobotApi {
     private final AtomicReference<RobotRequests> requests;
 
     /**
-     * The structural snapshot tracking active orientation behaviors bound to the sensor head component.
+     * The structural snapshot tracking active orientation behaviours bound to the sensor head component.
      */
     private HeadStatus headStatus;
     private Body obstacleBody;
@@ -897,7 +897,7 @@ public class SimRobot implements RobotApi {
                 headStatus = r.headStatus();
                 headStatusTime = robotTime;
                 if (FIX_DIRECTION.equals(headStatus.status())) {
-                    headDirection = Complex.fromDeg(r.headStatus().direction());
+                    headDirection = r.headStatus().direction();
                 }
             }
         }
@@ -909,7 +909,7 @@ public class SimRobot implements RobotApi {
      */
     private void handleRotation() {
         // Compute the rotation angle
-        double rotDeg = Complex.fromDeg(motionStatus.targetDir()).sub(direction()).toDeg();
+        double rotDeg = motionStatus.targetDir().sub(direction()).toDeg();
         double absRotDeg = abs(rotDeg);
         // Compute che rotation speed
         double rotSpeed;
@@ -984,7 +984,7 @@ public class SimRobot implements RobotApi {
 
     /**
      * Extracts the global absolute 2D spatial coordinate location representing the position
-     * of the robot center calculated from the underlying JBox2D physics canvas body coordinates.
+     * of the robot centre calculated from the underlying JBox2D physics canvas body coordinates.
      *
      * @return the calculated {@link Point2D} coordinate point in metres
      */
@@ -995,7 +995,7 @@ public class SimRobot implements RobotApi {
 
     /**
      * Queues an asynchronous movement objective parameter targeting a designated spatial location coordinate point,
-     * initializing either a forward or backward travel path structure.
+     * initialising either a forward or backward travel path structure.
      *
      * @param frontMove {@code true} to initialize a forward travel state, {@code false} to move backward
      * @param location  the global target destination coordinate point
@@ -1184,7 +1184,7 @@ public class SimRobot implements RobotApi {
      */
     @Override
     public Single<Boolean> rotate(int dir) {
-        requests.updateAndGet(r -> r.motionStatus(MotionStatus.rotate(dir)));
+        requests.updateAndGet(r -> r.motionStatus(MotionStatus.rotate(Complex.fromDeg(dir))));
         return Single.just(true);
     }
 
@@ -1213,7 +1213,7 @@ public class SimRobot implements RobotApi {
         int range = robotSpec().headFOV().toIntDeg() / 2;
         int dir = clamp(direction, -range, range);
         requests.updateAndGet(s ->
-                s.headStatus(HeadStatus.scan(dir))
+                s.headStatus(HeadStatus.scan(Complex.fromDeg(dir)))
         );
         return Single.just(true);
     }
@@ -1280,7 +1280,7 @@ public class SimRobot implements RobotApi {
                 robotTime,
                 m2mm(frontDistance), m2mm(rearDistance),
                 xPulses, yPulses, robotYaw.toIntDeg(), headDirection.toIntDeg(),
-                headStatus.status(), headStatus.direction(),
+                headStatus.status(), headStatus.direction().toIntDeg(),
                 pulses.getX(), pulses.getY());
         lidarTimeout = robotTime + config.lidarInterval();
         if (onLidars != null) {
@@ -1303,7 +1303,7 @@ public class SimRobot implements RobotApi {
                 xPulses, yPulses, robotDir.toIntDeg(),
                 leftPps, rightPps,
                 0, motionStatus.status(),
-                motionStatus.targetDir(), (int) round(leftPps), (int) round(rightPps),
+                motionStatus.targetDir().toIntDeg(), (int) round(leftPps), (int) round(rightPps),
                 0, 0,
                 pulses.getX(), pulses.getY());
         motionStatusTime = robotTime + config.motionInterval();
@@ -1688,10 +1688,10 @@ public class SimRobot implements RobotApi {
     /**
      * Models the individual real-time pipeline connection handshake state indicators.
      *
-     * @param connecting  {@code true} if the background handshake initialization sequence is currently active
+     * @param connecting  {@code true} if the background handshake initialisation sequence is currently active
      * @param connected   {@code true} if the pipeline link is fully open and authenticated
      * @param configuring {@code true} if the system parameters allocation step is executing
-     * @param configured  {@code true} if the configuration validation constraints are fully finalized
+     * @param configured  {@code true} if the configuration validation constraints are fully finalised
      */
     record RobotLineState(boolean connecting, boolean connected, boolean configuring,
                           boolean configured) implements RobotStatusApi {
@@ -1703,9 +1703,9 @@ public class SimRobot implements RobotApi {
      *
      * @param connect        {@code true} if an asynchronous interface connection sequence is requested
      * @param close          {@code true} if a comprehensive shutdown and resource release sweep is requested
-     * @param simulationTime the targeted logical simulation timeline counter synchronization value (ms), active if {@code >= 0}
+     * @param simulationTime the targeted logical simulation timeline counter synchronisation value (ms), active if {@code >= 0}
      * @param motionStatus   the newly updated translation objective payload to apply across wheel motors
-     * @param headStatus     the newly updated target alignment behaviors destined for the sensor head assembly
+     * @param headStatus     the newly updated target alignment behaviours destined for the sensor head assembly
      */
     record RobotRequests(boolean connect, boolean close, long simulationTime,
                          MotionStatus motionStatus, HeadStatus headStatus) {

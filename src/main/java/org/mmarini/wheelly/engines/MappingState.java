@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
@@ -37,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.Complex.DEG0;
 import static org.mmarini.wheelly.engines.StateResult.*;
 
 /**
@@ -116,12 +116,13 @@ public class MappingState extends TimeOutState {
         sensorDir = sensorDir.add(Complex.fromDeg(dAngle));
         return sensorDir;
     }
+
     private final Complex turnAngle;
     private final int minNumberOfSamples;
     private MappingStateStatus status;
     private Complex initialDir;
     private Complex targetRobotDir;
-    private int targetSensorDir;
+    private Complex targetSensorDir;
     private int numberOfSamples;
     private long prevLidarTime;
 
@@ -151,29 +152,21 @@ public class MappingState extends TimeOutState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         int sensorDir = robotStatus.headDirection().toIntDeg();
         long lidarTime = robotStatus.lidarMessage().time();
-        if (sensorDir != targetSensorDir || prevLidarTime == lidarTime) {
-            throw new NotImplementedException();
-            /* TODO
+        if (sensorDir != targetSensorDir.toIntDeg() || prevLidarTime == lidarTime) {
             return new StateResult(NONE_EXIT,
-                    RobotCommands.halt(targetSensorDir));
-
-             */
+                    RobotCommand.halt(targetSensorDir));
         }
         // Valid signal
         prevLidarTime = lidarTime;
         numberOfSamples++;
-        throw new NotImplementedException();
-            /* TODO
         return numberOfSamples < minNumberOfSamples // number of samples less than required
                 // rescan for sample
                 // run scan command
                 ? new StateResult(NONE_EXIT,
-                RobotCommands.halt(targetSensorDir))
+                RobotCommand.halt(targetSensorDir))
                 // Head direction is correct, and lidar signal has changed and the number of signal reaches the required number of signals
                 // Scan completed
                 : null;
-
-             */
     }
 
     @Override
@@ -184,7 +177,7 @@ public class MappingState extends TimeOutState {
         this.initialDir = status.direction();
         this.status = MappingStateStatus.RIGHT_SCANNING;
         this.numberOfSamples = 0;
-        this.targetSensorDir = 0;
+        this.targetSensorDir = DEG0;
         this.prevLidarTime = status.lidarMessage().time();
         logger.atDebug().log("Entry scan {} ...", 0);
     }
@@ -207,21 +200,17 @@ public class MappingState extends TimeOutState {
         if (result != null) {
             return result;
         }
-        // Range completed, check for scann completion
-        if (targetSensorDir < 0) {
+        // Range completed, check for scan completion
+        if (targetSensorDir.toIntDeg() < 0) {
             // Scan is not completed, turn right sensor till frontal scan
-            targetSensorDir = nextSensorDir(context).toIntDeg();
+            targetSensorDir = nextSensorDir(context);
             numberOfSamples = 0;
-            if (targetSensorDir > 0) {
+            if (targetSensorDir.toIntDeg() > 0) {
                 // Frontal scan reached
-                targetSensorDir = 0;
+                targetSensorDir = DEG0;
             }
             logger.atDebug().log("leftScanning {} ...", targetSensorDir);
-            throw new NotImplementedException();
-            /* TODO
-            return new StateResult(NONE_EXIT, RobotCommands.halt(targetSensorDir));
-
-             */
+            return new StateResult(NONE_EXIT, RobotCommand.halt(targetSensorDir));
         }
         // Left scan completed, turn clockwise the robot
         logger.atDebug().log("Left scanning completed");
@@ -238,11 +227,7 @@ public class MappingState extends TimeOutState {
         this.targetRobotDir = targetDir;
         numberOfSamples = 0;
         status = MappingStateStatus.TURING_ROBOT;
-        throw new NotImplementedException();
-            /* TODO
-        return new StateResult(NONE_EXIT, RobotCommands.rotate(targetDir));
-
-             */
+        return new StateResult(NONE_EXIT, RobotCommand.rotate(targetDir));
     }
 
     /**
@@ -274,30 +259,22 @@ public class MappingState extends TimeOutState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         RobotSpec spec = robotStatus.robotSpec();
         int maxAngle = spec.headFOV().toIntDeg() / 2;
-        if (targetSensorDir < maxAngle) {
+        if (targetSensorDir.toIntDeg() < maxAngle) {
             // Turn right sensor
-            targetSensorDir = nextSensorDir(context).toIntDeg();
+            targetSensorDir = nextSensorDir(context);
             numberOfSamples = 0;
-            if (targetSensorDir > maxAngle) {
-                targetSensorDir = maxAngle;
+            if (targetSensorDir.toIntDeg() > maxAngle) {
+                targetSensorDir = Complex.fromDeg(maxAngle);
             }
             logger.atDebug().log("Scanning {} ...", targetSensorDir);
-            throw new NotImplementedException();
-            /* TODO
-            return new StateResult(NONE_EXIT, RobotCommands.halt(targetSensorDir));
-
-             */
+            return new StateResult(NONE_EXIT, RobotCommand.halt(targetSensorDir));
         }
         logger.atDebug().log("Right scanning completed");
-        targetSensorDir = -spec.headFOV().toIntDeg() / 2;
+        targetSensorDir = spec.headFOV().divAngle(2).neg();
         numberOfSamples = 0;
         status = MappingStateStatus.LEFT_SCANNING;
         logger.atDebug().log("Scanning {} ...", targetSensorDir);
-        throw new NotImplementedException();
-            /* TODO
-        return new StateResult(NONE_EXIT, RobotCommands.halt(targetSensorDir));
-
-             */
+        return new StateResult(NONE_EXIT, RobotCommand.halt(targetSensorDir));
     }
 
     /**
@@ -334,7 +311,7 @@ public class MappingState extends TimeOutState {
     /**
      * Returns the target sensor dir
      */
-    int targetSensorDir() {
+    Complex targetSensorDir() {
         return targetSensorDir;
     }
 
@@ -347,11 +324,7 @@ public class MappingState extends TimeOutState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         Complex robotDir = robotStatus.direction();
         if (!robotDir.isCloseTo(targetRobotDir, 5)) {
-            throw new NotImplementedException();
-            /* TODO
-return new StateResult(NONE_EXIT, RobotCommands.rotate(targetRobotDir));
-
-             */
+            return new StateResult(NONE_EXIT, RobotCommand.rotate(targetRobotDir));
         }
         if (targetRobotDir.isCloseTo(initialDir)) {
             // Mapping completed
@@ -360,8 +333,8 @@ return new StateResult(NONE_EXIT, RobotCommands.rotate(targetRobotDir));
         }
         logger.atDebug().log("Turning robot completed");
         status = MappingStateStatus.RIGHT_SCANNING;
-        targetSensorDir = 0;
-        return new StateResult(NONE_EXIT, RobotCommands.halt());
+        targetSensorDir = DEG0;
+        return new StateResult(NONE_EXIT, RobotCommand.halt());
     }
 
     public enum MappingStateStatus {

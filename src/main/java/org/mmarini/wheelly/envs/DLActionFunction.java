@@ -35,10 +35,7 @@ import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.GridMap;
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.*;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -147,8 +144,8 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
     }
 
     @Override
-    public List<RobotCommands> commands(Map<String, Signal> actions, WorldModel... states) {
-        List<RobotCommands> result = new ArrayList<>();
+    public List<RobotCommand> commands(Map<String, Signal> actions, WorldModel... states) {
+        List<RobotCommand> result = new ArrayList<>();
         INDArray heads = requireNonNull(actions.get(HEAD_ACTION_ID)).toINDArray();
         INDArray moves = requireNonNull(actions.get(MOVE_ACTION_ID)).toINDArray();
         int n = (int) min(states.length, min(moves.size(0), heads.size(0)));
@@ -156,7 +153,7 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
             int moveIdx = moves.getInt(i, 0);
             int headIdx = heads.getInt(i, 0);
             WorldModel model = states[i];
-            RobotCommands cmd = decodeCommand(headIdx, moveIdx, model);
+            RobotCommand cmd = decodeCommand(headIdx, moveIdx, model);
             result.add(cmd);
         }
         return result;
@@ -169,7 +166,7 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param moveIdx the move command index
      * @param model   the world model
      */
-    RobotCommands decodeCommand(int headIdx, int moveIdx, WorldModel model) {
+    RobotCommand decodeCommand(int headIdx, int moveIdx, WorldModel model) {
         throw new NotImplementedException();
             /* TODO
         int headDeg = headAngle(headIdx, model);

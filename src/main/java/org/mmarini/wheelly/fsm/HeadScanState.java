@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.fsm;
 
 import org.mmarini.NotImplementedException;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
@@ -147,7 +148,7 @@ public class HeadScanState extends AbstractCompletableState {
      * @return the {@link RobotCommands} to be processed by the robot hardware during this cycle
      */
     @Override
-    public RobotCommands tick(EnvFSMContext context) {
+    public RobotCommand tick(EnvFSMContext context) {
         if (completed()) {
             return complete(context);
         }

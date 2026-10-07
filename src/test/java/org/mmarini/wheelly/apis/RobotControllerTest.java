@@ -111,6 +111,7 @@ class RobotControllerTest {
                 .firstElement()
                 .blockingGet();
         controller.motionStatus(MotionStatus.backward(target));
+        controller.headStatus(HeadStatus.scan(Complex.fromDeg(headDeg)));
         // Wait for 5 simulated seconds
         events.filter(s -> s.robotTime() >= TEST_DURATION)
                 .firstElement()
@@ -176,6 +177,7 @@ class RobotControllerTest {
                 .firstElement()
                 .blockingGet();
         controller.motionStatus(MotionStatus.forward(target));
+        controller.headStatus(HeadStatus.scan(Complex.fromDeg(headDeg)));
         // Wait for 5 simulated seconds
         events.filter(s -> s.robotTime() >= TEST_DURATION)
                 .firstElement()
@@ -241,7 +243,8 @@ class RobotControllerTest {
                 .filter(RobotControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
-        controller.motionStatus(MotionStatus.rotate(targetDeg));
+        controller.motionStatus(MotionStatus.rotate(Complex.fromDeg(targetDeg)));
+        controller.headStatus(HeadStatus.scan(Complex.fromDeg(headDeg)));
         // Wait for 5 robot seconds
         events.filter(s -> s.robotTime() >= TEST_DURATION)
                 .firstElement()
@@ -274,7 +277,7 @@ class RobotControllerTest {
                 .filter(RobotControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
-        controller.headStatus(HeadStatus.scan(headDeg));
+        controller.headStatus(HeadStatus.scan(Complex.fromDeg(headDeg)));
         // Wait for 5 simulated seconds
         events.filter(s -> s.robotTime() >= 5000)
                 .firstElement()

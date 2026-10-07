@@ -53,6 +53,8 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.HALT;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.ROTATE;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_HEAD_FOV_DEG;
 import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.envs.DLActionFunction.HEAD_ACTION_ID;
@@ -304,15 +306,15 @@ class DLActionFunctionTest {
         );
 
         // When decode command
-        List<RobotCommands> cmd = function.commands(signals, model, model);
+        List<RobotCommand> cmd = function.commands(signals, model, model);
 
         // Then ...
         assertNotNull(cmd);
         assertThat(cmd, hasSize(2));
-        assertTrue(cmd.getFirst().isHalt());
-        assertTrue(cmd.getLast().isHalt());
-        assertEquals(expectedHead, cmd.getFirst().scanDirection());
-        assertEquals(expectedHead, cmd.getLast().scanDirection());
+        assertEquals(HALT, cmd.getFirst().headStatus());
+        assertEquals(HALT, cmd.getLast().headStatus());
+        assertEquals(expectedHead, cmd.getFirst().headStatus().direction());
+        assertEquals(expectedHead, cmd.getLast().headStatus().direction());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
@@ -332,17 +334,17 @@ class DLActionFunctionTest {
         );
 
         // When decode command
-        List<RobotCommands> cmd = function.commands(signals, model, model);
+        List<RobotCommand> cmd = function.commands(signals, model, model);
 
         // Then ...
         assertNotNull(cmd);
         assertThat(cmd, hasSize(2));
-        assertTrue(cmd.getFirst().isRotate());
-        assertTrue(cmd.getLast().isRotate());
-        assertEquals(expectedHead, cmd.getFirst().scanDirection());
-        assertEquals(expectedHead, cmd.getLast().scanDirection());
-        assertEquals(expectedDir, cmd.getFirst().rotationDirection());
-        assertEquals(expectedDir, cmd.getLast().rotationDirection());
+        assertEquals(ROTATE, cmd.getFirst().motionStatus().status());
+        assertEquals(ROTATE, cmd.getLast().motionStatus().status());
+        assertEquals(expectedHead, cmd.getFirst().headStatus().direction());
+        assertEquals(expectedHead, cmd.getLast().headStatus().direction());
+        assertEquals(expectedDir, cmd.getFirst().motionStatus().targetDir());
+        assertEquals(expectedDir, cmd.getLast().motionStatus().targetDir());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
@@ -360,17 +362,17 @@ class DLActionFunctionTest {
         );
 
         // When decode command
-        List<RobotCommands> cmd = function.commands(signals, model, model);
+        List<RobotCommand> cmd = function.commands(signals, model, model);
 
         // Then ...
         assertNotNull(cmd);
         assertThat(cmd, hasSize(2));
-        assertEquals(RobotStatusId.BACKWARD, cmd.getFirst().status());
-        assertEquals(RobotStatusId.BACKWARD, cmd.getLast().status());
-        assertEquals(expectedHead, cmd.getFirst().scanDirection());
-        assertEquals(expectedHead, cmd.getLast().scanDirection());
-        assertThat(cmd.getFirst().moveTarget(), pointCloseTo(target, MM));
-        assertThat(cmd.getLast().moveTarget(), pointCloseTo(target, MM));
+        assertEquals(RobotStatusId.BACKWARD, cmd.getFirst().motionStatus().status());
+        assertEquals(RobotStatusId.BACKWARD, cmd.getLast().motionStatus().status());
+        assertEquals(expectedHead, cmd.getFirst().headStatus().direction());
+        assertEquals(expectedHead, cmd.getLast().headStatus().direction());
+        assertThat(cmd.getFirst().motionStatus().target(), pointCloseTo(target, MM));
+        assertThat(cmd.getLast().motionStatus().target(), pointCloseTo(target, MM));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
@@ -388,17 +390,17 @@ class DLActionFunctionTest {
         );
 
         // When decode command
-        List<RobotCommands> cmd = function.commands(signals, model, model);
+        List<RobotCommand> cmd = function.commands(signals, model, model);
 
         // Then ...
         assertNotNull(cmd);
         assertThat(cmd, hasSize(2));
-        assertEquals(RobotStatusId.FORWARD, cmd.getFirst().status());
-        assertEquals(RobotStatusId.FORWARD, cmd.getLast().status());
-        assertEquals(expectedHead, cmd.getFirst().scanDirection());
-        assertEquals(expectedHead, cmd.getLast().scanDirection());
-        assertThat(cmd.getFirst().moveTarget(), pointCloseTo(target, MM));
-        assertThat(cmd.getLast().moveTarget(), pointCloseTo(target, MM));
+        assertEquals(RobotStatusId.FORWARD, cmd.getFirst().motionStatus().status());
+        assertEquals(RobotStatusId.FORWARD, cmd.getLast().motionStatus().status());
+        assertEquals(expectedHead, cmd.getFirst().headStatus().direction());
+        assertEquals(expectedHead, cmd.getLast().headStatus().direction());
+        assertThat(cmd.getFirst().motionStatus().target(), pointCloseTo(target, MM));
+        assertThat(cmd.getLast().motionStatus().target(), pointCloseTo(target, MM));
     }
 
     @ParameterizedTest
@@ -460,13 +462,13 @@ class DLActionFunctionTest {
         Point2D target = function.target(moveCommand, model.gridMap());
 
         // When decode command
-        RobotCommands cmd = function.decodeCommand(headCommand, moveCommand, model);
+        RobotCommand cmd = function.decodeCommand(headCommand, moveCommand, model);
 
         // Then ...
         assertNotNull(cmd);
-        assertEquals(RobotStatusId.BACKWARD, cmd.status());
-        assertEquals(expectedHead, cmd.scanDirection());
-        assertThat(cmd.moveTarget(), pointCloseTo(target, MM));
+        assertEquals(RobotStatusId.BACKWARD, cmd.motionStatus().status());
+        assertEquals(expectedHead, cmd.headStatus().direction());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(target, MM));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
@@ -480,13 +482,13 @@ class DLActionFunctionTest {
         Point2D target = function.target(moveCommand, model.gridMap());
 
         // When decode command
-        RobotCommands cmd = function.decodeCommand(headCommand, moveCommand, model);
+        RobotCommand cmd = function.decodeCommand(headCommand, moveCommand, model);
 
         // Then ...
         assertNotNull(cmd);
-        assertEquals(RobotStatusId.FORWARD, cmd.status());
-        assertEquals(expectedHead, cmd.scanDirection());
-        assertThat(cmd.moveTarget(), pointCloseTo(target, MM));
+        assertEquals(RobotStatusId.FORWARD, cmd.motionStatus().status());
+        assertEquals(expectedHead, cmd.headStatus().direction());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(target, MM));
     }
 
     @ParameterizedTest(name = "[{index}], Robot @({0},{1}) R{2}, command={3}")
@@ -498,11 +500,11 @@ class DLActionFunctionTest {
         int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
         expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
         // When decode command
-        RobotCommands cmd = function.decodeCommand(headCommand, 0, model);
+        RobotCommand cmd = function.decodeCommand(headCommand, 0, model);
         // Then ...
         assertNotNull(cmd);
-        assertTrue(cmd.isHalt());
-        assertEquals(expectedHead, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(expectedHead, cmd.headStatus().direction());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
@@ -518,13 +520,13 @@ class DLActionFunctionTest {
                 .toIntDeg();
 
         // When decode command
-        RobotCommands cmd = function.decodeCommand(headCommand, moveCommand, model);
+        RobotCommand cmd = function.decodeCommand(headCommand, moveCommand, model);
 
         // Then ...
         assertNotNull(cmd);
-        assertTrue(cmd.isRotate());
-        assertEquals(expectedHead, cmd.scanDirection());
-        assertEquals(expectedDir, cmd.rotationDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertEquals(expectedHead, cmd.headStatus().direction());
+        assertEquals(expectedDir, cmd.motionStatus().targetDir());
     }
 
     @Test

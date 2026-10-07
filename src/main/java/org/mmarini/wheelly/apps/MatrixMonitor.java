@@ -697,7 +697,7 @@ public class MatrixMonitor {
      * @param actionEvent the action event triggered by the rotate toolbar button component
      */
     private void onRotateButton(ActionEvent actionEvent) {
-        int targetDir = robotStatus.direction().add(Complex.fromDeg(rotationSlider.getValue())).toIntDeg();
+        Complex targetDir = robotStatus.direction().add(Complex.fromDeg(rotationSlider.getValue()));
         motionStatus = MotionStatus.rotate(targetDir);
         controller.motionStatus(motionStatus);
     }
@@ -721,7 +721,7 @@ public class MatrixMonitor {
      * @param actionEvent the action event triggered by the scan toolbar button component
      */
     private void onScanButton(ActionEvent actionEvent) {
-        headStatus = HeadStatus.scan(headRotationSlider.getValue());
+        headStatus = HeadStatus.scan(Complex.fromDeg(headRotationSlider.getValue()));
         controller.headStatus(headStatus);
         headStatusField.setText(headStatus.toString());
     }

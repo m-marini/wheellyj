@@ -30,6 +30,7 @@ package org.mmarini.wheelly.fsm;
 
 import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
@@ -99,7 +100,7 @@ public class MoveState extends AbstractContactEventState {
      * @throws NullPointerException if the internal {@code targetPosition} has not been properly initialised
      */
     @Override
-    public RobotCommands tick(EnvFSMContext context) {
+    public RobotCommand tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward() || contacted()) {
             return triggerContact(context);

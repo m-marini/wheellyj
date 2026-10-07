@@ -69,7 +69,7 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
     private static final double FIXED_SAFETY_MARGIN = 10e-3;
     private static final ActionFunction MACRO_ACTION_FUNCTION = new ActionFunction() {
         @Override
-        public List<RobotCommands> commands(Map<String, Signal> actions, WorldModel... states) {
+        public List<RobotCommand> commands(Map<String, Signal> actions, WorldModel... states) {
             throw new NotImplementedException();
         }
 
@@ -251,7 +251,7 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
     }
 
     @Override
-    public RobotCommands onInference(WorldModel state) {
+    public RobotCommand onInference(WorldModel state) {
         requireNonNull(state);
         ensureConnected();
         currentWorldModel(state);

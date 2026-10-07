@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.fsm;
 
 
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 
 import java.util.function.Function;
@@ -53,7 +54,7 @@ public abstract class AbstractCompletableState extends AbstractCommitmentState i
     /**
      * The callback function evaluated to supply final robot commands when the state completes.
      */
-    private Function<EnvFSMContext, RobotCommands> onCompletion;
+    private Function<EnvFSMContext, RobotCommand> onCompletion;
 
     /**
      * Constructs an {@code AbstractCompletableState} with a specific commitment duration window.
@@ -75,11 +76,11 @@ public abstract class AbstractCompletableState extends AbstractCommitmentState i
      * @param context the {@link EnvFSMContext} tracking the shared operational data
      * @return the {@link RobotCommands} triggered by the completion event
      */
-    protected RobotCommands complete(EnvFSMContext context) {
+    protected RobotCommand complete(EnvFSMContext context) {
         completed = true;
         return onCompletion != null
                 ? onCompletion.apply(context)
-                : RobotCommands.halt();
+                : RobotCommand.halt();
     }
 
     /**
@@ -117,7 +118,7 @@ public abstract class AbstractCompletableState extends AbstractCommitmentState i
      * @return this state instance cast to its concrete type for method chaining
      */
     @SuppressWarnings("unchecked")
-    public <T extends AbstractCompletableState> T onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
+    public <T extends AbstractCompletableState> T onCompletion(Function<EnvFSMContext, RobotCommand> callback) {
         this.onCompletion = callback;
         return (T) this;
     }

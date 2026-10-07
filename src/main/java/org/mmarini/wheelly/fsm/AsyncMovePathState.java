@@ -30,6 +30,7 @@ package org.mmarini.wheelly.fsm;
 
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,7 +109,7 @@ public class AsyncMovePathState extends AbstractContactEventState {
      * @param context the current finite state machine context
      * @return the reactive {@link RobotCommands} triggered by the contact event
      */
-    private RobotCommands onContact(EnvFSMContext context) {
+    private RobotCommand onContact(EnvFSMContext context) {
         return triggerContact(context);
     }
 
@@ -134,7 +135,7 @@ public class AsyncMovePathState extends AbstractContactEventState {
      * @param context the current finite state machine context
      * @return the next set of execution {@link RobotCommands}
      */
-    private RobotCommands onMoveCompletion(EnvFSMContext context) {
+    private RobotCommand onMoveCompletion(EnvFSMContext context) {
         if (currentTargetIdx == path.size()) {
             // final target reached
             return complete(context);
@@ -164,7 +165,7 @@ public class AsyncMovePathState extends AbstractContactEventState {
      * @throws NullPointerException if the provided context is null
      */
     @Override
-    public RobotCommands tick(EnvFSMContext context) {
+    public RobotCommand tick(EnvFSMContext context) {
         if (contacted()) {
             return triggerContact(context);
         }
@@ -177,7 +178,7 @@ public class AsyncMovePathState extends AbstractContactEventState {
         List<Point2D> path = this.path;
         if (path == null) {
             // Waiting for path
-            return RobotCommands.halt();
+            return RobotCommand.halt();
         } else if (path.isEmpty()) {
             return complete(context);
         } else if (currentTargetIdx >= 0) {

@@ -419,7 +419,7 @@ public class RobotController implements RobotControllerApi {
                             s1.registerHeadStatus(time))
                     .headStatus();
             switch (headStatus.status()) {
-                case FIX_DIRECTION -> robot.scan(headStatus.direction());
+                case FIX_DIRECTION -> robot.scan(headStatus.direction().toIntDeg());
                 case FRONT_TRACK -> robot.track(true, headStatus.target());
                 case REAR_TRACK -> robot.track(false, headStatus.target());
             }
@@ -442,7 +442,7 @@ public class RobotController implements RobotControllerApi {
                 case HALT -> robot.halt();
                 case FORWARD -> robot.move(true, motionStatus.target());
                 case BACKWARD -> robot.move(false, motionStatus.target());
-                case ROTATE -> robot.rotate(motionStatus.targetDir());
+                case ROTATE -> robot.rotate(motionStatus.targetDir().toIntDeg());
             }
         }
     }

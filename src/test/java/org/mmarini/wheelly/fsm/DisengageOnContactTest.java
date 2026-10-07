@@ -35,7 +35,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
@@ -121,12 +121,12 @@ public class DisengageOnContactTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
-        assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc0, MM));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(BACKWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(safeLoc0, MM));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
 
         // When before commitment
@@ -134,9 +134,9 @@ public class DisengageOnContactTest {
         cmd = state.tick(ctx);
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
-        assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc0, MM));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(BACKWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(safeLoc0, MM));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(0, ctx.nextActionCount());
 
         // When backward still contact
@@ -144,9 +144,9 @@ public class DisengageOnContactTest {
         cmd = state.tick(ctx);
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
-        assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc1, MM));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(BACKWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(safeLoc1, MM));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
 
         // When clear contact
@@ -154,9 +154,9 @@ public class DisengageOnContactTest {
         cmd = state.tick(ctx);
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
-        assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc1, MM));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(BACKWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(safeLoc1, MM));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
 
         // When backward safe zone
@@ -164,8 +164,8 @@ public class DisengageOnContactTest {
         cmd = state.tick(ctx);
         // Then
         assertEquals(HALT_ACTION, state.moveAction());
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
     }
 
@@ -215,12 +215,12 @@ public class DisengageOnContactTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc0, MM));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(safeLoc0, MM));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
 
         // When before commitment
@@ -228,9 +228,9 @@ public class DisengageOnContactTest {
         cmd = state.tick(ctx);
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc0, MM));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(safeLoc0, MM));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(0, ctx.nextActionCount());
 
         // When backward still contact
@@ -238,9 +238,9 @@ public class DisengageOnContactTest {
         cmd = state.tick(ctx);
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc1, MM));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(safeLoc1, MM));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
 
         // When clear contact
@@ -248,9 +248,9 @@ public class DisengageOnContactTest {
         cmd = state.tick(ctx);
         // Then
         assertEquals(DISENGAGE_ON_CONTACT_ACTION, state.moveAction());
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.moveTarget(), pointCloseTo(safeLoc1, MM));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(safeLoc1, MM));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
 
         // When backward safe zone
@@ -258,8 +258,8 @@ public class DisengageOnContactTest {
         cmd = state.tick(ctx);
         // Then
         assertEquals(HALT_ACTION, state.moveAction());
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
     }
 }

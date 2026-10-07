@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.fsm;
 
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 
 /**
@@ -64,9 +65,9 @@ public class HaltState extends AbstractCompletableState {
      * @return the {@link RobotCommands} commanding an immediate and complete standstill of the robot
      */
     @Override
-    public RobotCommands tick(EnvFSMContext context) {
+    public RobotCommand tick(EnvFSMContext context) {
         return expired(context)
                 ? complete(context)
-                : RobotCommands.halt();
+                : RobotCommand.halt();
     }
 }

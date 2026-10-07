@@ -42,8 +42,11 @@ import java.awt.geom.Point2D;
 import java.util.stream.Stream;
 
 import static java.lang.Math.clamp;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.HALT;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.ROTATE;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
 import static org.mmarini.wheelly.apis.RobotStatusId.BACKWARD;
 import static org.mmarini.wheelly.apis.RobotStatusId.FORWARD;
@@ -266,16 +269,6 @@ class LabelStuckStateTest {
                 .build(NUM_TEST_CASE);
     }
 
-    LabelStuckState state;
-
-    @BeforeEach
-    void setUp() {
-        this.state = new LabelStuckState("stuck", null, null, null,
-                AvoidingState.DEFAULT_TIMEOUT,
-                DEFAULT_MIN_DISTANCE, DEFAULT_MAX_DISTANCE, DEFAULT_SEARCH_DISTANCE,
-                DEFAULT_CORRELATION_DISTANCE, Complex.fromDeg(DEFAULT_DIRECTION_RANGE), ignored -> true);
-    }
-
     private static int headMarkerAngle(ProcessorContextApi context) {
         RobotStatus status = context.worldModel().robotStatus();
         return clamp(Complex.direction(status.headLocation(), context.worldModel().markers().get(org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A).location())
@@ -286,6 +279,16 @@ class LabelStuckStateTest {
     private static int robotMarkerDir(ProcessorContextApi context) {
         return Complex.direction(context.worldModel().robotStatus().location(),
                 context.worldModel().markers().get(org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A).location()).toIntDeg();
+    }
+
+    LabelStuckState state;
+
+    @BeforeEach
+    void setUp() {
+        this.state = new LabelStuckState("stuck", null, null, null,
+                AvoidingState.DEFAULT_TIMEOUT,
+                DEFAULT_MIN_DISTANCE, DEFAULT_MAX_DISTANCE, DEFAULT_SEARCH_DISTANCE,
+                DEFAULT_CORRELATION_DISTANCE, Complex.fromDeg(DEFAULT_DIRECTION_RANGE), ignored -> true);
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG")
@@ -331,9 +334,9 @@ class LabelStuckStateTest {
         assertNotNull(result);
         assertEquals(NONE_EXIT, result.exitCode());
         // And the power should be backward
-        assertTrue(result.commands().isHalt());
+        assertEquals(HALT, result.command().motionStatus().status());
         // And the scan direction should be toward marker
-        assertEquals(headMarkerAngle(context), result.commands().scanDirection());
+        assertEquals(headMarkerAngle(context), result.command().headStatus().direction());
     }
 
     @ParameterizedTest(name = "[{index}] R=@({0}, {1}) R{2}, H={3} DEG, M={4} DEG, {5} m, dD={6}m")
@@ -381,10 +384,10 @@ class LabelStuckStateTest {
         assertNotNull(result);
         assertEquals(NONE_EXIT, result.exitCode());
         // And the scan direction should be toward marker clamped by head fov
-        assertEquals(headMarkerAngle(context), result.commands().scanDirection());
-        assertTrue(result.commands().isRotate());
+        assertEquals(headMarkerAngle(context), result.command().headStatus().direction());
+        assertEquals(ROTATE, result.command().motionStatus().status());
         // And the direction should be close the robotMarker direction
-        assertEquals(robotMarkerDir(context), result.commands().rotationDirection());
+        assertEquals(robotMarkerDir(context), result.command().motionStatus().targetDir());
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0}, {1}) R{2}, head {3} DEG, marker {4} DEG D{5}")
@@ -454,12 +457,12 @@ class LabelStuckStateTest {
         // Then the result should be none exit
         assertNotNull(result);
         assertEquals(NONE_EXIT, result.exitCode());
-        assertEquals(BACKWARD, result.commands().status());
+        assertEquals(BACKWARD, result.command().motionStatus().status());
         // And the scan direction should be toward marker clamped by head fov
-        assertEquals(headMarkerAngle(context), result.commands().scanDirection());
+        assertEquals(headMarkerAngle(context), result.command().headStatus().direction());
         // and the target-marker direction should be the same of robot marker
         Point2D markerLocation = context.worldModel().markers().get(LABEL_A).location();
-        int targetMarkerDir = Complex.direction(result.commands().moveTarget(), markerLocation).toIntDeg();
+        int targetMarkerDir = Complex.direction(result.command().motionStatus().target(), markerLocation).toIntDeg();
         assertEquals(targetMarkerDir, robotMarkerDir(context));
     }
 
@@ -487,12 +490,12 @@ class LabelStuckStateTest {
         // Then the result should be none exit
         assertNotNull(result);
         assertEquals(NONE_EXIT, result.exitCode());
-        assertEquals(FORWARD, result.commands().status());
+        assertEquals(FORWARD, result.command().motionStatus().status());
         // And the scan direction should be toward marker
-        assertEquals(headMarkerAngle(context), result.commands().scanDirection());
+        assertEquals(headMarkerAngle(context), result.command().headStatus().direction());
         // and the target-marker direction should be the same of robot marker
         Point2D markerLocation = context.worldModel().markers().get(LABEL_A).location();
-        int targetMarkerDir = Complex.direction(result.commands().moveTarget(), markerLocation).toIntDeg();
+        int targetMarkerDir = Complex.direction(result.command().motionStatus().target(), markerLocation).toIntDeg();
         assertEquals(targetMarkerDir, robotMarkerDir(context));
     }
 }

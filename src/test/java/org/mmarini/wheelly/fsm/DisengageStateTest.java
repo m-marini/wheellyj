@@ -34,6 +34,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
@@ -76,7 +77,7 @@ class DisengageStateTest {
         this.state = new DisengageState(COMMITMENT_TIME, SAFETY_DISTANCE)
                 .onCompletion(ctx1 -> {
                     onCompletionContexts.add(ctx1);
-                    return RobotCommands.halt();
+                    return RobotCommand.halt();
                 });
     }
 

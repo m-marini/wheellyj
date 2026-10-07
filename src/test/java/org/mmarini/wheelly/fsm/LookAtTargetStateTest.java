@@ -35,7 +35,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
@@ -144,9 +144,9 @@ class LookAtTargetStateTest {
 
         // When executing the action for the first time
         ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(targetDeg, cmd.scanDirection());
+        assertEquals(targetDeg, cmd.headStatus().direction());
         // And not expired
         assertFalse(state.expired(ctx));
 
@@ -154,7 +154,7 @@ class LookAtTargetStateTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(targetDeg, cmd.scanDirection());
+        assertEquals(targetDeg, cmd.headStatus().direction());
         // And expired
         assertTrue(state.expired(ctx));
 
@@ -162,7 +162,7 @@ class LookAtTargetStateTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(headDir1.toIntDeg(), cmd.scanDirection());
+        assertEquals(headDir1.toIntDeg(), cmd.headStatus().direction());
         // And expired
         assertTrue(state.expired(ctx));
 
@@ -170,7 +170,7 @@ class LookAtTargetStateTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertThat(Complex.fromDeg(cmd.scanDirection()), angleCloseTo(0, 3));
+        assertThat(cmd.headStatus().direction(), angleCloseTo(0, 3));
         // And expired
         assertTrue(state.expired(ctx));
 
@@ -178,7 +178,7 @@ class LookAtTargetStateTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(0, cmd.headStatus().direction());
         // And expired
         assertTrue(state.expired(ctx));
     }
@@ -210,9 +210,9 @@ class LookAtTargetStateTest {
 
         // When executing the action for the first time
         ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(0, cmd.headStatus().direction());
         // And not expired
         assertFalse(state.expired(ctx));
 
@@ -220,7 +220,7 @@ class LookAtTargetStateTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(0, cmd.headStatus().direction());
         // And expired
         assertTrue(state.expired(ctx));
 
@@ -281,9 +281,9 @@ class LookAtTargetStateTest {
 
         // When executing the action for the first time
         ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(headDir.opposite().toIntDeg(), cmd.scanDirection());
+        assertEquals(headDir.opposite().toIntDeg(), cmd.headStatus().direction());
         // And not expired
         assertFalse(state.expired(ctx));
 
@@ -291,7 +291,7 @@ class LookAtTargetStateTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(headDir.opposite().toIntDeg(), cmd.scanDirection());
+        assertEquals(headDir.opposite().toIntDeg(), cmd.headStatus().direction());
         // And expired
         assertTrue(state.expired(ctx));
 
@@ -299,7 +299,7 @@ class LookAtTargetStateTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(headDir1.toIntDeg(), cmd.scanDirection());
+        assertEquals(headDir1.toIntDeg(), cmd.headStatus().direction());
         // And expired
         assertTrue(state.expired(ctx));
 
@@ -307,7 +307,7 @@ class LookAtTargetStateTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertThat(Complex.fromDeg(cmd.scanDirection()), angleCloseTo(0, 3));
+        assertThat(cmd.headStatus().direction(), angleCloseTo(0, 3));
         // And expired
         assertTrue(state.expired(ctx));
 
@@ -315,7 +315,7 @@ class LookAtTargetStateTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(0, cmd.headStatus().direction());
         // And expired
         assertTrue(state.expired(ctx));
     }
@@ -347,9 +347,9 @@ class LookAtTargetStateTest {
 
         // When executing the action for the first time
         ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(0, cmd.headStatus().direction());
         // And not expired
         assertFalse(state.expired(ctx));
 
@@ -357,7 +357,7 @@ class LookAtTargetStateTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(0, cmd.headStatus().direction());
         // And expired
         assertTrue(state.expired(ctx));
 

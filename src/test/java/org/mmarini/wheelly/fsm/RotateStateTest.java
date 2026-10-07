@@ -34,7 +34,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
@@ -78,11 +78,11 @@ class RotateStateTest {
         this.state = new RotateState(COMMITMENT_TIME)
                 .onContact(ctx1 -> {
                     onContactContexts.add(ctx1);
-                    return RobotCommands.halt();
+                    return RobotCommand.halt();
                 })
                 .onCompletion(ctx1 -> {
                     onCompletionContexts.add(ctx1);
-                    return RobotCommands.halt();
+                    return RobotCommand.halt();
                 });
     }
 
@@ -119,18 +119,18 @@ class RotateStateTest {
         //--------
         // When first tick
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd.status());
-        assertEquals(targetDir.toIntDeg(), cmd.rotationDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertEquals(targetDir.toIntDeg(), cmd.motionStatus().targetDir());
 
         //--------
         // When tick after commitment
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd.status());
-        assertEquals(targetDir.toIntDeg(), cmd.rotationDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertEquals(targetDir.toIntDeg(), cmd.motionStatus().targetDir());
 
         //--------
         // When tick robot dir toward targetDir
@@ -139,14 +139,14 @@ class RotateStateTest {
         assertThat(onCompletionContexts, contains(ctx));
         assertThat(onContactContexts, empty());
         // Then the command should be halt
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
 
         //--------
         // When tick after completion
         ctx = iter.next();
         cmd = state.tick(ctx);
         // And next action should have been required
-        assertEquals(HALT, cmd.status());
+        assertEquals(HALT, cmd.motionStatus().status());
         assertThat(onCompletionContexts, hasItem(ctx));
         assertThat(onContactContexts, empty());
     }
@@ -180,25 +180,25 @@ class RotateStateTest {
         // When init
         state.init(ctx[0], targetDir.toIntDeg());
         // When ticks
-        RobotCommands[] cmd = Arrays.stream(ctx)
+        RobotCommand[] cmd = Arrays.stream(ctx)
                 .skip(1)
                 .map(state::tick)
-                .toArray(RobotCommands[]::new);
+                .toArray(RobotCommand[]::new);
 
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd[0].status());
-        assertEquals(targetDir.toIntDeg(), cmd[0].rotationDirection());
+        assertEquals(ROTATE, cmd[0].motionStatus().status());
+        assertEquals(targetDir.toIntDeg(), cmd[0].motionStatus().targetDir());
         // And no next action should have been required
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd[1].status());
-        assertEquals(targetDir.toIntDeg(), cmd[1].rotationDirection());
+        assertEquals(ROTATE, cmd[1].motionStatus().status());
+        assertEquals(targetDir.toIntDeg(), cmd[1].motionStatus().targetDir());
         // And next action should have been required
 
         //--------
         // Then the command should be halt
-        assertEquals(HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].motionStatus().status());
         // And next action should have been required
         assertThat(onContactContexts, contains(ctx[3]));
         assertThat(onCompletionContexts, empty());
@@ -231,23 +231,23 @@ class RotateStateTest {
         // When init
         state.init(ctx[0], targetDir.toIntDeg());
         // When ticks
-        RobotCommands[] cmd = Arrays.stream(ctx)
+        RobotCommand[] cmd = Arrays.stream(ctx)
                 .skip(1)
                 .map(state::tick)
-                .toArray(RobotCommands[]::new);
+                .toArray(RobotCommand[]::new);
 
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd[0].status());
-        assertEquals(targetDir.toIntDeg(), cmd[0].rotationDirection());
+        assertEquals(ROTATE, cmd[0].motionStatus().status());
+        assertEquals(targetDir.toIntDeg(), cmd[0].motionStatus().targetDir());
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd[1].status());
-        assertEquals(targetDir.toIntDeg(), cmd[1].rotationDirection());
+        assertEquals(ROTATE, cmd[1].motionStatus().status());
+        assertEquals(targetDir.toIntDeg(), cmd[1].motionStatus().targetDir());
 
         //--------
         // Then the command should be halt
-        assertEquals(HALT, cmd[2].status());
+        assertEquals(HALT, cmd[2].motionStatus().status());
 
         assertThat(onContactContexts, contains(ctx[3]));
         assertThat(onCompletionContexts, empty());

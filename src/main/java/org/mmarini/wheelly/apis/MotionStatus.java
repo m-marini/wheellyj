@@ -33,36 +33,37 @@ import java.awt.geom.Point2D;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public record MotionStatus(MotionStatusId status, int targetDir, Point2D target) {
+public record MotionStatus(MotionStatusId status, Complex targetDir, Point2D target) {
     static final Point2D ORIGIN = new Point2D.Double();
-    static final MotionStatus HALT = new MotionStatus(MotionStatusId.HALT, 0, ORIGIN);
+    static final MotionStatus HALT = new MotionStatus(MotionStatusId.HALT, Complex.DEG0, ORIGIN);
 
     public static MotionStatus backward(Point2D target) {
-        return new MotionStatus(MotionStatusId.BACKWARD, 0, target);
+        return new MotionStatus(MotionStatusId.BACKWARD, Complex.DEG0, target);
     }
 
     public static MotionStatus forward(Point2D target) {
-        return new MotionStatus(MotionStatusId.FORWARD, 0, target);
+        return new MotionStatus(MotionStatusId.FORWARD, Complex.DEG0, target);
     }
 
     public static MotionStatus halt() {
         return HALT;
     }
 
-    public static MotionStatus rotate(int direction) {
+    public static MotionStatus rotate(Complex direction) {
         return new MotionStatus(MotionStatusId.ROTATE, direction, ORIGIN);
     }
 
     public MotionStatus {
         requireNonNull(status);
         requireNonNull(target);
+        requireNonNull(targetDir);
     }
 
     @Override
     public String toString() {
         return switch (status) {
             case HALT -> "ha";
-            case ROTATE -> format("rt %d", this.targetDir);
+            case ROTATE -> format("rt %d", this.targetDir.toIntDeg());
             case FORWARD -> format("fw %.2f,%.2f", target.getX(), target.getY());
             case BACKWARD -> format("bw %.2f,%.2f", target.getX(), target.getY());
         };
@@ -89,7 +90,7 @@ public record MotionStatus(MotionStatusId status, int targetDir, Point2D target)
         BACKWARD,
 
         /**
-         * The robot chassis is actively rotating around its center point.
+         * The robot chassis is actively rotating around its centre point.
          */
         ROTATE
     }

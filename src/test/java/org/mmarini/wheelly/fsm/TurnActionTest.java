@@ -36,7 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.MapCell;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
@@ -147,11 +147,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(targetDir));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(targetDir));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertEquals(MICRO_LEFT_ACTION, state.moveAction());
 
@@ -159,8 +159,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertEquals(HALT_ACTION, state.moveAction());
 
@@ -168,8 +168,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertEquals(HALT_ACTION, state.moveAction());
     }
@@ -203,11 +203,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(targetDir));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(targetDir));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertFalse(state.isHalt());
 
@@ -215,8 +215,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -224,8 +224,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -262,11 +262,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(markerDir));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(markerDir));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertFalse(state.isHalt());
 
@@ -274,8 +274,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -283,8 +283,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -326,11 +326,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(markerHead));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(markerHead));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertFalse(state.isHalt());
 
@@ -338,8 +338,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -347,8 +347,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -381,10 +381,10 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -392,8 +392,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -436,11 +436,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(mapObstacleDir));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(mapObstacleDir));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertFalse(state.isHalt());
 
@@ -448,8 +448,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -457,8 +457,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -501,11 +501,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(mapObstacleDir));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(mapObstacleDir));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertFalse(state.isHalt());
 
@@ -513,8 +513,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -522,8 +522,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -562,10 +562,10 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -573,8 +573,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -608,11 +608,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(targetDir));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(targetDir));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertFalse(state.isHalt());
 
@@ -620,8 +620,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -629,8 +629,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -667,11 +667,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(markerHead.opposite()));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(markerHead.opposite()));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertFalse(state.isHalt());
 
@@ -679,8 +679,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -688,8 +688,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -726,11 +726,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(markerHead.opposite()));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(markerHead.opposite()));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertFalse(state.isHalt());
 
@@ -738,8 +738,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -747,8 +747,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -781,10 +781,10 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -792,8 +792,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -836,11 +836,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(mapObstacleDir.opposite()));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(mapObstacleDir.opposite()));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertFalse(state.isHalt());
 
@@ -848,8 +848,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -857,8 +857,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -897,10 +897,10 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -908,8 +908,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -952,11 +952,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(mapObstacleDir.opposite()));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(mapObstacleDir.opposite()));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertFalse(state.isHalt());
 
@@ -964,8 +964,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -973,8 +973,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }
@@ -1008,11 +1008,11 @@ public class TurnActionTest {
 
         // When first tick
         MockFSMContext ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(ROTATE, cmd.status());
-        assertThat(Complex.fromDeg(cmd.rotationDirection()), angleCloseTo(targetDir));
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(targetDir));
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertFalse(state.isHalt());
 
@@ -1020,8 +1020,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
 
@@ -1029,8 +1029,8 @@ public class TurnActionTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
         assertTrue(state.isHalt());
     }

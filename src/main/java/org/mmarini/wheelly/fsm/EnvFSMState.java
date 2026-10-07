@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.fsm;
 
+import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 
 /**
@@ -53,5 +54,5 @@ public interface EnvFSMState {
      *                sensor states (lifecycle features), and environmental data
      * @return the {@link RobotCommands} to be executed concurrently for the robot base and head
      */
-    RobotCommands tick(EnvFSMContext context);
+    RobotCommand tick(EnvFSMContext context);
 }

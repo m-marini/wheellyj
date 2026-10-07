@@ -32,25 +32,26 @@ import java.awt.geom.Point2D;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.Complex.DEG0;
 
-public record HeadStatus(HeadStatusId status, int direction, Point2D target) {
+public record HeadStatus(HeadStatusId status, Complex direction, Point2D target) {
     static final Point2D ORIGIN = new Point2D.Double();
-    static final HeadStatus LOOK_STRAIGHT = new HeadStatus(HeadStatusId.FIX_DIRECTION, 0, ORIGIN);
+    static final HeadStatus LOOK_STRAIGHT = new HeadStatus(HeadStatusId.FIX_DIRECTION, DEG0, ORIGIN);
 
     public static HeadStatus lookStraight() {
         return LOOK_STRAIGHT;
     }
 
-    public static HeadStatus scan(int direction) {
+    public static HeadStatus scan(Complex direction) {
         return new HeadStatus(HeadStatusId.FIX_DIRECTION, direction, ORIGIN);
     }
 
     public static HeadStatus trackFrontFace(Point2D target) {
-        return new HeadStatus(HeadStatusId.FRONT_TRACK, 0, target);
+        return new HeadStatus(HeadStatusId.FRONT_TRACK, DEG0, target);
     }
 
     public static HeadStatus trackRearFace(Point2D target) {
-        return new HeadStatus(HeadStatusId.REAR_TRACK, 0, target);
+        return new HeadStatus(HeadStatusId.REAR_TRACK, DEG0, target);
     }
 
     public HeadStatus {
@@ -61,7 +62,7 @@ public record HeadStatus(HeadStatusId status, int direction, Point2D target) {
     @Override
     public String toString() {
         return switch (status) {
-            case FIX_DIRECTION -> format("sc %d", this.direction);
+            case FIX_DIRECTION -> format("sc %d", this.direction.toIntDeg());
             case FRONT_TRACK -> format("ft %.2f,%.2f", target.getX(), target.getY());
             case REAR_TRACK -> format("rt %.2f,%.2f", target.getX(), target.getY());
         };
