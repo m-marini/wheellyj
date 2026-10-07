@@ -118,6 +118,7 @@ public class RobotExecutor {
             System.exit(1);
         }
     }
+
     private final EnvironmentPanel envPanel;
     private final GridPanel gridPanel;
     private final DoubleReducedValue reactionRobotTime;
@@ -129,7 +130,6 @@ public class RobotExecutor {
     private final WheellyToolBar toolBar;
     private final AtomicBoolean shuttingDown;
     private final AtomicBoolean active;
-    private final InferenceConnector inferenceMediator;
     private RobotApi robot;
     private long start;
     private long sessionDuration;
@@ -162,7 +162,6 @@ public class RobotExecutor {
         this.sensorMonitor = new SensorMonitor();
         this.shuttingDown = new AtomicBoolean(false);
         this.active = new AtomicBoolean(true);
-        this.inferenceMediator = RobotExecutor.this::onInferenceProcess;
         toolBar.resetButton().setEnabled(false);
         toolBar.learningButton().setEnabled(false);
     }
@@ -220,6 +219,7 @@ public class RobotExecutor {
         switch (robot) {
             case SimRobot sim:
                 sim.readObstacleMap()
+                        .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                         .subscribe(this::onObstacleMap);
                 break;
             case MqttRobot mqttRobot:
@@ -231,27 +231,39 @@ public class RobotExecutor {
         controller.readShutdown()
                 .subscribe(this::onControllerShutdown);
         controller.readErrors()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(err -> {
                     comMonitor.onError(err);
                     logger.atError().setCause(err).log("Controller error");
                 });
         controller.readControllerStatus()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .map(ControllerStatusMapper::map)
                 .subscribe(this::onControllerStatus);
-        controller.addOnRobotStatus(envPanel::robotStatus);
+        controller.addOnRobotStatus(s ->
+                SwingUtilities.invokeLater(() -> {
+                    envPanel.robotStatus(s);
+                }));
         agent.readState()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onState);
         agent.readStepUp()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onStepUp);
         agent.readTargets()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(t ->
                         envPanel.target(t.orElse(null)));
 
         agent.readPath()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onPath);
         agent.readTriggers()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onTrigger);
-        modeller.addOnInference(this::onInference);
+        modeller.addOnInference(t ->
+                SwingUtilities.invokeLater(() ->
+                        onInference(t)));
     }
 
     /**

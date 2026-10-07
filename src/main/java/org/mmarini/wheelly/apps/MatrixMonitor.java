@@ -315,6 +315,7 @@ public class MatrixMonitor {
     private void createFlows() {
         controller.addOnRobotStatus(this::onRobotStatus);
         controller.readErrors()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(er -> {
                     comMonitor.onError(er);
                     logger.atError().setCause(er).log("Error:");
@@ -323,11 +324,8 @@ public class MatrixMonitor {
                 .subscribe(this::onShutdown);
         controller.readControllerStatus()
                 .map(ControllerStatusMapper::map)
-                .doOnNext(s ->
-                        logger.atDebug().log("Status {}", s))
                 .distinctUntilChanged()
-                .doOnNext(s ->
-                        logger.atDebug().log("Distinct {}", s))
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onControlStatus);
 
         Observable.mergeArray(
@@ -731,6 +729,7 @@ public class MatrixMonitor {
      * graphical interface window frame containers.
      */
     private void onShutdown() {
+        logger.atInfo().log("Shut down");
         commandFrame.dispose();
         sensorFrame.dispose();
         comFrame.dispose();
