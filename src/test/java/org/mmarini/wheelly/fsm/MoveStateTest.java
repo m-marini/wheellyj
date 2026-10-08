@@ -40,7 +40,6 @@ import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -112,55 +111,83 @@ class MoveStateTest {
         // and target location
         Point2D targetPosition = targetDir.at(robotLocation, distance);
         // And context
-        MockFSMContext[] ctx = MockFSMContext.builder()
-                // Init
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
+                // 0 - Init
                 .add(builder.robotLocation(robotLocation)
                         .robotDir(robotDeg))
-                // tick
+                // 1 - 1st tick
                 .add(builder)
-                // tick after commitment
+                // 2 - tick at commitment
                 .add(builder.addTime(COMMITMENT_TIME))
-                // tick after next commitment
-                .add(builder.addTime(COMMITMENT_TIME)
+                // 3 - tick at target
+                .add(builder.addTime(1)
                         // and robot dir toward targetDir
                         .robotDir(targetDir.opposite().toIntDeg())
                         // and robot backward by movement distance + 1mm
                         .backward(movementDistance + MM))
-                .buildArray();
+                // 4 - after completion
+                .add(builder)
+                .build()
+                .iterator();
 
         //--------
-        // When executing the action for the first time
-        state.init(ctx[0], targetPosition);
-
-        MotionStatus[] cmd = Arrays.stream(ctx)
-                .skip(1)
-                .map(state::tick)
-                .toArray(MotionStatus[]::new);
-
-        // Then the command should be forward to target position
-        assertEquals(BACKWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(targetPosition, MM));
-        // And no next action should have been required
+        // When 0 - Init
+        MockFSMContext ctx = iter.next();
+        state.init(ctx, targetPosition);
 
         //--------
+        // When 1 - 1st tick
+        ctx = iter.next();
+        MotionStatus cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(BACKWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(targetPosition, MM));
-        // And next action should have been required
+        assertEquals(MotionStatus.backward(targetPosition), cmd);
+        // And action should not have been completed
+        assertFalse(state.completed());
+        // And action should not have been expired
+        assertFalse(state.expired(ctx));
+        // And
+        assertThat(onContactContext, empty());
+        assertThat(onCompletionContext, empty());
 
         //--------
+        // When 2 - tick at commitment
+        ctx = iter.next();
+        cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(HALT, cmd[2].status());
+        assertEquals(MotionStatus.backward(targetPosition), cmd);
+        // And action should not have been expired
+        assertTrue(state.expired(ctx));
+        // And action should not have been completed
+        assertFalse(state.completed());
+        assertThat(onContactContext, empty());
+        assertThat(onCompletionContext, empty());
+
+        //--------
+        // When 3 - tick at target
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then the command should be halt
+        assertEquals(MotionStatus.halt(), cmd);
         // And action should not have been completed
         assertTrue(state.completed());
         // And action should not have been expired
-        assertTrue(state.expired(ctx[3]));
-        // And no next action should have been required
-        // And on completion context should be the last one
-        // And on contact context should be the last one
-        // And on completion context should be the last one
-        assertThat(onCompletionContext, contains(ctx[3]));
+        assertTrue(state.expired(ctx));
         assertThat(onContactContext, empty());
+        assertThat(onCompletionContext, contains(ctx));
+
+        //--------
+        // When 4 - after completion
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then the command should be halt
+        assertEquals(MotionStatus.halt(), cmd);
+        // And action should not have been completed
+        assertTrue(state.completed());
+        // And action should not have been expired
+        assertTrue(state.expired(ctx));
+        assertThat(onContactContext, empty());
+        assertThat(onCompletionContext, hasItem(ctx));
+        assertThat(onCompletionContext, hasSize(2));
     }
 
     @ParameterizedTest

@@ -67,7 +67,7 @@ public class HaltState extends AbstractCompletableState<MotionStatus> {
     @Override
     public MotionStatus tick(EnvFSMContext context) {
         return expired(context)
-                ? complete(context, null)
+                ? complete(context, MotionStatus.halt())
                 : MotionStatus.halt();
     }
 }
