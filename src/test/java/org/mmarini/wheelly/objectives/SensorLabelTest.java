@@ -98,7 +98,7 @@ class SensorLabelTest {
                 distance, qrCode);
         RewardFunction f = SensorLabel.create(root, Locator.root());
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expectedReward, 1e-4));
     }

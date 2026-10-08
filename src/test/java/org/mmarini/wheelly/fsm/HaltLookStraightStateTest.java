@@ -37,6 +37,7 @@ import org.mmarini.wheelly.apis.WorldModelBuilder;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mmarini.wheelly.apis.Complex.DEG0;
 import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
 import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
 import static org.mmarini.wheelly.fsm.MoveActionId.HALT_ACTION;
@@ -44,7 +45,7 @@ import static org.mmarini.wheelly.fsm.MoveActionId.HALT_ACTION;
 public class HaltLookStraightStateTest {
     public static final int COMMITMENT_TIME = 1000;
     public static final int SCAN_INTERVAL = 2000;
-    public static final int[] SCAN_HEAD_DEG = {-45, 0, 45};
+    public static final Complex[] SCAN_HEAD_DEG = {Complex.fromDeg(-45), DEG0, Complex.fromDeg(45)};
     public static final double MICRO_DISTANCE = 0.5;
     public static final double MIN_OBSTACLE_DISTANCE = 0.5;
     public static final Complex TURN_SCAN_ANGLE = Complex.fromDeg(120);
@@ -69,11 +70,17 @@ public class HaltLookStraightStateTest {
     @Test
     void testHaltStraightContinue() {
         MockFSMContext[] ctx = MockFSMContext.builder()
+                // 0 - init
                 .add(worldBuilder)
+                // 1 - 1st tick
                 .add(worldBuilder)
+                // 2- before commitment
                 .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
+                // 3- at commitment
                 .add(worldBuilder.addTime(1))
-                .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
+                // 3- after commitment
+                .add(worldBuilder.addTime(1))
+                // 3- after completion
                 .add(worldBuilder.addTime(1))
                 .buildArray();
 

@@ -30,18 +30,17 @@ package org.mmarini.wheelly.fsm;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.apis.RobotCommand;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.MotionStatus;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.HALT;
 
 class HaltStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -57,34 +56,57 @@ class HaltStateTest {
         this.state = new HaltState(COMMITMENT_TIME)
                 .onCompletion(ctx -> {
                     onCompletionContexts.add(ctx);
-                    return RobotCommand.halt();
+                    return MotionStatus.halt();
                 });
     }
 
     @Test
     void testTick() {
-        MockFSMContext[] ctx = MockFSMContext.builder()
+        List<MockFSMContext> ctxs = MockFSMContext.builder()
+                // 0 - init
                 .add(builder)
+                // 1 - 1st tick
                 .add(builder)
-                .add(builder.addTime(COMMITMENT_TIME / 2))
-                .add(builder.addTime(COMMITMENT_TIME / 2 + 1))
-                .add(builder.addTime(COMMITMENT_TIME))
-                .buildArray();
+                // 2 - before commitment
+                .add(builder.addTime(COMMITMENT_TIME - 1))
+                // 3 - at commitment
+                .add(builder.addTime(1))
+                // 4 - after commitment
+                .add(builder.addTime(1))
+                .build();
 
         // When ...
-        state.init(ctx[0]);
-        // And ...
-        RobotCommands[] cmd = Arrays.stream(ctx)
-                .skip(1)
-                .map(state::tick)
-                .toArray(RobotCommands[]::new);
+        Iterator<MockFSMContext> iter = ctxs.iterator();
+        MockFSMContext ctx = iter.next();
+        state.init(ctx);
 
+        // When 1 - 1st tick
+        ctx = iter.next();
+        MotionStatus cmd = state.tick(ctx);
         // Then ...
-        assertEquals(HALT, cmd[0].status());
-        assertEquals(HALT, cmd[1].status());
-        assertEquals(HALT, cmd[2].status());
-        assertEquals(HALT, cmd[3].status());
+        assertEquals(HALT, cmd.status());
+        assertThat(onCompletionContexts, empty());
 
-        assertThat(onCompletionContexts, contains(ctx[3], ctx[4]));
+        // When 2 - before commitment
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then ...
+        assertEquals(HALT, cmd.status());
+        assertThat(onCompletionContexts, empty());
+
+        // When 3 - at commitment
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then ...
+        assertEquals(HALT, cmd.status());
+        assertThat(onCompletionContexts, contains(ctx));
+
+        // When 4 - at commitment
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then ...
+        assertEquals(HALT, cmd.status());
+        assertThat(onCompletionContexts, hasSize(2));
+        assertThat(onCompletionContexts, hasItem(ctx));
     }
 }

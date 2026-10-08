@@ -36,7 +36,7 @@ package org.mmarini.wheelly.fsm;
  * standardising temporal tracking to stabilise the robot's physical behaviour.
  * </p>
  */
-public abstract class AbstractCommitmentState implements EnvFSMCommitmentState {
+public abstract class AbstractCommitmentState<T> implements EnvFSMCommitmentState<T> {
 
     /**
      * The temporal length in milliseconds for which the state remains locked in its commitment.

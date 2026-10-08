@@ -30,7 +30,7 @@ package org.mmarini.wheelly.fsm;
 
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
-import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.MotionStatus;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +49,7 @@ import java.util.List;
  * and handle collisions during the movement lifecycle.
  * </p>
  */
-public class AsyncMovePathState extends AbstractContactEventState {
+public class AsyncMovePathState extends AbstractContactEventState<MotionStatus> {
     private static final Logger logger = LoggerFactory.getLogger(AsyncMovePathState.class);
     private final MoveState moveState;
     private volatile List<Point2D> path;
@@ -109,8 +109,8 @@ public class AsyncMovePathState extends AbstractContactEventState {
      * @param context the current finite state machine context
      * @return the reactive {@link RobotCommands} triggered by the contact event
      */
-    private RobotCommand onContact(EnvFSMContext context) {
-        return triggerContact(context);
+    private MotionStatus onContact(EnvFSMContext context) {
+        return triggerContact(context, null);
     }
 
     /**
@@ -135,10 +135,10 @@ public class AsyncMovePathState extends AbstractContactEventState {
      * @param context the current finite state machine context
      * @return the next set of execution {@link RobotCommands}
      */
-    private RobotCommand onMoveCompletion(EnvFSMContext context) {
+    private MotionStatus onMoveCompletion(EnvFSMContext context) {
         if (currentTargetIdx == path.size()) {
             // final target reached
-            return complete(context);
+            return complete(context, null);
         } else {
             // go to next point
             moveState.init(context, path.get(currentTargetIdx++));
@@ -165,22 +165,22 @@ public class AsyncMovePathState extends AbstractContactEventState {
      * @throws NullPointerException if the provided context is null
      */
     @Override
-    public RobotCommand tick(EnvFSMContext context) {
+    public MotionStatus tick(EnvFSMContext context) {
         if (contacted()) {
-            return triggerContact(context);
+            return triggerContact(context, null);
         }
         if (completed()) {
-            return complete(context);
+            return complete(context, null);
         }
         if (error != null) {
-            return complete(context);
+            return complete(context, null);
         }
         List<Point2D> path = this.path;
         if (path == null) {
             // Waiting for path
-            return RobotCommand.halt();
+            return MotionStatus.halt();
         } else if (path.isEmpty()) {
-            return complete(context);
+            return complete(context, null);
         } else if (currentTargetIdx >= 0) {
             return moveState.tick(context);
         } else {

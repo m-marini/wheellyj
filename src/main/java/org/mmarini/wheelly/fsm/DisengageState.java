@@ -28,8 +28,7 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.NotImplementedException;
-import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.MotionStatus;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
@@ -57,7 +56,7 @@ import static org.mmarini.wheelly.apis.RobotStatusId.FORWARD;
  *   <li>Upon reaching the target (within the robot's specific {@code targetRange}), the state is marked as completed and the completion callback is triggered.</li>
  * </ul>
  */
-public class DisengageState extends AbstractCompletableState {
+public class DisengageState extends AbstractCompletableState<MotionStatus> {
 
     /**
      * The minimum safety distance to maintain between the robot and the detected obstacle.
@@ -72,7 +71,7 @@ public class DisengageState extends AbstractCompletableState {
     /**
      * The last generated command to be transmitted to the robot's motors.
      */
-    private RobotCommand commands;
+    private MotionStatus command;
 
     /**
      * Creates a new instance of {@code DisengageState} with the specified commitment time
@@ -94,15 +93,11 @@ public class DisengageState extends AbstractCompletableState {
      * @param forward     {@code true} to move forward, {@code false} to move backward
      * @return the {@link RobotCommands} configured with the computed geometric target
      */
-    private RobotCommand computeCommandToSafetyTarget(RobotStatus robotStatus, boolean forward) {
+    private MotionStatus computeCommandToSafetyTarget(RobotStatus robotStatus, boolean forward) {
         double distance = safetyDistance + robotStatus.robotSpec().targetRange();
-        throw new NotImplementedException();
-        /* TODO
         return forward
-                ? RobotCommands.forward(robotStatus.direction().at(robotStatus.location(), distance))
-                : RobotCommands.backward(robotStatus.direction().opposite().at(robotStatus.location(), distance));
-
-         */
+                ? MotionStatus.forward(robotStatus.direction().at(robotStatus.location(), distance))
+                : MotionStatus.backward(robotStatus.direction().opposite().at(robotStatus.location(), distance));
     }
 
     /**
@@ -115,7 +110,7 @@ public class DisengageState extends AbstractCompletableState {
     public void init(EnvFSMContext context) {
         super.init(context);
         this.prevStatus = context.worldModel().robotStatus();
-        this.commands = RobotCommand.halt();
+        this.command = MotionStatus.halt();
     }
 
     /**
@@ -126,43 +121,43 @@ public class DisengageState extends AbstractCompletableState {
      * @return the action command to transmit to the robot for the current cycle
      */
     @Override
-    public RobotCommand tick(EnvFSMContext context) {
+    public MotionStatus tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         double targetRange = robotStatus.robotSpec().targetRange();
         if (completed()) {
-            return complete(context);
+            return complete(context, null);
         } else if (!robotStatus.canMoveForward() && !robotStatus.canMoveBackward()) {
             // Robot blocked
-            this.commands = RobotCommand.halt();
+            this.command = MotionStatus.halt();
         } else if (!robotStatus.canMoveForward()) {
             // disengaging the front contact
-            this.commands = computeCommandToSafetyTarget(robotStatus, false);
+            this.command = computeCommandToSafetyTarget(robotStatus, false);
         } else if (!robotStatus.canMoveBackward()) {
             // disengaging the rear contact
-            this.commands = computeCommandToSafetyTarget(robotStatus, true);
+            this.command = computeCommandToSafetyTarget(robotStatus, true);
         } else if (!prevStatus.canMoveForward()) {
             // disengaged front contact
-            this.commands = computeCommandToSafetyTarget(robotStatus, false);
+            this.command = computeCommandToSafetyTarget(robotStatus, false);
         } else if (!prevStatus.canMoveBackward()) {
             // disengaged rear contact
-            this.commands = computeCommandToSafetyTarget(robotStatus, true);
-        } else if (commands == null) {
+            this.command = computeCommandToSafetyTarget(robotStatus, true);
+        } else if (command == null) {
             // No previuos contacts
-            return complete(context);
-        } else if (HALT.equals(commands.motionStatus().status())) {
+            return complete(context, null);
+        } else if (HALT.equals(command.status())) {
             // Robot blocked
-            this.commands = RobotCommand.halt();
-        } else if (FORWARD.equals(commands.motionStatus().status()) || BACKWARD.equals(commands.motionStatus().status())) {
+            this.command = MotionStatus.halt();
+        } else if (FORWARD.equals(command.status()) || BACKWARD.equals(command.status())) {
             // Disengaging or moving to safe zone
             Point2D location = robotStatus.location();
-            double distance = location.distance(commands.motionStatus().target());
+            double distance = location.distance(command.target());
             if (distance <= targetRange) {
                 // disengaged at safe distance
                 // Action completed
-                return complete(context);
+                return complete(context, null);
             }
         }
         prevStatus = robotStatus;
-        return commands;
+        return command;
     }
 }

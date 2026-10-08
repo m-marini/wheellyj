@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.MotionStatus;
 import org.mmarini.wheelly.apis.RobotCommands;
 
 /**
@@ -41,7 +41,7 @@ import org.mmarini.wheelly.apis.RobotCommands;
  * inference for the subsequent execution tick.
  * </p>
  */
-public class HaltState extends AbstractCompletableState {
+public class HaltState extends AbstractCompletableState<MotionStatus> {
     /**
      * Constructs a {@code HaltState} with a specified initial timestamp to anchor
      * its minimum commitment duration.
@@ -65,9 +65,9 @@ public class HaltState extends AbstractCompletableState {
      * @return the {@link RobotCommands} commanding an immediate and complete standstill of the robot
      */
     @Override
-    public RobotCommand tick(EnvFSMContext context) {
+    public MotionStatus tick(EnvFSMContext context) {
         return expired(context)
-                ? complete(context)
-                : RobotCommand.halt();
+                ? complete(context, null)
+                : MotionStatus.halt();
     }
 }

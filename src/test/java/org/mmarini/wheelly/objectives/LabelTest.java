@@ -112,7 +112,7 @@ class LabelTest {
                 leftPps, rightPps,
                 obstacleDir, distance);
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

@@ -67,7 +67,7 @@ class AvoidTest {
         RewardFunction f = AvoidContact.create(root, Locator.root());
         BasicEnvState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }
@@ -89,7 +89,7 @@ class AvoidTest {
         RewardFunction f = AvoidContact.create(root, Locator.root());
         BasicEnvState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

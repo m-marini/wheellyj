@@ -90,7 +90,7 @@ class MoveToLabelTest {
         Point2D robotLocation1 = Complex.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
         BasicEnvState s1 = createState(robotLocation1, robotDeg, marker);
 
-        double reward = MoveToLabel.moveToLabel(matchReward).applyAsDouble(s0, RobotCommands.halt(), s1);
+        double reward = MoveToLabel.moveToLabel(matchReward).reward(s0, RobotCommands.halt(), s1);
 
         assertEquals(matchReward, reward);
     }
@@ -105,7 +105,7 @@ class MoveToLabelTest {
         Point2D robotLocation1 = Complex.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
         BasicEnvState s1 = createState(robotLocation1, robotDeg, marker);
 
-        double reward = MoveToLabel.moveToLabel(1).applyAsDouble(s0, RobotCommands.halt(), s1);
+        double reward = MoveToLabel.moveToLabel(1).reward(s0, RobotCommands.halt(), s1);
 
         assertEquals(0, reward);
     }

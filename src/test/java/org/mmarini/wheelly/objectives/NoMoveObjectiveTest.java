@@ -75,7 +75,7 @@ class NoMoveObjectiveTest {
         RewardFunction f = NoMove.create(root, Locator.root());
         BasicEnvState state = createState(sensorDir, leftPps, rightPps);
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }
@@ -104,7 +104,7 @@ class NoMoveObjectiveTest {
         RewardFunction f = NoMove.create(root, Locator.root());
         BasicEnvState state = createState(sensorDir, leftPps, rightPps);
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }
@@ -136,7 +136,7 @@ class NoMoveObjectiveTest {
         RewardFunction f = NoMove.create(root, Locator.root());
         BasicEnvState state = createState(sensorDir, leftPps, rightPps);
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

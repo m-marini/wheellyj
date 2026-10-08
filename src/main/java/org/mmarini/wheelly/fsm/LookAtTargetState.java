@@ -28,9 +28,8 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.HeadStatus;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
@@ -46,7 +45,7 @@ import static java.util.Objects.requireNonNull;
  * resetting the gaze forward if the required angle falls outside a specific tolerance range.
  * </p>
  */
-public class LookAtTargetState extends AbstractCommitmentState implements EnvFSMCompletableState {
+public class LookAtTargetState extends AbstractCommitmentState<HeadStatus> implements EnvFSMCompletableState<HeadStatus> {
 
     /**
      * The minimum distance from the target (in metres) required to actively track its direction.
@@ -130,12 +129,12 @@ public class LookAtTargetState extends AbstractCommitmentState implements EnvFSM
      * @throws NullPointerException if the internal target or provided context is null
      */
     @Override
-    public RobotCommand tick(EnvFSMContext context) {
+    public HeadStatus tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         Point2D headLocation = robotStatus.headLocation();
         if (headLocation.distance(target) <= minTargetDistance) {
             // Target too near
-            return RobotCommand.halt();
+            return HeadStatus.lookStraight();
         }
         Complex robotDir = robotStatus.direction();
         Complex headTargetDir = Complex.direction(headLocation, target).sub(robotDir);
@@ -145,12 +144,8 @@ public class LookAtTargetState extends AbstractCommitmentState implements EnvFSM
         }
         if (!headTargetDir.isClose0(robotStatus.robotSpec().headFOV().toRad() / 2)) {
             // target not in head fov
-            return RobotCommand.halt();
+            return HeadStatus.lookStraight();
         }
-        throw new NotImplementedException();
-            /* TODO
-return RobotCommands.halt(headTargetDir.toIntDeg());
-
-             */
+        return HeadStatus.scan(headTargetDir);
     }
 }

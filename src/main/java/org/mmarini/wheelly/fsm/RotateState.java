@@ -28,9 +28,8 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.MotionStatus;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
@@ -42,12 +41,12 @@ import org.mmarini.wheelly.apis.RobotStatus;
  * optimises transitions upon completion or when an obstacle contact occurs.
  * </p>
  */
-public class RotateState extends AbstractContactEventState {
+public class RotateState extends AbstractContactEventState<MotionStatus> {
 
     /**
-     * The target orientation in degrees.
+     * The target orientation
      */
-    private int targetDeg;
+    private Complex targetDeg;
 
     /**
      * Initialises a new instance of {@code RotateState} with a specified commitment duration.
@@ -73,12 +72,12 @@ public class RotateState extends AbstractContactEventState {
     /**
      * Initialises the state context and sets the target angle for the rotation.
      *
-     * @param context   the environment finite state machine context
-     * @param targetDeg the target direction angle in degrees
+     * @param context         the environment finite state machine context
+     * @param targetDirection the target direction angle
      */
-    public void init(EnvFSMContext context, int targetDeg) {
+    public void init(EnvFSMContext context, Complex targetDirection) {
         super.init(context);
-        this.targetDeg = targetDeg;
+        this.targetDeg = targetDirection;
     }
 
     /**
@@ -92,23 +91,19 @@ public class RotateState extends AbstractContactEventState {
      * @return the computed {@link RobotCommands} to guide the robot's behaviour
      */
     @Override
-    public RobotCommand tick(EnvFSMContext context) {
+    public MotionStatus tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward() || contacted()) {
-            return triggerContact(context);
+            return triggerContact(context, null);
         }
         if (completed()) {
-            return complete(context);
+            return complete(context, null);
         }
 
         Complex directionRange = robotStatus.robotSpec().directionRange();
         if (robotStatus.direction().isCloseTo(targetDeg, directionRange.toIntDeg())) {
-            return complete(context);
+            return complete(context, null);
         }
-        throw new NotImplementedException();
-            /* TODO
-        return RobotCommands.rotate(targetDeg);
-
-             */
+        return MotionStatus.rotate(targetDeg);
     }
 }

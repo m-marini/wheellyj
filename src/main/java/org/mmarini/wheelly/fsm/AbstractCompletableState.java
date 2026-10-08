@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.fsm;
 
 
-import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 
 import java.util.function.Function;
@@ -44,7 +43,7 @@ import java.util.function.Function;
  * upon transition finalisation.
  * </p>
  */
-public abstract class AbstractCompletableState extends AbstractCommitmentState implements EnvFSMCompletableState {
+public abstract class AbstractCompletableState<T> extends AbstractCommitmentState<T> implements EnvFSMCompletableState<T> {
 
     /**
      * Flags whether the distinct tactical goal of this state has been achieved.
@@ -54,7 +53,7 @@ public abstract class AbstractCompletableState extends AbstractCommitmentState i
     /**
      * The callback function evaluated to supply final robot commands when the state completes.
      */
-    private Function<EnvFSMContext, RobotCommand> onCompletion;
+    private Function<EnvFSMContext, T> onCompletion;
 
     /**
      * Constructs an {@code AbstractCompletableState} with a specific commitment duration window.
@@ -68,19 +67,16 @@ public abstract class AbstractCompletableState extends AbstractCommitmentState i
     /**
      * Transition helper that marks this state as completed and evaluates the registered
      * completion callback function.
-     * <p>
-     * If no explicit completion function is supplied, this method defaults to issuing a
-     * {@link RobotCommands#halt()} command to safely stop the hardware.
-     * </p>
      *
      * @param context the {@link EnvFSMContext} tracking the shared operational data
      * @return the {@link RobotCommands} triggered by the completion event
+     * @throw IllegalStateException If no explicit completion function is supplied
      */
-    protected RobotCommand complete(EnvFSMContext context) {
+    protected T complete(EnvFSMContext context, T defaultValue) {
         completed = true;
-        return onCompletion != null
-                ? onCompletion.apply(context)
-                : RobotCommand.halt();
+        return onCompletion == null
+                ? defaultValue
+                : onCompletion.apply(context);
     }
 
     /**
@@ -113,13 +109,13 @@ public abstract class AbstractCompletableState extends AbstractCommitmentState i
      * to optimise high-level decision routing.
      * </p>
      *
-     * @param <T>      the specific concrete type extending {@code AbstractCompletableState}
+     * @param <R>      the specific concrete type extending {@code AbstractCompletableState}
      * @param callback the functional mapper producing {@link RobotCommands} from the final context
      * @return this state instance cast to its concrete type for method chaining
      */
     @SuppressWarnings("unchecked")
-    public <T extends AbstractCompletableState> T onCompletion(Function<EnvFSMContext, RobotCommand> callback) {
+    public <R extends AbstractCompletableState<T>> R onCompletion(Function<EnvFSMContext, T> callback) {
         this.onCompletion = callback;
-        return (T) this;
+        return (R) this;
     }
 }

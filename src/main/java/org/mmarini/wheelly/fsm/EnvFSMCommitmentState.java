@@ -36,7 +36,7 @@ package org.mmarini.wheelly.fsm;
  * continuous execution over a minimum period, preventing rapid oscillations or early decision switching.
  * </p>
  */
-public interface EnvFSMCommitmentState extends EnvFSMState {
+public interface EnvFSMCommitmentState<T> extends EnvFSMState<T> {
 
     /**
      * Checks whether the current action commitment duration for this state has expired.

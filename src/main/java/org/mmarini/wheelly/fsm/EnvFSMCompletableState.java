@@ -38,7 +38,7 @@ package org.mmarini.wheelly.fsm;
  * entering its angular target deadband).
  * </p>
  */
-public interface EnvFSMCompletableState extends EnvFSMCommitmentState {
+public interface EnvFSMCompletableState<T> extends EnvFSMCommitmentState<T> {
 
     /**
      * Checks whether the macro-action or tactical goal associated with this state

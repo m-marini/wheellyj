@@ -280,7 +280,7 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
 
     @Override
     public double reward(EnvState state0, EnvAction actions, EnvState state1) {
-        return rewardFunc != null ? rewardFunc.applyAsDouble(state0, actions, state1) : 0;
+        return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
     /**

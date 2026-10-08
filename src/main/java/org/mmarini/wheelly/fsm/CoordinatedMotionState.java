@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.fsm;
 
 import io.reactivex.rxjava3.core.Single;
-import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +54,7 @@ import static org.mmarini.wheelly.fsm.MoveActionId.*;
  * durations and processes safety interruptions like obstacle contact.
  * </p>
  */
-public class CoordinatedMotionState implements EnvFSMState {
+public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
 
     private static final Logger logger = LoggerFactory.getLogger(CoordinatedMotionState.class);
 
@@ -76,11 +75,11 @@ public class CoordinatedMotionState implements EnvFSMState {
     private final RotateState rotateState;
     private final DisengageState disengageState;
     private final AsyncMovePathState movePathState;
-    private final LookStraightState lookStraightState;
+    private final ScanState lookStraightState;
     private final HeadScanState headScanState;
     private final LookAtTargetState lookAtTarget;
-    private EnvFSMCompletableState baseState;
-    private EnvFSMCompletableState headState;
+    private EnvFSMCompletableState<MotionStatus> baseState;
+    private EnvFSMCompletableState<HeadStatus> headState;
     private HeadActionId headAction;
     private MoveActionId moveAction;
 
@@ -95,7 +94,7 @@ public class CoordinatedMotionState implements EnvFSMState {
         this.haltState0 = new HaltState(0);
         this.moveState = new MoveState(config.commitmentDuration());
         this.rotateState = new RotateState(config.commitmentDuration());
-        this.lookStraightState = new LookStraightState(config.commitmentDuration());
+        this.lookStraightState = new ScanState(config.commitmentDuration());
         this.headScanState = new HeadScanState(config.commitmentDuration(), config.scanInterval(), config.scanAngleIntervalDeg());
         this.lookAtTarget = new LookAtTargetState(config.commitmentDuration(), config.minHeadTargetDistance());
         this.disengageState = new DisengageState(config.commitmentDuration(), config.safeDistance());
@@ -220,7 +219,7 @@ public class CoordinatedMotionState implements EnvFSMState {
      * @param context the operational context
      * @return the resulting robot motor commands issued by the brake state
      */
-    private RobotCommand forceHalt(EnvFSMContext context) {
+    private MotionStatus forceHalt(EnvFSMContext context) {
         logger.atDebug().log("Force Halt");
         haltState0.init(context);
         baseState = haltState0;
@@ -419,7 +418,7 @@ public class CoordinatedMotionState implements EnvFSMState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         rotateState.init(context,
                 robotStatus.direction()
-                        .sub(config.microAngle()).toIntDeg());
+                        .sub(config.microAngle()));
         baseState = rotateState;
         moveAction = MICRO_LEFT_ACTION;
     }
@@ -434,7 +433,7 @@ public class CoordinatedMotionState implements EnvFSMState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         rotateState.init(context,
                 robotStatus.direction()
-                        .add(config.microAngle()).toIntDeg());
+                        .add(config.microAngle()));
         baseState = rotateState;
         moveAction = MICRO_RIGHT_ACTION;
     }
@@ -478,7 +477,7 @@ public class CoordinatedMotionState implements EnvFSMState {
         } else {
             logger.atDebug().log("Start TurnFaceNearestMarkert {}", target);
             Point2D robotLocation = context.worldModel().robotStatus().location();
-            rotateState.init(context, Complex.direction(robotLocation, target).toIntDeg());
+            rotateState.init(context, Complex.direction(robotLocation, target));
             baseState = rotateState;
             moveAction = TURN_FACE_NEAREST_MARKER_ACTION;
         }
@@ -498,7 +497,7 @@ public class CoordinatedMotionState implements EnvFSMState {
         } else {
             logger.atDebug().log("Start TurnFaceNearestObstacle {}", target);
             Point2D robotLocation = context.worldModel().robotStatus().location();
-            rotateState.init(context, Complex.direction(robotLocation, target).toIntDeg());
+            rotateState.init(context, Complex.direction(robotLocation, target));
             baseState = rotateState;
             moveAction = TURN_FACE_NEAREST_OBSTACLE_ACTION;
         }
@@ -514,8 +513,7 @@ public class CoordinatedMotionState implements EnvFSMState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         rotateState.init(context,
                 robotStatus.direction()
-                        .sub(config.turnScanAngle())
-                        .toIntDeg());
+                        .sub(config.turnScanAngle()));
         baseState = rotateState;
         moveAction = TURN_LEFT_SCAN_ACTION;
     }
@@ -534,7 +532,7 @@ public class CoordinatedMotionState implements EnvFSMState {
         } else {
             logger.atDebug().log("Start TurnRearNearestMarker {}", target);
             Point2D robotLocation = context.worldModel().robotStatus().location();
-            rotateState.init(context, Complex.direction(robotLocation, target).opposite().toIntDeg());
+            rotateState.init(context, Complex.direction(robotLocation, target).opposite());
             baseState = rotateState;
             moveAction = TURN_REAR_NEAREST_MARKER_ACTION;
         }
@@ -555,7 +553,7 @@ public class CoordinatedMotionState implements EnvFSMState {
         } else {
             logger.atDebug().log("Start TurnRearNearestObstacle {}", target);
             Point2D robotLocation = context.worldModel().robotStatus().location();
-            rotateState.init(context, Complex.direction(robotLocation, target).opposite().toIntDeg());
+            rotateState.init(context, Complex.direction(robotLocation, target).opposite());
             baseState = rotateState;
             moveAction = TURN_REAR_NEAREST_OBSTACLE_ACTION;
         }
@@ -571,7 +569,7 @@ public class CoordinatedMotionState implements EnvFSMState {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         rotateState.init(context,
                 robotStatus.direction()
-                        .add(config.turnScanAngle()).toIntDeg());
+                        .add(config.turnScanAngle()));
         baseState = rotateState;
         moveAction = TURN_RIGHT_SCAN_ACTION;
     }
@@ -618,12 +616,8 @@ public class CoordinatedMotionState implements EnvFSMState {
             AgentAction actionId = context.nextAction();
             changeActions(context, actionId);
         }
-        RobotCommand baseCmd = baseState.tick(context);
-        RobotCommand headCmd = headState.tick(context);
-        throw new NotImplementedException();
-        /* TODO
-        return RobotCommands.merge(baseCmd, headCmd);
-
-         */
+        MotionStatus baseCmd = baseState.tick(context);
+        HeadStatus headCmd = headState.tick(context);
+        return new RobotCommand(baseCmd, headCmd);
     }
 }

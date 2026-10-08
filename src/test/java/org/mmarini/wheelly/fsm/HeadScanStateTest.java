@@ -30,24 +30,27 @@ package org.mmarini.wheelly.fsm;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.HeadStatus;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mmarini.Matchers.angleCloseTo;
+import static org.mmarini.wheelly.apis.HeadStatus.HeadStatusId.FIX_DIRECTION;
 import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.*;
 
 class HeadScanStateTest {
 
-    public static final int[] SCAN_DEG_10 = {
-            -60, -50, -40, -30, -20, -10,
-            0, 10, 20, 30, 40, 50, 60
-    };
+    public static final Complex[] SCAN_DEG_10 = IntStream.range(0, 13)
+            .mapToObj(i -> Complex.fromDeg(i * 10 - 60))
+            .toArray(Complex[]::new);
     public static final int ANGLE_INTERVAL_DEG = 45;
     WorldModelBuilder builder;
     HeadScanState state;
@@ -60,20 +63,20 @@ class HeadScanStateTest {
         this.state = new HeadScanState(COMMITMENT_TIME, SCAN_INTERVAL, ANGLE_INTERVAL_DEG)
                 .onCompletion(ctx -> {
                     onCompletionContexts.add(ctx);
-                    return RobotCommand.halt();
+                    return HeadStatus.lookStraight();
                 });
     }
 
     @Test
     void testComputeHeadDeg() {
-        int[] heads = HeadScanState.computeHeadDeg(132, 10);
+        Complex[] heads = HeadScanState.computeHeadDeg(132, 10);
         assertArrayEquals(SCAN_DEG_10, heads);
     }
 
     @Test
     void testScan() {
         // Given ...
-        List<MockFSMContext> ctxs = MockFSMContext.builder()
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
                 // 0 - init
                 .add(builder)
                 // 1 - 1st
@@ -81,32 +84,32 @@ class HeadScanStateTest {
                 // 2 - at commit time
                 .add(builder.addTime(COMMITMENT_TIME))
                 // 3 - at valid lidar signal
-                .add(builder.headAngle(SCAN_HEAD_DEG[0])
+                .add(builder.headAngle(SCAN_HEAD_DEG[0].toIntDeg())
                         .addTime(1)
                         .updateLidarTime())
                 // 4 - scan interval without lidar message
                 .add(builder.addTime(SCAN_INTERVAL))
-                // 5 - head ok and no lidar signal
-                .add(builder.headAngle(SCAN_HEAD_DEG[2])
+                // 5 - head OK and no lidar signal
+                .add(builder.headAngle(SCAN_HEAD_DEG[2].toIntDeg())
                         .addTime(1))
-                // 6 - head ok and lidar signal
+                // 6 - head OK and lidar signal
                 .add(builder.addTime(SCAN_INTERVAL)
                         .updateLidarTime())
                 // 7 - after completion
                 .add()
-                .build();
+                .build()
+                .iterator();
 
         // When init
-        Iterator<MockFSMContext> iter = ctxs.iterator();
         MockFSMContext ctx = iter.next();
         state.init(ctx);
 
         //--------
         // When 1st tick
         ctx = iter.next();
-        RobotCommand cmd = state.tick(ctx);
+        HeadStatus cmd = state.tick(ctx);
         // Then command should scan at 1st direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd.headStatus().direction());
+        assertEquals(SCAN_HEAD_DEG[0], cmd.direction());
         // And no committed
         assertFalse(state.expired(ctx));
         // And no completed
@@ -119,7 +122,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 1st direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd.headStatus().direction());
+        assertEquals(SCAN_HEAD_DEG[0], cmd.direction());
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -132,7 +135,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 2nd direction
-        assertEquals(SCAN_HEAD_DEG[1], cmd.headStatus().direction());
+        assertEquals(SCAN_HEAD_DEG[1], cmd.direction());
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -144,7 +147,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(SCAN_HEAD_DEG[2], cmd.headStatus().direction());
+        assertEquals(SCAN_HEAD_DEG[2], cmd.direction());
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -157,7 +160,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(SCAN_HEAD_DEG[2], cmd.headStatus().direction());
+        assertEquals(SCAN_HEAD_DEG[2], cmd.direction());
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -170,7 +173,8 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(0, cmd.headStatus().direction());
+        assertEquals(FIX_DIRECTION, cmd.status());
+        assertThat(cmd.direction(), angleCloseTo(0));
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -183,7 +187,8 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(0, cmd.headStatus().direction());
+        assertEquals(FIX_DIRECTION, cmd.status());
+        assertThat(cmd.direction(), angleCloseTo(0));
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed

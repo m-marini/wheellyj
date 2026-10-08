@@ -34,7 +34,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.MotionStatus;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
@@ -48,8 +48,9 @@ import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
-import static org.mmarini.wheelly.apis.RobotStatusId.ROTATE;
+import static org.mmarini.Matchers.angleCloseTo;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.HALT;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.ROTATE;
 
 class RotateStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -78,11 +79,11 @@ class RotateStateTest {
         this.state = new RotateState(COMMITMENT_TIME)
                 .onContact(ctx1 -> {
                     onContactContexts.add(ctx1);
-                    return RobotCommand.halt();
+                    return MotionStatus.halt();
                 })
                 .onCompletion(ctx1 -> {
                     onCompletionContexts.add(ctx1);
-                    return RobotCommand.halt();
+                    return MotionStatus.halt();
                 });
     }
 
@@ -114,23 +115,23 @@ class RotateStateTest {
         // When init
         Iterator<MockFSMContext> iter = asList(ctxs).iterator();
         MockFSMContext ctx = iter.next();
-        state.init(ctx, targetDir.toIntDeg());
+        state.init(ctx, targetDir);
 
         //--------
         // When first tick
         ctx = iter.next();
-        RobotCommand cmd = state.tick(ctx);
+        MotionStatus cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd.motionStatus().status());
-        assertEquals(targetDir.toIntDeg(), cmd.motionStatus().targetDir());
+        assertEquals(ROTATE, cmd.status());
+        assertThat(cmd.targetDir(), angleCloseTo(targetDir));
 
         //--------
         // When tick after commitment
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd.motionStatus().status());
-        assertEquals(targetDir.toIntDeg(), cmd.motionStatus().targetDir());
+        assertEquals(ROTATE, cmd.status());
+        assertThat(cmd.targetDir(), angleCloseTo(targetDir));
 
         //--------
         // When tick robot dir toward targetDir
@@ -139,14 +140,14 @@ class RotateStateTest {
         assertThat(onCompletionContexts, contains(ctx));
         assertThat(onContactContexts, empty());
         // Then the command should be halt
-        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(HALT, cmd.status());
 
         //--------
         // When tick after completion
         ctx = iter.next();
         cmd = state.tick(ctx);
         // And next action should have been required
-        assertEquals(HALT, cmd.motionStatus().status());
+        assertEquals(HALT, cmd.status());
         assertThat(onCompletionContexts, hasItem(ctx));
         assertThat(onContactContexts, empty());
     }
@@ -178,27 +179,27 @@ class RotateStateTest {
 
         //--------
         // When init
-        state.init(ctx[0], targetDir.toIntDeg());
+        state.init(ctx[0], targetDir);
         // When ticks
-        RobotCommand[] cmd = Arrays.stream(ctx)
+        MotionStatus[] cmd = Arrays.stream(ctx)
                 .skip(1)
                 .map(state::tick)
-                .toArray(RobotCommand[]::new);
+                .toArray(MotionStatus[]::new);
 
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd[0].motionStatus().status());
-        assertEquals(targetDir.toIntDeg(), cmd[0].motionStatus().targetDir());
+        assertEquals(ROTATE, cmd[0].status());
+        assertThat(cmd[0].targetDir(), angleCloseTo(targetDir));
         // And no next action should have been required
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd[1].motionStatus().status());
-        assertEquals(targetDir.toIntDeg(), cmd[1].motionStatus().targetDir());
+        assertEquals(ROTATE, cmd[1].status());
+        assertThat(cmd[1].targetDir(), angleCloseTo(targetDir));
         // And next action should have been required
 
         //--------
         // Then the command should be halt
-        assertEquals(HALT, cmd[2].motionStatus().status());
+        assertEquals(HALT, cmd[2].status());
         // And next action should have been required
         assertThat(onContactContexts, contains(ctx[3]));
         assertThat(onCompletionContexts, empty());
@@ -229,25 +230,25 @@ class RotateStateTest {
 
         //--------
         // When init
-        state.init(ctx[0], targetDir.toIntDeg());
+        state.init(ctx[0], targetDir);
         // When ticks
-        RobotCommand[] cmd = Arrays.stream(ctx)
+        MotionStatus[] cmd = Arrays.stream(ctx)
                 .skip(1)
                 .map(state::tick)
-                .toArray(RobotCommand[]::new);
+                .toArray(MotionStatus[]::new);
 
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd[0].motionStatus().status());
-        assertEquals(targetDir.toIntDeg(), cmd[0].motionStatus().targetDir());
+        assertEquals(ROTATE, cmd[0].status());
+        assertThat(cmd[0].targetDir(), angleCloseTo(targetDir));
 
         //--------
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd[1].motionStatus().status());
-        assertEquals(targetDir.toIntDeg(), cmd[1].motionStatus().targetDir());
+        assertEquals(ROTATE, cmd[1].status());
+        assertThat(cmd[1].targetDir(), angleCloseTo(targetDir));
 
         //--------
         // Then the command should be halt
-        assertEquals(HALT, cmd[2].motionStatus().status());
+        assertEquals(HALT, cmd[2].status());
 
         assertThat(onContactContexts, contains(ctx[3]));
         assertThat(onCompletionContexts, empty());

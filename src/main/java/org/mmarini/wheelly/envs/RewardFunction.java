@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.ToDoubleFunction3;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -42,7 +41,7 @@ import static java.lang.String.format;
 /**
  * Computes the reward base on initial state, action signals and resulting state
  */
-public interface RewardFunction extends ToDoubleFunction3<EnvState, EnvAction, EnvState> {
+public interface RewardFunction {
 
     /**
      * Returns the composed objective from the objective list
@@ -53,7 +52,7 @@ public interface RewardFunction extends ToDoubleFunction3<EnvState, EnvAction, E
         return (state0, action, state1) -> {
             double value = 0;
             for (RewardFunction objective : objectives) {
-                value = objective.applyAsDouble(state0, action, state1);
+                value = objective.reward(state0, action, state1);
                 if (value != 0) {
                     break;
                 }
@@ -80,4 +79,6 @@ public interface RewardFunction extends ToDoubleFunction3<EnvState, EnvAction, E
                 .toList();
         return composeObjective(objectives);
     }
+
+    double reward(EnvState state, EnvAction action, EnvState state1);
 }

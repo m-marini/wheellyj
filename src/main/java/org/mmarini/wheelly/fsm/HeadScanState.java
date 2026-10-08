@@ -28,8 +28,8 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.NotImplementedException;
-import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.HeadStatus;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
@@ -43,7 +43,7 @@ import org.mmarini.wheelly.apis.RobotStatus;
  * the next macro-action from the inference framework to coordinate subsequent behaviour.
  * </p>
  */
-public class HeadScanState extends AbstractCompletableState {
+public class HeadScanState extends AbstractCompletableState<HeadStatus> {
 
     /**
      * Computes the array of target head angles based on the field of view (FOV)
@@ -53,12 +53,12 @@ public class HeadScanState extends AbstractCompletableState {
      * @param scanInterval the angular interval between steps
      * @return an array of calculated target degrees
      */
-    static int[] computeHeadDeg(int fov, int scanInterval) {
+    static Complex[] computeHeadDeg(int fov, int scanInterval) {
         int n = (fov / scanInterval / 2) * 2 + 1;
-        int[] result = new int[n];
+        Complex[] result = new Complex[n];
         int angle = -scanInterval * (n - 1) / 2;
         for (int i = 0; i < result.length; i++) {
-            result[i] = angle;
+            result[i] = Complex.fromDeg(angle);
             angle += scanInterval;
         }
         return result;
@@ -79,7 +79,7 @@ public class HeadScanState extends AbstractCompletableState {
     /**
      * The array of target angles in degrees through which the head will rotate.
      */
-    private int[] headDeg;
+    private Complex[] headDeg;
     /**
      * The robot timestamp recorded at the beginning of the current step interval.
      */
@@ -148,16 +148,16 @@ public class HeadScanState extends AbstractCompletableState {
      * @return the {@link RobotCommands} to be processed by the robot hardware during this cycle
      */
     @Override
-    public RobotCommand tick(EnvFSMContext context) {
+    public HeadStatus tick(EnvFSMContext context) {
         if (completed()) {
-            return complete(context);
+            return complete(context, null);
         }
         RobotStatus robotStatus = context.worldModel().robotStatus();
-        int sensorDir = robotStatus.headDirection().toIntDeg();
+        Complex sensorDir = robotStatus.headDirection();
         long lidarTime = robotStatus.lidarMessage().time();
         long time = context.worldModel().robotStatus().robotTime();
         // Check if head is directed to targetDirection and the lidar message has arrived
-        if (sensorDir == headDeg[currentStepIndex] && lidarTime > prevLidarTime) {
+        if (sensorDir.isCloseTo(headDeg[currentStepIndex]) && lidarTime > prevLidarTime) {
             // head directed to target direction and lidar has arrived -> acquire valid measure
             prevLidarTime = lidarTime;
             numberOfSamples++;
@@ -167,17 +167,13 @@ public class HeadScanState extends AbstractCompletableState {
             // reach required number of samples or time to measure
             if (currentStepIndex >= headDeg.length - 1) {
                 // Scan completed
-                return complete(context);
+                return complete(context, null);
             }
             // Next scan
             currentStepIndex++;
             numberOfSamples = 0;
             startStepTime = time;
         }
-        throw new NotImplementedException();
-            /* TODO
-return RobotCommands.halt(headDeg[currentStepIndex]);
-
-             */
+        return HeadStatus.scan(headDeg[currentStepIndex]);
     }
 }

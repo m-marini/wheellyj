@@ -28,9 +28,8 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.MotionStatus;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
@@ -47,7 +46,7 @@ import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
  * optimises the transition upon reaching the target or triggering a callback.
  * </p>
  */
-public class MoveState extends AbstractContactEventState {
+public class MoveState extends AbstractContactEventState<MotionStatus> {
 
     /**
      * The target co-ordinates towards which the robot is travelling.
@@ -100,28 +99,24 @@ public class MoveState extends AbstractContactEventState {
      * @throws NullPointerException if the internal {@code targetPosition} has not been properly initialised
      */
     @Override
-    public RobotCommand tick(EnvFSMContext context) {
+    public MotionStatus tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward() || contacted()) {
-            return triggerContact(context);
+            return triggerContact(context, null);
         }
         if (completed()) {
-            return complete(context);
+            return complete(context, null);
         }
         double targetRange = robotStatus.robotSpec().targetRange() + DISTANCE_PER_PULSE;
         Point2D robotLocation = robotStatus.location();
         if (robotLocation.distance(targetPosition) <= targetRange && robotStatus.halt()) {
-            return complete(context);
+            return complete(context, null);
         }
         // Compute movement
         Complex egocentricTargetDir = Complex.direction(robotLocation, targetPosition).sub(robotStatus.direction());
-        throw new NotImplementedException();
-            /* TODO
 
         return egocentricTargetDir.isClose0(90)
-                ? RobotCommands.forward(0, targetPosition)
-               ty : RobotCommands.backward(0, targetPosition);
-
-             */
+                ? MotionStatus.forward(targetPosition)
+                : MotionStatus.backward(targetPosition);
     }
 }

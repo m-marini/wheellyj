@@ -35,15 +35,17 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.HeadStatus;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
+import java.util.Iterator;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.angleCloseTo;
+import static org.mmarini.wheelly.apis.HeadStatus.HeadStatusId.FRONT_TRACK;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.Utils.MM;
 
@@ -122,7 +124,7 @@ class LookAtTargetStateTest {
         Complex targetHead1 = Complex.direction(headLoc1, target);
         Complex headDir1 = targetHead1.sub(robotHead1);
 
-        MockFSMContext[] ctxs = MockFSMContext.builder()
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
                 .add(builder)
                 .add(builder)
                 .add(builder.addTime(COMMITMENT_TIME))
@@ -135,50 +137,51 @@ class LookAtTargetStateTest {
                 // rotate out of head fov
                 .add(builder.addTime(COMMITMENT_TIME)
                         .robotDir(targetHead0.add(Complex.DEG90).toIntDeg()))
-                .buildArray();
+                .build()
+                .iterator();
 
         // When initialise
-        int idx = 0;
-        MockFSMContext ctx = ctxs[idx++];
+        MockFSMContext ctx = iter.next();
         state.init(ctx, target, true);
 
         // When executing the action for the first time
-        ctx = ctxs[idx++];
-        RobotCommand cmd = state.tick(ctx);
+        ctx = iter.next();
+        HeadStatus cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(targetDeg, cmd.headStatus().direction());
+        assertThat(cmd.direction(), angleCloseTo(targetDeg));
         // And not expired
         assertFalse(state.expired(ctx));
 
         // When executing after commitment
-        ctx = ctxs[idx++];
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(targetDeg, cmd.headStatus().direction());
+        assertThat(cmd.direction(), angleCloseTo(targetDeg));
         // And expired
         assertTrue(state.expired(ctx));
 
         // When rotate to 45 deg from target
-        ctx = ctxs[idx++];
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(headDir1.toIntDeg(), cmd.headStatus().direction());
+        assertThat(cmd.direction(), angleCloseTo(headDir1));
         // And expired
         assertTrue(state.expired(ctx));
 
         // When executing rotation to target
-        ctx = ctxs[idx++];
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertThat(cmd.headStatus().direction(), angleCloseTo(0, 3));
+        assertThat(cmd.direction(), angleCloseTo(0, 3));
         // And expired
         assertTrue(state.expired(ctx));
 
         // When rotate out of head fov
-        ctx = ctxs[idx++];
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.headStatus().direction());
+        assertEquals(FRONT_TRACK, cmd.status());
+        assertEquals(0, cmd.direction());
         // And expired
         assertTrue(state.expired(ctx));
     }
@@ -197,30 +200,32 @@ class LookAtTargetStateTest {
         Complex targetHead0 = robotHead0.add(Complex.fromDeg(targetDeg));
         Point2D target = targetHead0.at(headLoc0, targetDistance);
 
-        MockFSMContext[] ctxs = MockFSMContext.builder()
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
                 .add(builder)
                 .add(builder)
                 .add(builder.addTime(COMMITMENT_TIME))
-                .buildArray();
+                .build()
+                .iterator();
 
         // When initialise
-        int idx = 0;
-        MockFSMContext ctx = ctxs[idx++];
+        MockFSMContext ctx = iter.next();
         state.init(ctx, target, true);
 
         // When executing the action for the first time
-        ctx = ctxs[idx++];
-        RobotCommand cmd = state.tick(ctx);
+        ctx = iter.next();
+        HeadStatus cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.headStatus().direction());
+        assertEquals(FRONT_TRACK, cmd.status());
+        assertEquals(0, cmd.direction());
         // And not expired
         assertFalse(state.expired(ctx));
 
         // When executing after commitment
-        ctx = ctxs[idx++];
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.headStatus().direction());
+        assertEquals(FRONT_TRACK, cmd.status());
+        assertEquals(0, cmd.direction());
         // And expired
         assertTrue(state.expired(ctx));
 
@@ -259,7 +264,7 @@ class LookAtTargetStateTest {
         // And the head rotation relative the robot
         Complex headDir1 = targetHead1.sub(robotHead1).opposite();
 
-        MockFSMContext[] ctxs = MockFSMContext.builder()
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
                 .add(builder)
                 .add(builder)
                 .add(builder.addTime(COMMITMENT_TIME))
@@ -272,50 +277,50 @@ class LookAtTargetStateTest {
                 // rotate out of head fov
                 .add(builder.addTime(COMMITMENT_TIME)
                         .robotDir(targetHead0.opposite().add(Complex.DEG90).toIntDeg()))
-                .buildArray();
+                .build()
+                .iterator();
 
         // When initialise
-        int idx = 0;
-        MockFSMContext ctx = ctxs[idx++];
+        MockFSMContext ctx = iter.next();
         state.init(ctx, target, false);
 
         // When executing the action for the first time
-        ctx = ctxs[idx++];
-        RobotCommand cmd = state.tick(ctx);
+        ctx = iter.next();
+        HeadStatus cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(headDir.opposite().toIntDeg(), cmd.headStatus().direction());
+        assertEquals(headDir.opposite().toIntDeg(), cmd.direction());
         // And not expired
         assertFalse(state.expired(ctx));
 
         // When executing after commitment
-        ctx = ctxs[idx++];
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(headDir.opposite().toIntDeg(), cmd.headStatus().direction());
+        assertEquals(headDir.opposite().toIntDeg(), cmd.direction());
         // And expired
         assertTrue(state.expired(ctx));
 
         // When rotate to 45 deg from target
-        ctx = ctxs[idx++];
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(headDir1.toIntDeg(), cmd.headStatus().direction());
+        assertEquals(headDir1.toIntDeg(), cmd.direction());
         // And expired
         assertTrue(state.expired(ctx));
 
         // When executing rotation to target
-        ctx = ctxs[idx++];
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertThat(cmd.headStatus().direction(), angleCloseTo(0, 3));
+        assertThat(cmd.direction(), angleCloseTo(0, 3));
         // And expired
         assertTrue(state.expired(ctx));
 
         // When rotate out of head fov
-        ctx = ctxs[idx++];
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.headStatus().direction());
+        assertEquals(0, cmd.direction());
         // And expired
         assertTrue(state.expired(ctx));
     }
@@ -334,30 +339,30 @@ class LookAtTargetStateTest {
         Complex targetHead0 = robotHead0.add(Complex.fromDeg(targetDeg));
         Point2D target = targetHead0.at(headLoc0, targetDistance);
 
-        MockFSMContext[] ctxs = MockFSMContext.builder()
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
                 .add(builder)
                 .add(builder)
                 .add(builder.addTime(COMMITMENT_TIME))
-                .buildArray();
+                .build()
+                .iterator();
 
         // When initialise
-        int idx = 0;
-        MockFSMContext ctx = ctxs[idx++];
+        MockFSMContext ctx = iter.next();
         state.init(ctx, target, false);
 
         // When executing the action for the first time
-        ctx = ctxs[idx++];
-        RobotCommand cmd = state.tick(ctx);
+        ctx = iter.next();
+        HeadStatus cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.headStatus().direction());
+        assertEquals(0, cmd.direction());
         // And not expired
         assertFalse(state.expired(ctx));
 
         // When executing after commitment
-        ctx = ctxs[idx++];
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.headStatus().direction());
+        assertEquals(0, cmd.direction());
         // And expired
         assertTrue(state.expired(ctx));
 

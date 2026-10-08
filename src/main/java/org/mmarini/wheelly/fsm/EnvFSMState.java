@@ -28,7 +28,6 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.RobotCommand;
 import org.mmarini.wheelly.apis.RobotCommands;
 
 /**
@@ -40,7 +39,7 @@ import org.mmarini.wheelly.apis.RobotCommands;
  * must be issued to the motors and perception modules at each clock cycle.
  * </p>
  */
-public interface EnvFSMState {
+public interface EnvFSMState<T> {
 
     /**
      * Executes a single processing cycle (tick) for the current state of the FSM.
@@ -54,5 +53,5 @@ public interface EnvFSMState {
      *                sensor states (lifecycle features), and environmental data
      * @return the {@link RobotCommands} to be executed concurrently for the robot base and head
      */
-    RobotCommand tick(EnvFSMContext context);
+    T tick(EnvFSMContext context);
 }
