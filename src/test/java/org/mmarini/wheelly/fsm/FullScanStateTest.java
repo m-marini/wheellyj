@@ -42,25 +42,24 @@ import java.util.stream.IntStream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.Matchers.angleCloseTo;
-import static org.mmarini.wheelly.apis.HeadStatus.HeadStatusId.FIX_DIRECTION;
-import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.*;
+import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.COMMITMENT_TIME;
+import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.SCAN_HEAD_DEG;
 
-class HeadScanStateTest {
+class FullScanStateTest {
 
     public static final Complex[] SCAN_DEG_10 = IntStream.range(0, 13)
             .mapToObj(i -> Complex.fromDeg(i * 10 - 60))
             .toArray(Complex[]::new);
     public static final int ANGLE_INTERVAL_DEG = 45;
     WorldModelBuilder builder;
-    HeadScanState state;
+    FullScanState state;
     List<EnvFSMContext> onCompletionContexts;
 
     @BeforeEach
     void setUp() {
         this.builder = new WorldModelBuilder();
         this.onCompletionContexts = new ArrayList<>();
-        this.state = new HeadScanState(COMMITMENT_TIME, SCAN_INTERVAL, ANGLE_INTERVAL_DEG)
+        this.state = new FullScanState(COMMITMENT_TIME, ANGLE_INTERVAL_DEG)
                 .onCompletion(ctx -> {
                     onCompletionContexts.add(ctx);
                     return HeadStatus.lookStraight();
@@ -69,7 +68,7 @@ class HeadScanStateTest {
 
     @Test
     void testComputeHeadDeg() {
-        Complex[] heads = HeadScanState.computeHeadDeg(132, 10);
+        Complex[] heads = FullScanState.computeHeadDeg(132, 10);
         assertArrayEquals(SCAN_DEG_10, heads);
     }
 
@@ -83,19 +82,26 @@ class HeadScanStateTest {
                 .add(builder)
                 // 2 - at commit time
                 .add(builder.addTime(COMMITMENT_TIME))
-                // 3 - at valid lidar signal
+                // 3 - at valid lidar signal -45 DEG
                 .add(builder.headAngle(SCAN_HEAD_DEG[0].toIntDeg())
                         .addTime(1)
                         .updateLidarTime())
                 // 4 - scan interval without lidar message
-                .add(builder.addTime(SCAN_INTERVAL))
-                // 5 - head OK and no lidar signal
-                .add(builder.headAngle(SCAN_HEAD_DEG[2].toIntDeg())
+                .add(builder.addTime(1))
+                // 5 - head 0 DEG and no lidar message
+                .add(builder.headAngle(SCAN_HEAD_DEG[1].toIntDeg())
                         .addTime(1))
-                // 6 - head OK and lidar signal
-                .add(builder.addTime(SCAN_INTERVAL)
+                // 6 - head 0 DEG and lidar message
+                .add(builder.addTime(1)
                         .updateLidarTime())
-                // 7 - after completion
+                // 7 - head 0 DEG and lidar message
+                .add(builder.addTime(1)
+                        .updateLidarTime())
+                // 8 - head 45 DEG and lidar message
+                .add(builder.addTime(1)
+                        .headAngle(SCAN_HEAD_DEG[2].toIntDeg())
+                        .updateLidarTime())
+                // 9 - after completion
                 .add()
                 .build()
                 .iterator();
@@ -109,7 +115,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         HeadStatus cmd = state.tick(ctx);
         // Then command should scan at 1st direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd.direction());
+        assertEquals(HeadStatus.scan(SCAN_HEAD_DEG[0]), cmd);
         // And no committed
         assertFalse(state.expired(ctx));
         // And no completed
@@ -122,7 +128,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 1st direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd.direction());
+        assertEquals(HeadStatus.scan(SCAN_HEAD_DEG[0]), cmd);
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -135,7 +141,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 2nd direction
-        assertEquals(SCAN_HEAD_DEG[1], cmd.direction());
+        assertEquals(HeadStatus.scan(SCAN_HEAD_DEG[1]), cmd);
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -147,7 +153,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(SCAN_HEAD_DEG[2], cmd.direction());
+        assertEquals(HeadStatus.scan(SCAN_HEAD_DEG[1]), cmd);
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -160,7 +166,7 @@ class HeadScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(SCAN_HEAD_DEG[2], cmd.direction());
+        assertEquals(HeadStatus.scan(SCAN_HEAD_DEG[1]), cmd);
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -169,12 +175,37 @@ class HeadScanStateTest {
         assertThat(onCompletionContexts, empty());
 
         //--------
-        // When 6 - head ok and lidar signal
+        // When 6 - head OK and lidar signal 0 DEG
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(FIX_DIRECTION, cmd.status());
-        assertThat(cmd.direction(), angleCloseTo(0));
+        assertEquals(HeadStatus.scan(SCAN_HEAD_DEG[2]), cmd);
+        // And committed
+        assertTrue(state.expired(ctx));
+        // And no completed
+        assertFalse(state.completed());
+        // And completion triggered
+        assertThat(onCompletionContexts, empty());
+
+        //--------
+        // When 7 - head 0 DEG and lidar message
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then command should scan at 3rd direction
+        assertEquals(HeadStatus.scan(SCAN_HEAD_DEG[2]), cmd);
+        // And committed
+        assertTrue(state.expired(ctx));
+        // And no completed
+        assertFalse(state.completed());
+        // And completion triggered
+        assertThat(onCompletionContexts, empty());
+
+        //--------
+        // When 8 - head 45 DEG and lidar message
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then command should scan at 3rd direction
+        assertEquals(HeadStatus.lookStraight(), cmd);
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
@@ -183,17 +214,17 @@ class HeadScanStateTest {
         assertThat(onCompletionContexts, contains(ctx));
 
         //--------
-        // When 7 - after completion
+        // When 9 - after completion
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(FIX_DIRECTION, cmd.status());
-        assertThat(cmd.direction(), angleCloseTo(0));
+        assertEquals(HeadStatus.lookStraight(), cmd);
         // And committed
         assertTrue(state.expired(ctx));
         // And no completed
         assertTrue(state.completed());
         // And completion triggered
+        assertThat(onCompletionContexts, hasSize(2));
         assertThat(onCompletionContexts, hasItem(ctx));
     }
 }

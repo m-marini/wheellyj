@@ -76,7 +76,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
     private final DisengageState disengageState;
     private final AsyncMovePathState movePathState;
     private final ScanState lookStraightState;
-    private final HeadScanState headScanState;
+    private final FullScanState fullScanState;
     private final LookAtTargetState lookAtTarget;
     private EnvFSMCompletableState<MotionStatus> baseState;
     private EnvFSMCompletableState<HeadStatus> headState;
@@ -95,7 +95,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         this.moveState = new MoveState(config.commitmentDuration());
         this.rotateState = new RotateState(config.commitmentDuration());
         this.lookStraightState = new ScanState(config.commitmentDuration());
-        this.headScanState = new HeadScanState(config.commitmentDuration(), config.scanInterval(), config.scanAngleIntervalDeg());
+        this.fullScanState = new FullScanState(config.commitmentDuration(), config.scanAngleIntervalDeg());
         this.lookAtTarget = new LookAtTargetState(config.commitmentDuration(), config.minHeadTargetDistance());
         this.disengageState = new DisengageState(config.commitmentDuration(), config.safeDistance());
         this.movePathState = new AsyncMovePathState(config.commitmentDuration());
@@ -445,8 +445,8 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
      */
     private void initScan(EnvFSMContext context) {
         logger.atDebug().log("Start Scan");
-        headScanState.init(context);
-        headState = headScanState;
+        fullScanState.init(context);
+        headState = fullScanState;
         headAction = SCAN_ACTION;
     }
 
