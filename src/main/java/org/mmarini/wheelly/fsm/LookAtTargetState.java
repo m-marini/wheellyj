@@ -28,48 +28,28 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.HeadStatus;
-import org.mmarini.wheelly.apis.RobotCommands;
-import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.geom.Point2D;
 
-import static java.util.Objects.requireNonNull;
-
 /**
- * Represents a concrete FSM state where the robot tracks and looks at a specific target point.
+ * Manages the robot sensor subsystem while tracking a specific spatial point of interest.
  * <p>
- * This state calculates the directional vector from the robot's head location to the designated
- * target. It allows configuring whether the look profile should be front-facing or rear-facing,
- * resetting the gaze forward if the required angle falls outside a specific tolerance range.
+ * This state coordinates the positioning of the sensor head to maintain a steady gaze
+ * towards a target location, dynamically selecting either a front-facing or rear-facing
+ * tracking profile based on operational constraints.
  * </p>
  */
 public class LookAtTargetState extends AbstractCommitmentState<HeadStatus> implements EnvFSMCompletableState<HeadStatus> {
-
-    /**
-     * The minimum distance from the target (in metres) required to actively track its direction.
-     */
-    private final double minTargetDistance;
-    /**
-     * The spatial co-ordinate point of the target to track.
-     */
-    private Point2D target;
-    /**
-     * Flag indicating whether the front side of the head should face the target.
-     */
-    private boolean frontFacing;
+    private HeadStatus targetStatus;
 
     /**
      * Constructs a {@code LookAtTargetState} with the specified commitment duration
-     * and the minimum target distance threshold.
      *
      * @param commitmentDuration the length of time in milliseconds that the state must remain active
-     * @param minTargetDistance  the minimum distance from the target to follow its direction (in metres)
      */
-    public LookAtTargetState(long commitmentDuration, double minTargetDistance) {
+    public LookAtTargetState(long commitmentDuration) {
         super(commitmentDuration);
-        this.minTargetDistance = minTargetDistance;
     }
 
     /**
@@ -99,53 +79,36 @@ public class LookAtTargetState extends AbstractCommitmentState<HeadStatus> imple
     }
 
     /**
-     * Initialises the state by setting the target co-ordinates, alignment profile, and tracking timeline.
+     * Initialises the gaze tracking sequence focusing on a concrete spatial target.
      * <p>
-     * This method prepares the state parameters for ongoing execution ticks, registering the
-     * objective co-ordinates and configuring the spatial orientation settings.
+     * This method configures the sensor alignment path, deciding whether to monitor
+     * the objective utilising a front-facing or rear-facing chassis alignment.
      * </p>
      *
-     * @param context     the {@link EnvFSMContext} tracking the shared operational data
-     * @param target      the {@link Point2D} co-ordinate of the target, must not be null
-     * @param frontFacing {@code true} if front-facing tracking is required; {@code false} for rear-facing
-     * @throws NullPointerException if the provided target is null
+     * @param context     the context reference containing the ongoing execution environment
+     * @param target      the target coordinates to lock the sensor gaze onto
+     * @param frontFacing {@code true} to utilise front-facing track mode; {@code false} for rear-facing
      */
     public void init(EnvFSMContext context, Point2D target, boolean frontFacing) {
         super.init(context);
-        this.target = requireNonNull(target);
-        this.frontFacing = frontFacing;
+        this.targetStatus = frontFacing
+                ? HeadStatus.trackFrontFace(target)
+                : HeadStatus.trackRearFace(target);
     }
 
+
     /**
-     * Executes the internal tracking logic for the current tick, generating a head-orienting command profile.
+     * Processes a single clock tick interval within the finite state machine cycle.
      * <p>
-     * This method computes the absolute direction to the target based on the current head location.
-     * It reverses the direction if rear-looking is active and issues a halt command if the target
-     * is too near or falls outside the head's field of view (FOV).
+     * This method consistently returns the calculated tracking instructions to sustain the
+     * hardware focus on the target throughout the active tracking loop.
      * </p>
      *
-     * @param context the {@link EnvFSMContext} tracking the shared operational data
-     * @return the {@link RobotCommands} enforcing the calculated head target angle orientation
-     * @throws NullPointerException if the internal target or provided context is null
+     * @param context the context reference containing the ongoing execution environment
+     * @return the current {@code HeadStatus} configuration required for target tracking
      */
     @Override
     public HeadStatus tick(EnvFSMContext context) {
-        RobotStatus robotStatus = context.worldModel().robotStatus();
-        Point2D headLocation = robotStatus.headLocation();
-        if (headLocation.distance(target) <= minTargetDistance) {
-            // Target too near
-            return HeadStatus.lookStraight();
-        }
-        Complex robotDir = robotStatus.direction();
-        Complex headTargetDir = Complex.direction(headLocation, target).sub(robotDir);
-        if (!frontFacing) {
-            // Revert head direction if rear head required
-            headTargetDir = headTargetDir.opposite();
-        }
-        if (!headTargetDir.isClose0(robotStatus.robotSpec().headFOV().toRad() / 2)) {
-            // target not in head fov
-            return HeadStatus.lookStraight();
-        }
-        return HeadStatus.scan(headTargetDir);
+        return targetStatus;
     }
 }

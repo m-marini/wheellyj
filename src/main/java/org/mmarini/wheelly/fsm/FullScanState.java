@@ -30,17 +30,14 @@ package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.HeadStatus;
-import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
 /**
- * Represents a concrete FSM state that performs a sequential scan by rotating
- * the robot's head through an array of angular degrees.
+ * Orchestrates a comprehensive panoramic field scan across the entire field of view (FOV).
  * <p>
- * This state transitions the head through multiple predefined angles, holding each
- * orientation for a fixed scan interval. It tracks the step execution and, upon
- * completion of the final angular target, flags itself as complete and requests
- * the next macro-action from the inference framework to coordinate subsequent behaviour.
+ * This state handles the sequential progression of angular positions for the sensor subsystem,
+ * partitioning the total hardware capability into incremental angular steps to programmatically
+ * capture environmental data.
  * </p>
  */
 public class FullScanState extends AbstractCompletableState<HeadStatus> {
@@ -68,6 +65,10 @@ public class FullScanState extends AbstractCompletableState<HeadStatus> {
      * The scan angle interval measured in degrees.
      */
     private final int angleIntervalDeg;
+
+    /**
+     * The underlying delegate state processing single discrete scanning increments.
+     */
     private final ScanState scanState;
 
     /**
@@ -79,6 +80,13 @@ public class FullScanState extends AbstractCompletableState<HeadStatus> {
      */
     private int currentStepIndex;
 
+    /**
+     * Initialises a new {@code FullScanState} instance with a specified duration commitment
+     * and directional scanning granularity.
+     *
+     * @param commitmentDuration the continuous period required to sustain this execution path
+     * @param angleIntervalDeg   the angular interval between consecutive scanning points in degrees
+     */
     public FullScanState(long commitmentDuration, int angleIntervalDeg) {
         super(commitmentDuration);
         this.scanState = new ScanState(commitmentDuration)
@@ -87,6 +95,16 @@ public class FullScanState extends AbstractCompletableState<HeadStatus> {
         currentStepIndex = -1;
     }
 
+    /**
+     * Initialises the full scanning sequence by evaluating hardware specs and resetting steps.
+     * <p>
+     * This method pre-calculates the complete sequence of directional angles matching the
+     * onboard sensors' limits, starting the first observation step immediately.
+     * </p>
+     *
+     * @param context the context reference containing the ongoing execution environment
+     * @throws IllegalArgumentException if the calculated target directions yield zero valid steps
+     */
     public void init(EnvFSMContext context) {
         super.init(context);
         RobotStatus robotStatus = context.worldModel().robotStatus();
@@ -98,6 +116,16 @@ public class FullScanState extends AbstractCompletableState<HeadStatus> {
         scanState.init(context, headDirections[0]);
     }
 
+    /**
+     * Handles internal completion callbacks when an individual scanning point finishes.
+     * <p>
+     * This transition logic increments the tracking index to target the next angular
+     * sector or completes the macro-action entirely if the final sector has been logged.
+     * </p>
+     *
+     * @param context the context reference containing the ongoing execution environment
+     * @return the subsequent {@code HeadStatus} required to continue or finalise the behaviour
+     */
     private HeadStatus onCompletion(EnvFSMContext context) {
         if (currentStepIndex >= headDirections.length - 1) {
             // Scan completed
@@ -110,11 +138,14 @@ public class FullScanState extends AbstractCompletableState<HeadStatus> {
     }
 
     /**
-     * Executes the periodic control logic (tick) to advance through the angular scanning steps,
-     * track time-based interval expiry, and handle macro-action finalisation upon sequencing completion.
+     * Processes a single clock tick interval within the finite state machine cycle.
+     * <p>
+     * This ensures the active delegate sequence updates its internal state or routes
+     * the termination workflow if the execution budget has been exhausted.
+     * </p>
      *
-     * @param context the {@link EnvFSMContext} tracking the shared operational data
-     * @return the {@link RobotCommands} to be processed by the robot hardware during this cycle
+     * @param context the context reference containing the ongoing execution environment
+     * @return the current {@code HeadStatus} configuration required for the ongoing operations
      */
     @Override
     public HeadStatus tick(EnvFSMContext context) {

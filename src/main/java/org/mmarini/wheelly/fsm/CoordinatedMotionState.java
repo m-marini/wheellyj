@@ -96,7 +96,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         this.rotateState = new RotateState(config.commitmentDuration());
         this.lookStraightState = new ScanState(config.commitmentDuration());
         this.fullScanState = new FullScanState(config.commitmentDuration(), config.scanAngleIntervalDeg());
-        this.lookAtTarget = new LookAtTargetState(config.commitmentDuration(), config.minHeadTargetDistance());
+        this.lookAtTarget = new LookAtTargetState(config.commitmentDuration());
         this.disengageState = new DisengageState(config.commitmentDuration(), config.safeDistance());
         this.movePathState = new AsyncMovePathState(config.commitmentDuration());
         moveState.onContact(this::forceHalt)
