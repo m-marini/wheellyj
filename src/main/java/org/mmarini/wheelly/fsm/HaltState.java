@@ -41,7 +41,7 @@ import org.mmarini.wheelly.apis.RobotCommands;
  * inference for the subsequent execution tick.
  * </p>
  */
-public class HaltState extends AbstractCompletableState<MotionStatus> {
+public class HaltState extends AbstractCompletableState1<MotionStatus> {
     /**
      * Constructs a {@code HaltState} with a specified initial timestamp to anchor
      * its minimum commitment duration.

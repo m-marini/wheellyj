@@ -56,7 +56,7 @@ import static org.mmarini.wheelly.apis.RobotStatusId.FORWARD;
  *   <li>Upon reaching the target (within the robot's specific {@code targetRange}), the state is marked as completed and the completion callback is triggered.</li>
  * </ul>
  */
-public class DisengageState extends AbstractCompletableState<MotionStatus> {
+public class DisengageState extends AbstractCompletableState1<MotionStatus> {
 
     /**
      * The minimum safety distance to maintain between the robot and the detected obstacle.

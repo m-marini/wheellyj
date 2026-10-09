@@ -39,11 +39,16 @@ import org.mmarini.wheelly.apis.HeadStatus;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.stream.Stream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_TARGET_RANGE;
 
 class LookAtTargetStateTest {
     public static final int COMMITMENT_TIME = 1000;
@@ -55,18 +60,24 @@ class LookAtTargetStateTest {
                 .uniform(-3.0, 3.0, 10)
                 .uniform(-3.0, 3.0, 10)
                 .uniform(-180, 179)
-                .uniform(-180, 179)
-                .uniform(0, 1.0, 10)
+                .uniform(-65, 65)
+                .exponential(DEFAULT_TARGET_RANGE, 1.0, 10)
                 .build(NUM_RANDOM_TEST_CASES);
     }
 
     WorldModelBuilder builder;
     LookAtTargetState state;
+    List<EnvFSMContext> onCompletions;
 
     @BeforeEach
     void setUp() {
         this.builder = new WorldModelBuilder();
-        this.state = new LookAtTargetState(COMMITMENT_TIME);
+        this.onCompletions = new ArrayList<>();
+        this.state = new LookAtTargetState(1)
+                .onCompletion((ctx, def) -> {
+                    onCompletions.add(ctx);
+                    return def;
+                });
     }
 
     @ParameterizedTest
@@ -84,31 +95,51 @@ class LookAtTargetStateTest {
         Point2D target = targetHead0.at(headLoc0, targetDistance);
 
         Iterator<MockFSMContext> iter = MockFSMContext.builder()
+                // 0 - init
                 .add(builder)
+                // 1 - 1st tick
                 .add(builder)
-                .add(builder.addTime(COMMITMENT_TIME))
+                // 2 - head in direction and lidar message
+                .add(builder.headAngle(targetDeg)
+                        .addTime(1)
+                        .updateLidarTime())
+                // 3 - after completion
+                .add(builder.addTime(1)
+                        .updateLidarTime())
                 .build()
                 .iterator();
 
-        // When initialise
+        // When 0 - init
         MockFSMContext ctx = iter.next();
         state.init(ctx, target, true);
 
-        // When executing the action for the first time
+        // When 1 - 1st tick
         ctx = iter.next();
         HeadStatus cmd = state.tick(ctx);
         // Then command should scan the expected direction
         assertEquals(HeadStatus.trackFrontFace(target), cmd);
-        // And not expired
-        assertFalse(state.expired(ctx));
+        // And state not completed
+        assertFalse(state.completed());
+        assertThat(onCompletions, empty());
 
-        // When executing after commitment
+        // When 2 - head in direction and lidar message
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
         assertEquals(HeadStatus.trackFrontFace(target), cmd);
-        // And expired
-        assertTrue(state.expired(ctx));
+        // And state not completed
+        assertTrue(state.completed());
+        assertThat(onCompletions, contains(ctx));
+
+        // When 3 - after completion
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then command should scan the expected direction
+        assertEquals(HeadStatus.trackFrontFace(target), cmd);
+        // And state not completed
+        assertTrue(state.completed());
+        assertThat(onCompletions, hasSize(2));
+        assertThat(onCompletions, hasItem(ctx));
     }
 
     @ParameterizedTest
@@ -126,31 +157,50 @@ class LookAtTargetStateTest {
         Point2D target = targetHead0.at(headLoc0, targetDistance);
 
         Iterator<MockFSMContext> iter = MockFSMContext.builder()
+                // 0 - init
                 .add(builder)
+                // 1 - 1st tick
                 .add(builder)
-                .add(builder.addTime(COMMITMENT_TIME))
+                // 2 - head in direction and lidar message
+                .add(builder.headAngle(targetDeg)
+                        .addTime(1)
+                        .updateLidarTime())
+                // 3 - after completion
+                .add(builder.addTime(1)
+                        .updateLidarTime())
                 .build()
                 .iterator();
 
-        // When initialise
+        // When 0 - init
         MockFSMContext ctx = iter.next();
-        state.init(ctx, target, false);
+        state.init(ctx, target, true);
 
-        // When executing the action for the first time
+        // When 1 - 1st tick
         ctx = iter.next();
         HeadStatus cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(HeadStatus.trackRearFace(target), cmd);
-        // And not expired
-        assertFalse(state.expired(ctx));
+        assertEquals(HeadStatus.trackFrontFace(target), cmd);
+        // And state not completed
+        assertFalse(state.completed());
+        assertThat(onCompletions, empty());
 
-        // When executing after commitment
+        // When 2 - head in direction and lidar message
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(HeadStatus.trackRearFace(target), cmd);
-        // And expired
-        assertTrue(state.expired(ctx));
-    }
+        assertEquals(HeadStatus.trackFrontFace(target), cmd);
+        // And state not completed
+        assertTrue(state.completed());
+        assertThat(onCompletions, contains(ctx));
 
+        // When 3 - after completion
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then command should scan the expected direction
+        assertEquals(HeadStatus.trackFrontFace(target), cmd);
+        // And state not completed
+        assertTrue(state.completed());
+        assertThat(onCompletions, hasSize(2));
+        assertThat(onCompletions, hasItem(ctx));
+    }
 }

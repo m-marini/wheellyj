@@ -31,7 +31,7 @@ package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.RobotCommands;
 
-import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
  * An abstract base class for FSM states that require a time-based commitment
@@ -43,7 +43,7 @@ import java.util.function.BiFunction;
  * upon transition finalisation.
  * </p>
  */
-public abstract class AbstractCompletableState<T> implements EnvFSMCompletableState<T> {
+public abstract class AbstractCompletableState1<T> extends AbstractCommitmentState<T> implements EnvFSMCompletableState1<T> {
 
     /**
      * Flags whether the distinct tactical goal of this state has been achieved.
@@ -53,20 +53,30 @@ public abstract class AbstractCompletableState<T> implements EnvFSMCompletableSt
     /**
      * The callback function evaluated to supply final robot commands when the state completes.
      */
-    private BiFunction<EnvFSMContext, T, T> onCompletion;
+    private Function<EnvFSMContext, T> onCompletion;
 
     /**
      * Constructs an {@code AbstractCompletableState} with a specific commitment duration window.
+     *
+     * @param commitmentDuration the length of time in milliseconds that the state must remain active
      */
-    protected AbstractCompletableState() {
-
+    protected AbstractCompletableState1(long commitmentDuration) {
+        super(commitmentDuration);
     }
 
+    /**
+     * Transition helper that marks this state as completed and evaluates the registered
+     * completion callback function.
+     *
+     * @param context the {@link EnvFSMContext} tracking the shared operational data
+     * @return the {@link RobotCommands} triggered by the completion event
+     * @throw IllegalStateException If no explicit completion function is supplied
+     */
     protected T complete(EnvFSMContext context, T defaultValue) {
         completed = true;
         return onCompletion == null
                 ? defaultValue
-                : onCompletion.apply(context, defaultValue);
+                : onCompletion.apply(context);
     }
 
     /**
@@ -88,6 +98,7 @@ public abstract class AbstractCompletableState<T> implements EnvFSMCompletableSt
      */
     @Override
     public void init(EnvFSMContext context) {
+        super.init(context);
         completed = false;
     }
 
@@ -102,8 +113,8 @@ public abstract class AbstractCompletableState<T> implements EnvFSMCompletableSt
      * @param callback the functional mapper producing {@link RobotCommands} from the final context
      * @return this state instance cast to its concrete type for method chaining
      */
-    @Override
-    public <R extends AbstractCompletableState<T>> R onCompletion(BiFunction<EnvFSMContext, T, T> callback) {
+    @SuppressWarnings("unchecked")
+    public <R extends AbstractCompletableState1<T>> R onCompletion(Function<EnvFSMContext, T> callback) {
         this.onCompletion = callback;
         return (R) this;
     }

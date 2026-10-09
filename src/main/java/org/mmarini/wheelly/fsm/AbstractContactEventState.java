@@ -37,12 +37,12 @@ import java.util.function.Function;
  * An abstract base class for FSM states that require a time-based commitment
  * and must react specifically to physical contact events.
  * <p>
- * This class extends {@link AbstractCompletableState} by providing dedicated lifecycle hooks
+ * This class extends {@link AbstractCompletableState1} by providing dedicated lifecycle hooks
  * for physical interaction tracking. It enables fluid configuration of terminal action
  * planning via a custom callback function that triggers immediately upon contact detection.
  * </p>
  */
-public abstract class AbstractContactEventState<T> extends AbstractCompletableState<T> {
+public abstract class AbstractContactEventState<T> extends AbstractCompletableState1<T> {
 
     /**
      * Flags whether a physical contact event has been triggered during this state's lifecycle.

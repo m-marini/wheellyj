@@ -61,11 +61,8 @@ public class ScanState extends AbstractCompletableState<HeadStatus> {
 
     /**
      * Initialises a new {@code ScanState} instance with a specified duration commitment.
-     *
-     * @param commitmentDuration the continuous period required to sustain this execution path
      */
-    public ScanState(long commitmentDuration) {
-        super(commitmentDuration);
+    public ScanState() {
         this.minNumberOfSamples = 1;
     }
 
@@ -75,6 +72,7 @@ public class ScanState extends AbstractCompletableState<HeadStatus> {
      * @param context the context reference containing the ongoing execution environment
      * @throws IllegalStateException always thrown to signal that a specific target is missing
      */
+    @Override
     public void init(EnvFSMContext context) {
         throw new IllegalStateException("target is missing");
     }

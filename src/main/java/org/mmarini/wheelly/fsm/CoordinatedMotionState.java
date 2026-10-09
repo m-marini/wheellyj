@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.fsm;
 
 import io.reactivex.rxjava3.core.Single;
+import org.mmarini.NotImplementedException;
 import org.mmarini.wheelly.apis.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,9 +77,9 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
     private final DisengageState disengageState;
     private final AsyncMovePathState movePathState;
     private final ScanState lookStraightState;
-    private final FullScanState fullScanState;
+    private final PanoramicScanState fullScanState;
     private final LookAtTargetState lookAtTarget;
-    private EnvFSMCompletableState<MotionStatus> baseState;
+    private EnvFSMCompletableState1<MotionStatus> baseState;
     private EnvFSMCompletableState<HeadStatus> headState;
     private HeadActionId headAction;
     private MoveActionId moveAction;
@@ -94,9 +95,9 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         this.haltState0 = new HaltState(0);
         this.moveState = new MoveState(config.commitmentDuration());
         this.rotateState = new RotateState(config.commitmentDuration());
-        this.lookStraightState = new ScanState(config.commitmentDuration());
-        this.fullScanState = new FullScanState(config.commitmentDuration(), config.scanAngleIntervalDeg());
-        this.lookAtTarget = new LookAtTargetState(config.commitmentDuration());
+        this.lookStraightState = new ScanState();
+        this.fullScanState = new PanoramicScanState(config.scanAngleIntervalDeg());
+        this.lookAtTarget = new LookAtTargetState(1);
         this.disengageState = new DisengageState(config.commitmentDuration(), config.safeDistance());
         this.movePathState = new AsyncMovePathState(config.commitmentDuration());
         moveState.onContact(this::forceHalt)
@@ -115,12 +116,16 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
      * @param actionId the target multi-action intent containing base and head requests
      */
     private void changeActions(EnvFSMContext context, AgentAction actionId) {
+        throw new NotImplementedException();
+        /* TODO
         if (headState == null || headState.completed() || headState.expired(context)) {
             changeHeadAction(context, actionId.headId());
         }
         if (baseState == null || baseState.completed() || baseState.expired(context)) {
             changeMoveAction(context, actionId.moveId());
         }
+
+         */
     }
 
     /**
@@ -301,7 +306,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         } else {
             logger.atDebug().log("Start LookFaceMarker {}", target);
             lookAtTarget.init(context, target, true);
-            headState = lookAtTarget;
+            //headState = lookAtTarget;
             headAction = LOOK_FACE_AT_NEAREST_MARKER_ACTION;
         }
     }
@@ -320,7 +325,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         } else {
             logger.atDebug().log("Start LookFaceObstacle {}", target);
             lookAtTarget.init(context, target, true);
-            headState = lookAtTarget;
+            // headState = lookAtTarget;
             headAction = LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION;
         }
     }
@@ -339,7 +344,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         } else {
             logger.atDebug().log("Start LookRearMarker {}", target);
             lookAtTarget.init(context, target, false);
-            headState = lookAtTarget;
+            //headState = lookAtTarget;
             headAction = LOOK_REAR_AT_NEAREST_MARKER_ACTION;
         }
     }
@@ -358,7 +363,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         } else {
             logger.atDebug().log("Start LookRearObstacle {}", target);
             lookAtTarget.init(context, target, false);
-            headState = lookAtTarget;
+            //  headState = lookAtTarget;
             headAction = LOOK_REAR_AT_NEAREST_OBSTACLE_ACTION;
         }
     }
@@ -371,7 +376,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
     private void initLookStraight(EnvFSMContext context) {
         logger.atDebug().log("Start LookStraight");
         lookStraightState.init(context);
-        headState = lookStraightState;
+        //headState = lookStraightState;
         headAction = LOOK_STRIGHT_ACTION;
     }
 
@@ -606,6 +611,8 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
      */
     @Override
     public RobotCommand tick(EnvFSMContext context) {
+        throw new NotImplementedException();
+        /* TODO
         if (baseState == null
                 || headState == null
                 || baseState.completed()
@@ -619,5 +626,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         MotionStatus baseCmd = baseState.tick(context);
         HeadStatus headCmd = headState.tick(context);
         return new RobotCommand(baseCmd, headCmd);
+
+         */
     }
 }

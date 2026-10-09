@@ -64,7 +64,7 @@ class ScanStateTest {
     @BeforeEach
     void setUp() {
         this.builder = new WorldModelBuilder();
-        this.state = new ScanState(COMMITMENT_TIME);
+        this.state = new ScanState();
     }
 
     @ParameterizedTest
@@ -78,17 +78,11 @@ class ScanStateTest {
                 .add(builder)
                 // 1 - 1st tick
                 .add(builder)
-                // 2 - before commit
-                .add(builder.addTime(COMMITMENT_TIME - 1))
-                // 3 - at commit
-                .add(builder.addTime(1))
-                // 4 - after commit
-                .add(builder.addTime(1))
-                // 5 - valid lidar signal
+                // 2 - valid lidar signal
                 .add(builder.headAngle(scanDeg)
                         .addTime(1)
                         .updateLidarTime())
-                // 4 - after completion
+                // 3 - after completion
                 .add(builder.addTime(1))
                 .build()
                 .iterator();
@@ -102,47 +96,20 @@ class ScanStateTest {
         HeadStatus cmd = state.tick(ctx);
         // Then command should scan at target direction
         assertEquals(HeadStatus.scan(scanDir), cmd);
-        assertFalse(state.expired(ctx));
         assertFalse(state.completed());
 
-        // When 2 - before commit
+        // When 2 - valid lidar signal
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at target direction
         assertEquals(HeadStatus.scan(scanDir), cmd);
-        assertFalse(state.expired(ctx));
-        assertFalse(state.completed());
-
-        // When 3 - at commit
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        // Then command should scan at target direction
-        assertEquals(HeadStatus.scan(scanDir), cmd);
-        assertTrue(state.expired(ctx));
-        assertFalse(state.completed());
-
-        // When 4 - after commit
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        // Then command should scan at target direction
-        assertEquals(HeadStatus.scan(scanDir), cmd);
-        assertTrue(state.expired(ctx));
-        assertFalse(state.completed());
-
-        // When 5 - valid lidar signal
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        // Then command should scan at target direction
-        assertEquals(HeadStatus.scan(scanDir), cmd);
-        assertTrue(state.expired(ctx));
         assertTrue(state.completed());
 
-        // When 4 - after completion
+        // When 3 - after completion
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at target direction
         assertEquals(HeadStatus.scan(scanDir), cmd);
-        assertTrue(state.expired(ctx));
         assertTrue(state.completed());
     }
 
@@ -152,9 +119,9 @@ class ScanStateTest {
     void testScanOnCompletion(int scanDeg) {
         // Given a look straight action
         List<EnvFSMContext> onCompletions = new ArrayList<>();
-        state.onCompletion(ctx -> {
+        state.onCompletion((ctx, def) -> {
             onCompletions.add(ctx);
-            return HeadStatus.lookStraight();
+            return def;
         });
         Complex scanDir = Complex.fromDeg(scanDeg);
         Iterator<MockFSMContext> iter = MockFSMContext.builder()
@@ -162,17 +129,11 @@ class ScanStateTest {
                 .add(builder)
                 // 1 - 1st tick
                 .add(builder)
-                // 2 - before commit
-                .add(builder.addTime(COMMITMENT_TIME - 1))
-                // 3 - at commit
-                .add(builder.addTime(1))
-                // 4 - after commit
-                .add(builder.addTime(1))
-                // 5 - valid lidar signal
+                // 2 - valid lidar signal
                 .add(builder.headAngle(scanDeg)
                         .addTime(1)
                         .updateLidarTime())
-                // 4 - after completion
+                // 3 - after completion
                 .add(builder.addTime(1))
                 .build()
                 .iterator();
@@ -186,43 +147,14 @@ class ScanStateTest {
         HeadStatus cmd = state.tick(ctx);
         // Then command should scan at target direction
         assertEquals(HeadStatus.scan(scanDir), cmd);
-        assertFalse(state.expired(ctx));
         assertFalse(state.completed());
         assertThat(onCompletions, empty());
 
-        // When 2 - before commit
+        // When 2 - valid lidar signal
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at target direction
         assertEquals(HeadStatus.scan(scanDir), cmd);
-        assertFalse(state.expired(ctx));
-        assertFalse(state.completed());
-        assertThat(onCompletions, empty());
-
-        // When 3 - at commit
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        // Then command should scan at target direction
-        assertEquals(HeadStatus.scan(scanDir), cmd);
-        assertTrue(state.expired(ctx));
-        assertFalse(state.completed());
-        assertThat(onCompletions, empty());
-
-        // When 4 - after commit
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        // Then command should scan at target direction
-        assertEquals(HeadStatus.scan(scanDir), cmd);
-        assertTrue(state.expired(ctx));
-        assertFalse(state.completed());
-        assertThat(onCompletions, empty());
-
-        // When 5 - valid lidar signal
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        // Then command should scan at target direction
-        assertEquals(HeadStatus.lookStraight(), cmd);
-        assertTrue(state.expired(ctx));
         assertTrue(state.completed());
         assertThat(onCompletions, contains(ctx));
 
@@ -230,8 +162,7 @@ class ScanStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at target direction
-        assertEquals(HeadStatus.lookStraight(), cmd);
-        assertTrue(state.expired(ctx));
+        assertEquals(HeadStatus.scan(scanDir), cmd);
         assertTrue(state.completed());
         assertThat(onCompletions, hasSize(2));
         assertThat(onCompletions, hasItem(ctx));

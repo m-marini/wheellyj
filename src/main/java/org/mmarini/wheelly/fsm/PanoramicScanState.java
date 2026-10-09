@@ -40,7 +40,7 @@ import org.mmarini.wheelly.apis.RobotStatus;
  * capture environmental data.
  * </p>
  */
-public class FullScanState extends AbstractCompletableState<HeadStatus> {
+public class PanoramicScanState extends AbstractCompletableState<HeadStatus> {
 
     /**
      * Computes the array of target head angles based on the field of view (FOV)
@@ -84,12 +84,11 @@ public class FullScanState extends AbstractCompletableState<HeadStatus> {
      * Initialises a new {@code FullScanState} instance with a specified duration commitment
      * and directional scanning granularity.
      *
-     * @param commitmentDuration the continuous period required to sustain this execution path
      * @param angleIntervalDeg   the angular interval between consecutive scanning points in degrees
      */
-    public FullScanState(long commitmentDuration, int angleIntervalDeg) {
-        super(commitmentDuration);
-        this.scanState = new ScanState(commitmentDuration)
+    public PanoramicScanState(int angleIntervalDeg) {
+        super();
+        this.scanState = new ScanState()
                 .onCompletion(this::onCompletion);
         this.angleIntervalDeg = angleIntervalDeg;
         currentStepIndex = -1;
@@ -103,7 +102,7 @@ public class FullScanState extends AbstractCompletableState<HeadStatus> {
      * </p>
      *
      * @param context the context reference containing the ongoing execution environment
-     * @throws IllegalArgumentException if the calculated target directions yield zero valid steps
+    >     * @throws IllegalArgumentException if the calculated target directions yield zero valid steps
      */
     public void init(EnvFSMContext context) {
         super.init(context);
@@ -126,10 +125,10 @@ public class FullScanState extends AbstractCompletableState<HeadStatus> {
      * @param context the context reference containing the ongoing execution environment
      * @return the subsequent {@code HeadStatus} required to continue or finalise the behaviour
      */
-    private HeadStatus onCompletion(EnvFSMContext context) {
+    private HeadStatus onCompletion(EnvFSMContext context, HeadStatus defaultValue) {
         if (currentStepIndex >= headDirections.length - 1) {
             // Scan completed
-            return complete(context, HeadStatus.lookStraight());
+            return complete(context, defaultValue);
         }
         // Next scan
         currentStepIndex++;
@@ -150,7 +149,7 @@ public class FullScanState extends AbstractCompletableState<HeadStatus> {
     @Override
     public HeadStatus tick(EnvFSMContext context) {
         return completed()
-                ? complete(context, null)
+                ? complete(context, HeadStatus.lookStraight())
                 : scanState.tick(context);
     }
 }

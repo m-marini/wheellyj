@@ -28,9 +28,13 @@
 
 package org.mmarini.wheelly.fsm;
 
+import org.mmarini.wheelly.apis.Complex;
 import org.mmarini.wheelly.apis.HeadStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.geom.Point2D;
+
+import static org.mmarini.wheelly.apis.HeadStatus.HeadStatusId.FRONT_TRACK;
 
 /**
  * Manages the robot sensor subsystem while tracking a specific spatial point of interest.
@@ -40,30 +44,27 @@ import java.awt.geom.Point2D;
  * tracking profile based on operational constraints.
  * </p>
  */
-public class LookAtTargetState extends AbstractCommitmentState<HeadStatus> implements EnvFSMCompletableState<HeadStatus> {
+public class LookAtTargetState extends AbstractCompletableState<HeadStatus> {
+    /**
+     * The minimum required number of valid LiDAR samples to collect per interval.
+     */
+    private final int minNumberOfSamples;
+    /**
+     * The counter tracking valid LiDAR samples acquired during the active step.
+     */
+    private int numberOfSamples;
+    /**
+     * The timestamp of the last processed LiDAR sample to avoid duplicate updates.
+     */
+    private long prevLidarTime;
     private HeadStatus targetStatus;
 
     /**
      * Constructs a {@code LookAtTargetState} with the specified commitment duration
      *
-     * @param commitmentDuration the length of time in milliseconds that the state must remain active
      */
-    public LookAtTargetState(long commitmentDuration) {
-        super(commitmentDuration);
-    }
-
-    /**
-     * Indicates whether the gaze tracking macro-action has successfully completed.
-     * <p>
-     * For continuous sensory observation profiles, this tracking baseline remains active
-     * indefinitely across execution cycles and defaults to returning {@code false}.
-     * </p>
-     *
-     * @return {@code false} as continuous tracking behaviour does not implicitly trigger an end state
-     */
-    @Override
-    public boolean completed() {
-        return false;
+    public LookAtTargetState(int minNumberOfSamples) {
+        this.minNumberOfSamples = minNumberOfSamples;
     }
 
     /**
@@ -96,19 +97,34 @@ public class LookAtTargetState extends AbstractCommitmentState<HeadStatus> imple
                 : HeadStatus.trackRearFace(target);
     }
 
-
-    /**
-     * Processes a single clock tick interval within the finite state machine cycle.
-     * <p>
-     * This method consistently returns the calculated tracking instructions to sustain the
-     * hardware focus on the target throughout the active tracking loop.
-     * </p>
-     *
-     * @param context the context reference containing the ongoing execution environment
-     * @return the current {@code HeadStatus} configuration required for target tracking
-     */
     @Override
     public HeadStatus tick(EnvFSMContext context) {
+        if (completed()) {
+            return complete(context, targetStatus);
+        }
+        // Compute target direction
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        Point2D robotLocation = robotStatus.location();
+        Complex robotDir = robotStatus.direction();
+        Point2D headLocation = robotStatus.robotSpec().headLocation(robotLocation, robotDir);
+        Complex targetDir = Complex.direction(headLocation, targetStatus.target());
+        Complex targetRelDir = targetDir.sub(robotDir);
+        Complex targetHeadDirection = FRONT_TRACK.equals(targetStatus.status())
+                ? targetRelDir
+                : targetRelDir.opposite();
+        Complex sensorDir = robotStatus.headDirection();
+        long lidarTime = robotStatus.lidarMessage().time();
+        // Check if head is directed to targetDirection and the lidar message has arrived
+        if (sensorDir.isCloseTo(targetHeadDirection) && lidarTime > prevLidarTime) {
+            // head directed to target direction and lidar has arrived -> acquire valid measure
+            prevLidarTime = lidarTime;
+            numberOfSamples++;
+        }
+        // Check for measured completion
+        if (numberOfSamples >= minNumberOfSamples) {
+            // Scan completed
+            return complete(context, targetStatus);
+        }
         return targetStatus;
     }
 }

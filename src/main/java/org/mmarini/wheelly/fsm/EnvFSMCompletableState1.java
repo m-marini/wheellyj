@@ -28,19 +28,17 @@
 
 package org.mmarini.wheelly.fsm;
 
-import java.util.function.BiFunction;
-
 /**
  * Represents a specialised FSM state that can explicitly signal the successful
  * completion of its tactical goal or macro-action.
  * <p>
- * This interface extends {@link EnvFSMState} to provide an explicit feedback
+ * This interface extends {@link EnvFSMCommitmentState} to provide an explicit feedback
  * loop for actions whose termination depends on achieving a specific physical or
  * structural target (such as a robot base reaching its safety distance or a head sensor
  * entering its angular target deadband).
  * </p>
  */
-public interface EnvFSMCompletableState<T> extends EnvFSMState<T> {
+public interface EnvFSMCompletableState1<T> extends EnvFSMCommitmentState<T> {
 
     /**
      * Checks whether the macro-action or tactical goal associated with this state
@@ -55,8 +53,4 @@ public interface EnvFSMCompletableState<T> extends EnvFSMState<T> {
      * {@code false} if the execution lifecycle is still active
      */
     boolean completed();
-
-    void init(EnvFSMContext context);
-
-    <R extends AbstractCompletableState<T>> R onCompletion(BiFunction<EnvFSMContext, T, T> callback);
 }
