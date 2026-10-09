@@ -43,8 +43,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.HALT;
 
 class HaltStateTest {
-    public static final int COMMITMENT_TIME = 1000;
-
     WorldModelBuilder builder;
     HaltState state;
     List<EnvFSMContext> onCompletionContexts;

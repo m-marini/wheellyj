@@ -87,14 +87,14 @@ class MoveStateTest {
         this.builder = new WorldModelBuilder();
         this.onCompletionContext = new ArrayList<>();
         this.onContactContext = new ArrayList<>();
-        this.state = new MoveState(COMMITMENT_TIME)
-                .onContact(ctx1 -> {
-                    onContactContext.add(ctx1);
-                    return MotionStatus.halt();
+        this.state = new MoveState()
+                .onContact((ctx1, def) -> {
+                    onContactContext.add((ctx1));
+                    return def;
                 })
-                .onCompletion(ctx1 -> {
-                    onCompletionContext.add(ctx1);
-                    return MotionStatus.halt();
+                .onCompletion((ctx1, def) -> {
+                    onCompletionContext.add((ctx1));
+                    return def;
                 });
     }
 
@@ -117,15 +117,13 @@ class MoveStateTest {
                         .robotDir(robotDeg))
                 // 1 - 1st tick
                 .add(builder)
-                // 2 - tick at commitment
-                .add(builder.addTime(COMMITMENT_TIME))
-                // 3 - tick at target
+                // 2 - tick at target
                 .add(builder.addTime(1)
                         // and robot dir toward targetDir
                         .robotDir(targetDir.opposite().toIntDeg())
                         // and robot backward by movement distance + 1mm
                         .backward(movementDistance + MM))
-                // 4 - after completion
+                // 3 - after completion
                 .add(builder)
                 .build()
                 .iterator();
@@ -143,8 +141,6 @@ class MoveStateTest {
         assertEquals(MotionStatus.backward(targetPosition), cmd);
         // And action should not have been completed
         assertFalse(state.completed());
-        // And action should not have been expired
-        assertFalse(state.expired(ctx));
         // And
         assertThat(onContactContext, empty());
         assertThat(onCompletionContext, empty());
@@ -155,8 +151,6 @@ class MoveStateTest {
         cmd = state.tick(ctx);
         // Then the command should be forward to target position
         assertEquals(MotionStatus.backward(targetPosition), cmd);
-        // And action should not have been expired
-        assertTrue(state.expired(ctx));
         // And action should not have been completed
         assertFalse(state.completed());
         assertThat(onContactContext, empty());
@@ -170,8 +164,6 @@ class MoveStateTest {
         assertEquals(MotionStatus.halt(), cmd);
         // And action should not have been completed
         assertTrue(state.completed());
-        // And action should not have been expired
-        assertTrue(state.expired(ctx));
         assertThat(onContactContext, empty());
         assertThat(onCompletionContext, contains(ctx));
 
@@ -183,8 +175,6 @@ class MoveStateTest {
         assertEquals(MotionStatus.halt(), cmd);
         // And action should not have been completed
         assertTrue(state.completed());
-        // And action should not have been expired
-        assertTrue(state.expired(ctx));
         assertThat(onContactContext, empty());
         assertThat(onCompletionContext, hasItem(ctx));
         assertThat(onCompletionContext, hasSize(2));
@@ -236,8 +226,6 @@ class MoveStateTest {
         // Then the command should forward to 1st target
         assertEquals(FORWARD, cmd.status());
         assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
-        // And state not expired
-        assertFalse(state.expired(ctx));
         // and state not completed
         assertFalse(state.completed());
         // And no completion notified
@@ -249,8 +237,6 @@ class MoveStateTest {
         // Then the command should forward to 1st target
         assertEquals(FORWARD, cmd.status());
         assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
-        // And state expired
-        assertTrue(state.expired(ctx));
         // and state not completed
         assertFalse(state.completed());
         // And no completion notified
@@ -262,8 +248,6 @@ class MoveStateTest {
         // Then the command should forward to 1st target
         assertEquals(FORWARD, cmd.status());
         assertThat(cmd.target(), pointCloseTo(targetPosition, MM));
-        // And state expired
-        assertTrue(state.expired(ctx));
         // and state not completed
         assertFalse(state.completed());
         // And no completion notified
@@ -274,8 +258,6 @@ class MoveStateTest {
         cmd = state.tick(ctx);
         // Then the command should halt
         assertEquals(HALT, cmd.status());
-        // And state expired
-        assertTrue(state.expired(ctx));
         // and state not completed
         assertTrue(state.completed());
         // And completion notified
@@ -286,8 +268,6 @@ class MoveStateTest {
         cmd = state.tick(ctx);
         // Then the command should halt
         assertEquals(HALT, cmd.status());
-        // And state expired
-        assertTrue(state.expired(ctx));
         // and state not completed
         assertTrue(state.completed());
         // And completion notified twice
@@ -357,8 +337,6 @@ class MoveStateTest {
         assertTrue(state.contacted());
         // And action should not have been completed
         assertFalse(state.completed());
-        // And action should not have been expired
-        assertFalse(state.expired(ctx));
         // And on contact context should be the last one
         assertThat(onContactContext, contains(ctx));
         assertThat(onCompletionContext, empty());
@@ -424,8 +402,6 @@ class MoveStateTest {
         assertTrue(state.contacted());
         // And action should not have been completed
         assertFalse(state.completed());
-        // And action should not have been expired
-        assertFalse(state.expired(ctx));
         // And on contact context should be the last one
         assertThat(onContactContext, contains(ctx));
         assertThat(onCompletionContext, empty());

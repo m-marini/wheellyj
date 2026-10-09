@@ -51,7 +51,6 @@ import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_TARGET_RANGE;
 
 class LookAtTargetStateTest {
-    public static final int COMMITMENT_TIME = 1000;
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
 

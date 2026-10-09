@@ -48,7 +48,6 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ScanStateTest {
-    public static final int COMMITMENT_TIME = 1000;
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
 

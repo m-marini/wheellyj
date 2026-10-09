@@ -33,6 +33,8 @@ import org.mmarini.wheelly.apis.MotionStatus;
 import org.mmarini.wheelly.apis.RobotCommands;
 import org.mmarini.wheelly.apis.RobotStatus;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Represents a finite state machine state that handles the rotational
  * behaviour of the robot towards a specific target direction.
@@ -75,6 +77,7 @@ public class RotateState extends AbstractContactEventState<MotionStatus> {
      */
     public void init(EnvFSMContext context, Complex targetDirection) {
         super.init(context);
+        requireNonNull(targetDirection);
         this.targetStatus = MotionStatus.rotate(targetDirection);
     }
 

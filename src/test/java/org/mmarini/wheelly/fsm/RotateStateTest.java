@@ -53,7 +53,6 @@ import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.HALT;
 import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.ROTATE;
 
 class RotateStateTest {
-    public static final int COMMITMENT_TIME = 1000;
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
 
@@ -102,11 +101,11 @@ class RotateStateTest {
                 // 1 - 1st tick
                 .add(builder)
                 // 2 - tick robot dir toward targetDir
-                .add(builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(1)
                         // and robot dir toward targetDir
                         .robotDir(targetDir.toIntDeg()))
                 // 3 - after completion
-                .add(builder.addTime(COMMITMENT_TIME))
+                .add(builder.addTime(1))
                 .buildArray();
 
         //--------
@@ -163,11 +162,11 @@ class RotateStateTest {
                 // tick
                 .add(builder)
                 // tick after commitment
-                .add(builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(1)
                         .robotDir(targetDir.opposite().toIntDeg()))
 
                 // tick after next commitment
-                .add(builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(1)
                         // and robot dir toward targetDir
                         .canMoveForward(false))
                 .buildArray();
@@ -215,10 +214,10 @@ class RotateStateTest {
                 // tick
                 .add(builder)
                 // tick after commitment
-                .add(builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(1)
                         .robotDir(targetDir.opposite().toIntDeg()))
                 // tick after next commitment
-                .add(builder.addTime(COMMITMENT_TIME)
+                .add(builder.addTime(1)
                         // and rear contact
                         .canMoveBackward(false))
                 .buildArray();
