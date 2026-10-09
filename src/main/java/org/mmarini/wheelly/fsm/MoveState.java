@@ -46,7 +46,7 @@ import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
  * optimises the transition upon reaching the target or triggering a callback.
  * </p>
  */
-public class MoveState extends AbstractContactEventState<MotionStatus> {
+public class MoveState extends AbstractContactEventState1<MotionStatus> {
 
     /**
      * The target co-ordinates towards which the robot is travelling.

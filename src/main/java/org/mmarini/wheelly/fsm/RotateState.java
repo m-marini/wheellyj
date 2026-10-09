@@ -46,15 +46,13 @@ public class RotateState extends AbstractContactEventState<MotionStatus> {
     /**
      * The target orientation
      */
-    private Complex targetDeg;
+    private MotionStatus targetStatus;
 
     /**
      * Initialises a new instance of {@code RotateState} with a specified commitment duration.
      *
-     * @param commitmentTime the maximum time duration for which this state remains active
      */
-    public RotateState(long commitmentTime) {
-        super(commitmentTime);
+    public RotateState() {
     }
 
     /**
@@ -77,7 +75,7 @@ public class RotateState extends AbstractContactEventState<MotionStatus> {
      */
     public void init(EnvFSMContext context, Complex targetDirection) {
         super.init(context);
-        this.targetDeg = targetDirection;
+        this.targetStatus = MotionStatus.rotate(targetDirection);
     }
 
     /**
@@ -94,16 +92,16 @@ public class RotateState extends AbstractContactEventState<MotionStatus> {
     public MotionStatus tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward() || contacted()) {
-            return triggerContact(context, null);
+            return triggerContact(context, MotionStatus.halt());
         }
         if (completed()) {
-            return complete(context, null);
+            return complete(context, MotionStatus.halt());
         }
 
         Complex directionRange = robotStatus.robotSpec().directionRange();
-        if (robotStatus.direction().isCloseTo(targetDeg, directionRange.toIntDeg())) {
-            return complete(context, null);
+        if (robotStatus.direction().isCloseTo(targetStatus.targetDir(), directionRange.toIntDeg())) {
+            return complete(context, MotionStatus.halt());
         }
-        return MotionStatus.rotate(targetDeg);
+        return targetStatus;
     }
 }

@@ -53,10 +53,10 @@ class HaltStateTest {
     void setUp() {
         this.builder = new WorldModelBuilder();
         this.onCompletionContexts = new ArrayList<>();
-        this.state = new HaltState(COMMITMENT_TIME)
-                .onCompletion(ctx -> {
+        this.state = new HaltState()
+                .onCompletion((ctx, def) -> {
                     onCompletionContexts.add(ctx);
-                    return MotionStatus.halt();
+                    return def;
                 });
     }
 
@@ -67,11 +67,7 @@ class HaltStateTest {
                 .add(builder)
                 // 1 - 1st tick
                 .add(builder)
-                // 2 - before commitment
-                .add(builder.addTime(COMMITMENT_TIME - 1))
-                // 3 - at commitment
-                .add(builder.addTime(1))
-                // 4 - after commitment
+                // 2 - 2nd tick
                 .add(builder.addTime(1))
                 .build();
 
@@ -85,23 +81,9 @@ class HaltStateTest {
         MotionStatus cmd = state.tick(ctx);
         // Then ...
         assertEquals(HALT, cmd.status());
-        assertThat(onCompletionContexts, empty());
-
-        // When 2 - before commitment
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        // Then ...
-        assertEquals(HALT, cmd.status());
-        assertThat(onCompletionContexts, empty());
-
-        // When 3 - at commitment
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        // Then ...
-        assertEquals(HALT, cmd.status());
         assertThat(onCompletionContexts, contains(ctx));
 
-        // When 4 - at commitment
+        // When 2 - before commitment
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then ...

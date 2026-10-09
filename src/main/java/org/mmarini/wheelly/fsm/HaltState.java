@@ -41,16 +41,17 @@ import org.mmarini.wheelly.apis.RobotCommands;
  * inference for the subsequent execution tick.
  * </p>
  */
-public class HaltState extends AbstractCompletableState1<MotionStatus> {
+public class HaltState extends AbstractCompletableState<MotionStatus> {
     /**
      * Constructs a {@code HaltState} with a specified initial timestamp to anchor
      * its minimum commitment duration.
-     *
-     * @param commitmentDuration the timestamp representing the reference point utilised
-     *                           to calculate state expiration
      */
-    public HaltState(long commitmentDuration) {
-        super(commitmentDuration);
+    public HaltState() {
+    }
+
+    @Override
+    public void init(EnvFSMContext context) {
+        super.init(context);
     }
 
     /**
@@ -66,7 +67,7 @@ public class HaltState extends AbstractCompletableState1<MotionStatus> {
      */
     @Override
     public MotionStatus tick(EnvFSMContext context) {
-        return expired(context)
+        return context.worldModel().robotStatus().halt()
                 ? complete(context, MotionStatus.halt())
                 : MotionStatus.halt();
     }

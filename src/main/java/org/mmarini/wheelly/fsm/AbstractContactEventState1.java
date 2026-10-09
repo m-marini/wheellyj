@@ -31,18 +31,18 @@ package org.mmarini.wheelly.fsm;
 
 import org.mmarini.wheelly.apis.RobotCommands;
 
-import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
  * An abstract base class for FSM states that require a time-based commitment
  * and must react specifically to physical contact events.
  * <p>
- * This class extends {@link AbstractCompletableState} by providing dedicated lifecycle hooks
+ * This class extends {@link AbstractCompletableState1} by providing dedicated lifecycle hooks
  * for physical interaction tracking. It enables fluid configuration of terminal action
  * planning via a custom callback function that triggers immediately upon contact detection.
  * </p>
  */
-public abstract class AbstractContactEventState<T> extends AbstractCompletableState<T> {
+public abstract class AbstractContactEventState1<T> extends AbstractCompletableState1<T> {
 
     /**
      * Flags whether a physical contact event has been triggered during this state's lifecycle.
@@ -52,13 +52,15 @@ public abstract class AbstractContactEventState<T> extends AbstractCompletableSt
     /**
      * The callback function evaluated to supply reactive robot commands when contact is detected.
      */
-    private BiFunction<EnvFSMContext, T, T> onContact;
+    private Function<EnvFSMContext, T> onContact;
 
     /**
-     * Constructs an {@code AbstractContactEventState}
+     * Constructs an {@code AbstractContactEventState} with a specific commitment duration window.
+     *
+     * @param commitmentDuration the length of time in milliseconds that the state must remain active
      */
-    protected AbstractContactEventState() {
-        super();
+    protected AbstractContactEventState1(long commitmentDuration) {
+        super(commitmentDuration);
     }
 
     /**
@@ -95,7 +97,7 @@ public abstract class AbstractContactEventState<T> extends AbstractCompletableSt
      * @return this state instance cast to its concrete type for method chaining
      */
     @SuppressWarnings("unchecked")
-    public <R extends AbstractContactEventState<T>> R onContact(BiFunction<EnvFSMContext, T, T> callback) {
+    public <R extends AbstractContactEventState1<T>> R onContact(Function<EnvFSMContext, T> callback) {
         this.onContact = callback;
         return (R) this;
     }
@@ -112,6 +114,6 @@ public abstract class AbstractContactEventState<T> extends AbstractCompletableSt
         contacted = true;
         return onContact == null
                 ? defaultValue
-                : onContact.apply(context, defaultValue);
+                : onContact.apply(context);
     }
 }

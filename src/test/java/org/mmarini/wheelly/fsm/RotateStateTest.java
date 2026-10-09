@@ -47,7 +47,7 @@ import java.util.stream.Stream;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.HALT;
 import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.ROTATE;
@@ -76,14 +76,14 @@ class RotateStateTest {
         this.builder = new WorldModelBuilder();
         this.onCompletionContexts = new ArrayList<>();
         this.onContactContexts = new ArrayList<>();
-        this.state = new RotateState(COMMITMENT_TIME)
-                .onContact(ctx1 -> {
+        this.state = new RotateState()
+                .onContact((ctx1, def) -> {
                     onContactContexts.add(ctx1);
-                    return MotionStatus.halt();
+                    return def;
                 })
-                .onCompletion(ctx1 -> {
+                .onCompletion((ctx1, def) -> {
                     onCompletionContexts.add(ctx1);
-                    return MotionStatus.halt();
+                    return def;
                 });
     }
 
@@ -96,58 +96,53 @@ class RotateStateTest {
         Complex targetDir = Complex.fromDeg(targetDeg + robotDeg);
         // And context
         MockFSMContext[] ctxs = MockFSMContext.builder()
-                // Init
+                // 0 - Init
                 .add(builder.robotLocation(robotLocation)
                         .robotDir(robotDeg))
-                // tick
+                // 1 - 1st tick
                 .add(builder)
-                // tick after commitment
-                .add(builder.addTime(COMMITMENT_TIME))
-                // tick robot dir toward targetDir
+                // 2 - tick robot dir toward targetDir
                 .add(builder.addTime(COMMITMENT_TIME)
                         // and robot dir toward targetDir
                         .robotDir(targetDir.toIntDeg()))
-                // tick after completion
+                // 3 - after completion
                 .add(builder.addTime(COMMITMENT_TIME))
                 .buildArray();
 
         //--------
-        // When init
+        // When 0 - Init
         Iterator<MockFSMContext> iter = asList(ctxs).iterator();
         MockFSMContext ctx = iter.next();
         state.init(ctx, targetDir);
 
         //--------
-        // When first tick
+        // When 1 - 1st tick
         ctx = iter.next();
         MotionStatus cmd = state.tick(ctx);
         // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd.status());
-        assertThat(cmd.targetDir(), angleCloseTo(targetDir));
-
-        //--------
-        // When tick after commitment
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        // Then the command should be forward to target position
-        assertEquals(ROTATE, cmd.status());
-        assertThat(cmd.targetDir(), angleCloseTo(targetDir));
-
-        //--------
-        // When tick robot dir toward targetDir
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        assertThat(onCompletionContexts, contains(ctx));
+        assertEquals(MotionStatus.rotate(targetDir), cmd);
+        assertFalse(state.completed());
+        assertThat(onCompletionContexts, empty());
         assertThat(onContactContexts, empty());
+
+        //--------
+        // When 2 - tick robot dir toward targetDir
+        ctx = iter.next();
+        cmd = state.tick(ctx);
         // Then the command should be halt
         assertEquals(HALT, cmd.status());
+        assertTrue(state.completed());
+        assertThat(onCompletionContexts, contains(ctx));
+        assertThat(onContactContexts, empty());
 
         //--------
-        // When tick after completion
+        // When 3 - after completion
         ctx = iter.next();
         cmd = state.tick(ctx);
-        // And next action should have been required
+        // Then the command should be halt
         assertEquals(HALT, cmd.status());
+        assertTrue(state.completed());
+        assertThat(onCompletionContexts, hasSize(2));
         assertThat(onCompletionContexts, hasItem(ctx));
         assertThat(onContactContexts, empty());
     }

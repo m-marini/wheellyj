@@ -49,7 +49,7 @@ import java.util.List;
  * and handle collisions during the movement lifecycle.
  * </p>
  */
-public class AsyncMovePathState extends AbstractContactEventState<MotionStatus> {
+public class AsyncMovePathState extends AbstractContactEventState1<MotionStatus> {
     private static final Logger logger = LoggerFactory.getLogger(AsyncMovePathState.class);
     private final MoveState moveState;
     private volatile List<Point2D> path;
