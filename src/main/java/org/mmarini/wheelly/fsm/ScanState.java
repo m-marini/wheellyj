@@ -108,7 +108,7 @@ public class ScanState extends AbstractCompletableState<HeadStatus> {
     @Override
     public HeadStatus tick(EnvFSMContext context) {
         if (completed()) {
-            return complete(context, targetStatus);
+            return targetStatus;
         }
         RobotStatus robotStatus = context.worldModel().robotStatus();
         Complex sensorDir = robotStatus.headDirection();

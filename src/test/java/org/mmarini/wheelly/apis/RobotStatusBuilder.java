@@ -30,6 +30,7 @@ package org.mmarini.wheelly.apis;
 
 import java.awt.geom.Point2D;
 
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.*;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.Utils.m2mm;
 
@@ -51,15 +52,15 @@ public class RobotStatusBuilder {
     private double rightPps;
     private Point2D robotLocation;
     private long lidarTime;
-    private boolean halt;
     private String qr;
+    private MotionStatus.MotionStatusId motionStatus;
 
     public RobotStatusBuilder() {
         this.canMoveBackward = this.canMoveForward = this.frontSensor = this.rearSensor = true;
         this.time = 1;
         this.robotLocation = new Point2D.Double();
-        this.halt = true;
         this.qr = "?";
+        motionStatus = HALT;
     }
 
     public RobotStatusBuilder addTime(long deltaTime) {
@@ -78,7 +79,9 @@ public class RobotStatusBuilder {
         WheellyMotionMessage motion = new WheellyMotionMessage(time,
                 xPulses,
                 yPulses,
-                robotDirDeg, 0, 0, 0, MotionStatus.MotionStatusId.HALT, 0, 0, 0, 0, 0, 0, 0); // TODO status
+                robotDirDeg, leftPps, rightPps, 0,
+                motionStatus,
+                0, 0, 0, 0, 0, 0, 0);
         WheellyContactsMessage contacts = new WheellyContactsMessage(time, frontSensor, rearSensor, canMoveForward, canMoveBackward);
         CameraEvent camera = new CameraEvent(time, qr, 3, 4, null, Complex.DEG0);
         WheellyLidarMessage lidars = new WheellyLidarMessage(lidarTime, m2mm(frontDistance), m2mm(rearDistance),
@@ -88,8 +91,7 @@ public class RobotStatusBuilder {
                 InferenceFileReader.DEFAULT_SUPPLY_MESSAGE,
                 InferenceFileReader.DEFAULT_DECODE_VOLTAGE,
                 new CorrelatedCameraEvent(camera, lidars),
-                lidars)
-                .setSpeeds(leftPps, rightPps);
+                lidars);
     }
 
     public RobotStatusBuilder canMoveBackward(boolean canMoveBackward) {
@@ -126,8 +128,10 @@ public class RobotStatusBuilder {
         return this;
     }
 
-    public RobotStatusBuilder halt(boolean halt) {
-        this.halt = halt;
+    public RobotStatusBuilder halt() {
+        motionStatus = HALT;
+        leftPps = 0;
+        rightPps = 0;
         return this;
     }
 
@@ -137,6 +141,11 @@ public class RobotStatusBuilder {
 
     public RobotStatusBuilder headAngle(int headAngle) {
         this.headAngle = headAngle;
+        return this;
+    }
+
+    public RobotStatusBuilder moving(boolean forward) {
+        this.motionStatus = forward ? FORWARD : BACKWARD;
         return this;
     }
 
@@ -182,6 +191,11 @@ public class RobotStatusBuilder {
 
     public void rotate(Complex angle) {
         robotDirDeg = robotDir().add(angle).toIntDeg();
+    }
+
+    public RobotStatusBuilder rotating() {
+        this.motionStatus = ROTATE;
+        return this;
     }
 
     public long time() {

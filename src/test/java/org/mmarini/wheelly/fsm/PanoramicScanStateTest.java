@@ -193,7 +193,6 @@ class PanoramicScanStateTest {
         // And no completed
         assertTrue(state.completed());
         // And completion triggered
-        assertThat(onCompletionContexts, hasSize(2));
-        assertThat(onCompletionContexts, hasItem(ctx));
+        assertThat(onCompletionContexts, hasSize(1));
     }
 }

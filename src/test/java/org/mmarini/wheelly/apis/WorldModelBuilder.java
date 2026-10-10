@@ -181,6 +181,11 @@ public class WorldModelBuilder {
         return this;
     }
 
+    public WorldModelBuilder halt() {
+        this.robotStatusBuilder.halt();
+        return this;
+    }
+
     public WorldModelBuilder numSectors(int numSectors) {
         this.numSectors = numSectors;
         return this;
@@ -219,8 +224,8 @@ public class WorldModelBuilder {
         return this.robotStatusBuilder.robotDir();
     }
 
-    public WorldModelBuilder robotHalt(boolean halt) {
-        this.robotStatusBuilder.halt(halt);
+    public WorldModelBuilder moving(boolean forward) {
+        robotStatusBuilder.moving(forward);
         return this;
     }
 

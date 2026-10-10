@@ -84,7 +84,7 @@ public class PanoramicScanState extends AbstractCompletableState<HeadStatus> {
      * Initialises a new {@code FullScanState} instance with a specified duration commitment
      * and directional scanning granularity.
      *
-     * @param angleIntervalDeg   the angular interval between consecutive scanning points in degrees
+     * @param angleIntervalDeg the angular interval between consecutive scanning points in degrees
      */
     public PanoramicScanState(int angleIntervalDeg) {
         super();
@@ -102,7 +102,7 @@ public class PanoramicScanState extends AbstractCompletableState<HeadStatus> {
      * </p>
      *
      * @param context the context reference containing the ongoing execution environment
-    >     * @throws IllegalArgumentException if the calculated target directions yield zero valid steps
+     *                >     * @throws IllegalArgumentException if the calculated target directions yield zero valid steps
      */
     public void init(EnvFSMContext context) {
         super.init(context);
@@ -149,7 +149,7 @@ public class PanoramicScanState extends AbstractCompletableState<HeadStatus> {
     @Override
     public HeadStatus tick(EnvFSMContext context) {
         return completed()
-                ? complete(context, HeadStatus.lookStraight())
+                ? HeadStatus.lookStraight()
                 : scanState.tick(context);
     }
 }

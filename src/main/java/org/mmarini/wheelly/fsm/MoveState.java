@@ -70,7 +70,7 @@ public class MoveState extends AbstractContactEventState<MotionStatus> {
         super.init(ctx);
         this.targetStatus = requireNonNull(targetStatus);
         if (HALT.equals(targetStatus.status())
-                || ROTATE.equals(targetStatus)) {
+                || ROTATE.equals(targetStatus.status())) {
             throw new IllegalArgumentException("invalid status " + targetStatus.status());
         }
     }
@@ -103,17 +103,18 @@ public class MoveState extends AbstractContactEventState<MotionStatus> {
     @Override
     public MotionStatus tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
-        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward() || contacted()) {
-            return triggerContact(context, null);
-        }
         if (completed()) {
-            return complete(context, null);
+            return MotionStatus.halt();
+        }
+        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward()) {
+            complete(context, null);
+            return triggerContact(context, MotionStatus.halt());
         }
         double targetRange = robotStatus.robotSpec().targetRange() + DISTANCE_PER_PULSE;
         Point2D robotLocation = robotStatus.location();
         Point2D targetPosition = targetStatus.target();
         if (robotLocation.distance(targetPosition) <= targetRange && robotStatus.halt()) {
-            return complete(context, null);
+            return complete(context, MotionStatus.halt());
         }
 
         return targetStatus;

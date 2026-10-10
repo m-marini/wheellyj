@@ -163,7 +163,6 @@ class ScanStateTest {
         // Then command should scan at target direction
         assertEquals(HeadStatus.scan(scanDir), cmd);
         assertTrue(state.completed());
-        assertThat(onCompletions, hasSize(2));
-        assertThat(onCompletions, hasItem(ctx));
+        assertThat(onCompletions, hasSize(1));
     }
 }

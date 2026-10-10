@@ -64,7 +64,7 @@ public class AsyncMovePathState extends AbstractContactEventState1<MotionStatus>
      */
     public AsyncMovePathState(long commitmentTime) {
         super(commitmentTime);
-        this.moveState = new MoveState(0)
+        this.moveState = new MoveState()
                 .onContact(this::onContact)
                 .onCompletion(this::onMoveCompletion);
     }
@@ -109,8 +109,8 @@ public class AsyncMovePathState extends AbstractContactEventState1<MotionStatus>
      * @param context the current finite state machine context
      * @return the reactive {@link RobotCommands} triggered by the contact event
      */
-    private MotionStatus onContact(EnvFSMContext context) {
-        return triggerContact(context, null);
+    private MotionStatus onContact(EnvFSMContext context, MotionStatus defaultValue) {
+        return triggerContact(context, defaultValue);
     }
 
     /**
@@ -135,13 +135,13 @@ public class AsyncMovePathState extends AbstractContactEventState1<MotionStatus>
      * @param context the current finite state machine context
      * @return the next set of execution {@link RobotCommands}
      */
-    private MotionStatus onMoveCompletion(EnvFSMContext context) {
+    private MotionStatus onMoveCompletion(EnvFSMContext context, MotionStatus defaultValue) {
         if (currentTargetIdx == path.size()) {
             // final target reached
-            return complete(context, null);
+            return complete(context, defaultValue);
         } else {
             // go to next point
-            moveState.init(context, path.get(currentTargetIdx++));
+            moveState.init(context, MotionStatus.forward(path.get(currentTargetIdx++)));
             return moveState.tick(context);
         }
     }
@@ -185,7 +185,7 @@ public class AsyncMovePathState extends AbstractContactEventState1<MotionStatus>
             return moveState.tick(context);
         } else {
             currentTargetIdx = 0;
-            moveState.init(context, path.getFirst());
+            moveState.init(context, MotionStatus.forward(path.getFirst()));
             return moveState.tick(context);
         }
     }

@@ -550,7 +550,7 @@ class DLMacroActionStateFunctionTest {
         WorldModel model = builder
                 .robotSpeed(leftPps, rightPps)
                 .robotDir(robotDeg)
-                .robotHalt(halt)
+                .halt()
                 .build();
         // And a env state
         MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRIGHT_ACTION);

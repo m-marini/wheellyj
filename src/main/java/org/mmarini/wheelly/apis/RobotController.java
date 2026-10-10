@@ -206,8 +206,7 @@ public class RobotController implements RobotControllerApi {
     private void onCamera(CameraEvent cameraEvent) {
         RobotControllerStatus st = status.updateAndGet(s -> {
             RobotStatus s1 = s.robotStatus()
-                    .setCameraMessage(new CorrelatedCameraEvent(cameraEvent, s.robotStatus().lidarMessage()))
-                    .setSimulationTime(robot.robotTime());
+                    .setCameraMessage(new CorrelatedCameraEvent(cameraEvent, s.robotStatus().lidarMessage()));
             return s.robotStatus(s1);
         });
         RobotStatus robotStatus = st.robotStatus();
@@ -223,8 +222,7 @@ public class RobotController implements RobotControllerApi {
     private void onContactsMessage(WheellyContactsMessage message) {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
-                                .setContactsMessage(message)
-                                .setSimulationTime(message.time())))
+                                .setContactsMessage(message)))
                 .robotStatus();
         notifyRobotStatus(status);
         scheduleInference(status);
@@ -253,8 +251,7 @@ public class RobotController implements RobotControllerApi {
     private void onLidarMessage(WheellyLidarMessage message) {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
-                                .setLidarMessage(message)
-                                .setSimulationTime(message.time())))
+                                .setLidarMessage(message)))
                 .robotStatus();
         notifyRobotStatus(status);
         scheduleInference(status);
@@ -269,8 +266,7 @@ public class RobotController implements RobotControllerApi {
     private void onMotionMessage(WheellyMotionMessage message) {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
-                                .setMotionMessage(message)
-                                .setSimulationTime(message.time())))
+                                .setMotionMessage(message)))
                 .robotStatus();
         notifyRobotStatus(status);
         scheduleInference(status);
@@ -313,8 +309,7 @@ public class RobotController implements RobotControllerApi {
     private void onSupplyMessage(WheellySupplyMessage message) {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
-                                .setSupplyMessage(message)
-                                .setSimulationTime(message.time())))
+                                .setSupplyMessage(message)))
                 .robotStatus();
         notifyRobotStatus(status);
         scheduleInference(status);

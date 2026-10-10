@@ -94,11 +94,12 @@ public class RotateState extends AbstractContactEventState<MotionStatus> {
     @Override
     public MotionStatus tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
-        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward() || contacted()) {
-            return triggerContact(context, MotionStatus.halt());
-        }
         if (completed()) {
-            return complete(context, MotionStatus.halt());
+            return MotionStatus.halt();
+        }
+        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward()) {
+            complete(context, MotionStatus.halt());
+            return triggerContact(context, MotionStatus.halt());
         }
 
         Complex directionRange = robotStatus.robotSpec().directionRange();

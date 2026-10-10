@@ -92,15 +92,15 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
     protected CoordinatedMotionState(MacroActionConfig config) {
         this.config = requireNonNull(config);
         this.haltState = new HaltState();
-        this.moveState = new MoveState(config.commitmentDuration());
+        this.moveState = new MoveState();
         this.rotateState = new RotateState();
         this.lookStraightState = new ScanState();
         this.fullScanState = new PanoramicScanState(config.scanAngleIntervalDeg());
         this.lookAtTarget = new LookAtTargetState(1);
         this.disengageState = new DisengageState(config.commitmentDuration(), config.safeDistance());
         this.movePathState = new AsyncMovePathState(config.commitmentDuration());
-        moveState.onContact(this::forceHalt)
-                .onCompletion(this::forceHalt);
+        moveState.onContact(this::forceHalt1)
+                .onCompletion(this::forceHalt1);
         rotateState.onContact(this::forceHalt1)
                 .onCompletion(this::forceHalt1);
         disengageState.onCompletion(this::forceHalt);
@@ -403,8 +403,8 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
                 .opposite()
                 .at(robotStatus.location(),
                         config.microDistance() + robotStatus.robotSpec().targetRange());
-        moveState.init(context, target);
-        baseState = moveState;
+        moveState.init(context, MotionStatus.backward(target));
+        baseState1 = moveState;
         moveAction = MICRO_BACKWARD_ACTION;
     }
 
@@ -418,8 +418,8 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         RobotStatus robotStatus = context.worldModel().robotStatus();
         Point2D target = robotStatus.direction().at(robotStatus.location(),
                 config.microDistance() + robotStatus.robotSpec().targetRange());
-        moveState.init(context, target);
-        baseState = moveState;
+        moveState.init(context, MotionStatus.forward(target));
+        baseState1 = moveState;
         moveAction = MICRO_FORWARD_ACTION;
 
     }
