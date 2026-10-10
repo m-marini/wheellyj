@@ -44,6 +44,7 @@ import static org.mmarini.wheelly.engines.AvoidingState.DEFAULT_SAFE_DISTANCE;
  * </p>
  *
  * @param commitmentDuration    the minimum target duration for action commitment, expressed in milliseconds
+ * @param minNumberOfSamples
  * @param scanInterval          the time delta separating consecutive scanning tasks, expressed in milliseconds
  * @param scanAngleIntervalDeg  the angle interval during head scan (DEG)
  * @param microDistance         the linear step distance constraint applied during micro-translation behaviours
@@ -54,7 +55,8 @@ import static org.mmarini.wheelly.engines.AvoidingState.DEFAULT_SAFE_DISTANCE;
  * @param turnScanAngle         the directional complex vector defining the sweep boundaries for turning scans
  * @param microAngle            the directional complex vector defining minor angular adjustments during micro-manoeuvres
  */
-public record MacroActionConfig(long commitmentDuration, long scanInterval, int scanAngleIntervalDeg,
+public record MacroActionConfig(long commitmentDuration, int minNumberOfSamples, long scanInterval,
+                                int scanAngleIntervalDeg,
                                 double microDistance, double minMarkerDistance, double minObstacleDistance,
                                 double minHeadTargetDistance, double safeDistance, Complex turnScanAngle,
                                 Complex microAngle) {
@@ -104,10 +106,21 @@ public record MacroActionConfig(long commitmentDuration, long scanInterval, int 
      */
     public static final String MICRO_ANGLE_ID = "microAngle";
 
-    public static final int DEFAULT_TURN_SCAN_ANGLE = 120;
-    public static final int DEFAULT_MICRO_ANGLE_SCAN = 5;
+    public static final int DEFAULT_TURN_SCAN_ANGLE_DEG = 120;
+    public static final int DEFAULT_MICRO_ANGLE_SCAN_DEG = 5;
     public static final String SCAN_ANGLE_INTERVAL_ID = "scanAngleInterval";
     public static final int DEFAULT_SCAN_ANGLE_INTERVAL_DEG = 5;
+    public static final int DEFAULT_NUMBER_OF_SAMPLES = 1;
+    public static final String MIN_NUMBER_OF_SAMPLES_ID = "minNumberOfSamples";
+
+    public static final double DEFAULT_MICRO_DISTANCE = 0.3;
+    public static final long DEFAULT_COMMITMENT_DURATION = 1000L;
+    public static final Complex DEFAULT_MICRO_ANGLE = Complex.fromDeg(DEFAULT_MICRO_ANGLE_SCAN_DEG);
+    public static final Complex DEFAULT_TURN_SCAN_ANGLE = Complex.fromDeg(DEFAULT_TURN_SCAN_ANGLE_DEG);
+    public static final MacroActionConfig DEFAULT_MACRO_ACTION_CONFIG = new MacroActionConfig(
+            DEFAULT_COMMITMENT_DURATION, DEFAULT_NUMBER_OF_SAMPLES, 0, DEFAULT_SCAN_ANGLE_INTERVAL_DEG,
+            DEFAULT_MICRO_DISTANCE, DEFAULT_MICRO_DISTANCE, DEFAULT_MICRO_DISTANCE, 0,
+            DEFAULT_SAFE_DISTANCE, DEFAULT_TURN_SCAN_ANGLE, DEFAULT_MICRO_ANGLE);
 
     /**
      * Parses and instantiates a {@code MacroActionConfig} from a given JSON node layout.
@@ -129,9 +142,10 @@ public record MacroActionConfig(long commitmentDuration, long scanInterval, int 
         double minObstacleDistance = locator.path(MIN_OBSTACLE_DISTANCE_ID).getNode(root).asDouble();
         double minHeadTargetDistance = locator.path(MIN_HEAD_TARGET_DISTANCE_ID).getNode(root).asDouble(DEFAULT_MAX_SEARCH_TIME);
         double safeDistance = locator.path(SAFE_DISTANCE_ID).getNode(root).asDouble(DEFAULT_SAFE_DISTANCE);
-        Complex turnScanAngle = Complex.fromDeg(locator.path(TURN_SCAN_ANGLE_ID).getNode(root).asInt(DEFAULT_TURN_SCAN_ANGLE));
-        Complex microAngle = Complex.fromDeg(locator.path(MICRO_ANGLE_ID).getNode(root).asInt(DEFAULT_MICRO_ANGLE_SCAN));
-        return new MacroActionConfig(commitmentDuration, scanInterval, scanAngleIntervalDeg, microDistance, minMarkerDistance, minObstacleDistance, minHeadTargetDistance, safeDistance, turnScanAngle, microAngle);
+        Complex turnScanAngle = Complex.fromDeg(locator.path(TURN_SCAN_ANGLE_ID).getNode(root).asInt(DEFAULT_TURN_SCAN_ANGLE_DEG));
+        Complex microAngle = Complex.fromDeg(locator.path(MICRO_ANGLE_ID).getNode(root).asInt(DEFAULT_MICRO_ANGLE_SCAN_DEG));
+        int minNumberOfSamples = locator.path(MIN_NUMBER_OF_SAMPLES_ID).getNode(root).asInt(DEFAULT_NUMBER_OF_SAMPLES);
+        return new MacroActionConfig(commitmentDuration, minNumberOfSamples, scanInterval, scanAngleIntervalDeg, microDistance, minMarkerDistance, minObstacleDistance, minHeadTargetDistance, safeDistance, turnScanAngle, microAngle);
     }
 
     /**
@@ -141,6 +155,7 @@ public record MacroActionConfig(long commitmentDuration, long scanInterval, int 
      * </p>
      *
      * @param commitmentDuration    the time constraint for execution commitment in milliseconds
+     * @param minNumberOfSamples
      * @param scanInterval          the recurrence interval step for sensors in milliseconds
      * @param scanAngleIntervalDeg  the angle interval during head scan (DEG)
      * @param microDistance         the minor translation step bound
@@ -152,17 +167,8 @@ public record MacroActionConfig(long commitmentDuration, long scanInterval, int 
      * @param microAngle            the complex angle factor definition for micro-rotations
      * @throws NullPointerException if any of the specialized object parameters are {@code null}
      */
-    public MacroActionConfig(long commitmentDuration, long scanInterval, int scanAngleIntervalDeg, double microDistance,
-                             double minMarkerDistance, double minObstacleDistance, double minHeadTargetDistance, double safeDistance, Complex turnScanAngle, Complex microAngle) {
-        this.commitmentDuration = commitmentDuration;
-        this.scanInterval = scanInterval;
-        this.scanAngleIntervalDeg = scanAngleIntervalDeg;
-        this.microDistance = microDistance;
-        this.minObstacleDistance = minObstacleDistance;
-        this.turnScanAngle = requireNonNull(turnScanAngle);
-        this.microAngle = requireNonNull(microAngle);
-        this.minMarkerDistance = minMarkerDistance;
-        this.minHeadTargetDistance = minHeadTargetDistance;
-        this.safeDistance = safeDistance;
+    public MacroActionConfig {
+        requireNonNull(turnScanAngle);
+        requireNonNull(microAngle);
     }
 }

@@ -58,8 +58,8 @@ import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.apis.WorldModelBuilder.GRID_SIZE;
 import static org.mmarini.wheelly.engines.AbstractSearchAndMoveState.*;
 import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.BASE_HEAD_CONFIG;
-import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_FACE_AT_NEAREST_MARKER_ACTION;
-import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_FACE_AT_MARKER_ACTION;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_FACE_AT_OBSTACLE_ACTION;
 import static org.mmarini.wheelly.fsm.MoveActionId.EXPLORE_NEAREST_UNKNOWN_AREA;
 import static org.mmarini.wheelly.fsm.MoveActionId.TRACK_NEAREST_MARKER;
 
@@ -234,7 +234,7 @@ class DLMacroActionEnvironmentTest {
         this.markerEnv = new DLMacroActionEnvironment(config, new Random(SEED)) {
             @Override
             public AgentAction nextAction() {
-                return new AgentAction(TRACK_NEAREST_MARKER, LOOK_FACE_AT_NEAREST_MARKER_ACTION);
+                return new AgentAction(TRACK_NEAREST_MARKER, LOOK_FACE_AT_MARKER_ACTION);
             }
         };
         markerEnv.connect(mockAgent);
@@ -242,7 +242,7 @@ class DLMacroActionEnvironmentTest {
         this.exploreEnv = new DLMacroActionEnvironment(config, new Random(SEED)) {
             @Override
             public AgentAction nextAction() {
-                return new AgentAction(EXPLORE_NEAREST_UNKNOWN_AREA, LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION);
+                return new AgentAction(EXPLORE_NEAREST_UNKNOWN_AREA, LOOK_FACE_AT_OBSTACLE_ACTION);
             }
         };
         exploreEnv.connect(mockAgent);

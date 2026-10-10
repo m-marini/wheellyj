@@ -39,7 +39,7 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.apis.Complex.DEG0;
 import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
-import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRAIGHT_ACTION;
 import static org.mmarini.wheelly.fsm.MoveActionId.HALT_ACTION;
 
 public class HaltLookStraightStateTest {
@@ -55,7 +55,7 @@ public class HaltLookStraightStateTest {
     public static final double SAFE_DISTANCE = 0.5;
     public static final int SCAN_ANGLE_INTERVAL_DEG = 45;
     public static final MacroActionConfig BASE_HEAD_CONFIG = new MacroActionConfig(
-            COMMITMENT_TIME, SCAN_INTERVAL, SCAN_ANGLE_INTERVAL_DEG, MICRO_DISTANCE, MIN_MARKER_DISTANCE, MIN_OBSTACLE_DISTANCE,
+            COMMITMENT_TIME, MacroActionConfig.DEFAULT_NUMBER_OF_SAMPLES, SCAN_INTERVAL, SCAN_ANGLE_INTERVAL_DEG, MICRO_DISTANCE, MIN_MARKER_DISTANCE, MIN_OBSTACLE_DISTANCE,
             MIN_HEAD_TARGET_DISTANCE, SAFE_DISTANCE, TURN_SCAN_ANGLE, MICRO_ANGLE);
 
     WorldModelBuilder worldBuilder;
@@ -115,7 +115,7 @@ public class HaltLookStraightStateTest {
     @Test
     void testHaltStraightRepeat() {
         MockFSMContext[] ctx = MockFSMContext.builder()
-                .add(HALT_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(HALT_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 .add(worldBuilder)
                 .add(worldBuilder.addTime(COMMITMENT_TIME - 1))
                 .add(worldBuilder.addTime(1))

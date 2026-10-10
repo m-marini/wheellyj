@@ -62,8 +62,8 @@ public class ScanState extends AbstractCompletableState<HeadStatus> {
     /**
      * Initialises a new {@code ScanState} instance with a specified duration commitment.
      */
-    public ScanState() {
-        this.minNumberOfSamples = 1;
+    public ScanState(int minNumberOfSamples) {
+        this.minNumberOfSamples = minNumberOfSamples;
     }
 
     /**

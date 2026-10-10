@@ -94,8 +94,8 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         this.haltState = new HaltState();
         this.moveState = new MoveState();
         this.rotateState = new RotateState();
-        this.lookStraightState = new ScanState();
-        this.fullScanState = new PanoramicScanState(config.scanAngleIntervalDeg());
+        this.lookStraightState = new ScanState(1);
+        this.fullScanState = new PanoramicScanState(1, config.scanAngleIntervalDeg());
         this.lookAtTarget = new LookAtTargetState(1);
         this.disengageState = new DisengageState(config.commitmentDuration(), config.safeDistance());
         this.movePathState = new AsyncMovePathState(config.commitmentDuration());
@@ -137,12 +137,12 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         switch (actionId) {
             case CONTINUE_HEAD_ACTION -> {
             }
-            case LOOK_STRIGHT_ACTION -> initLookStraight(context);
+            case LOOK_STRAIGHT_ACTION -> initLookStraight(context);
             case SCAN_ACTION -> initScan(context);
-            case LOOK_FACE_AT_NEAREST_MARKER_ACTION -> initLookFaceMarker(context);
-            case LOOK_REAR_AT_NEAREST_MARKER_ACTION -> initLookRearMarker(context);
-            case LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION -> initLookFaceObstacle(context);
-            case LOOK_REAR_AT_NEAREST_OBSTACLE_ACTION -> initLookRearObstacle(context);
+            case LOOK_FACE_AT_MARKER_ACTION -> initLookFaceMarker(context);
+            case LOOK_REAR_AT_MARKER_ACTION -> initLookRearMarker(context);
+            case LOOK_FACE_AT_OBSTACLE_ACTION -> initLookFaceObstacle(context);
+            case LOOK_REAR_AT_OBSTACLE_ACTION -> initLookRearObstacle(context);
             default -> throw new IllegalStateException("head action " + actionId + " not found");
         }
         if (headState == null) {
@@ -318,7 +318,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
             logger.atDebug().log("Start LookFaceMarker {}", target);
             lookAtTarget.init(context, target, true);
             //headState = lookAtTarget;
-            headAction = LOOK_FACE_AT_NEAREST_MARKER_ACTION;
+            headAction = LOOK_FACE_AT_MARKER_ACTION;
         }
     }
 
@@ -337,7 +337,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
             logger.atDebug().log("Start LookFaceObstacle {}", target);
             lookAtTarget.init(context, target, true);
             // headState = lookAtTarget;
-            headAction = LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION;
+            headAction = LOOK_FACE_AT_OBSTACLE_ACTION;
         }
     }
 
@@ -356,7 +356,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
             logger.atDebug().log("Start LookRearMarker {}", target);
             lookAtTarget.init(context, target, false);
             //headState = lookAtTarget;
-            headAction = LOOK_REAR_AT_NEAREST_MARKER_ACTION;
+            headAction = LOOK_REAR_AT_MARKER_ACTION;
         }
     }
 
@@ -375,7 +375,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
             logger.atDebug().log("Start LookRearObstacle {}", target);
             lookAtTarget.init(context, target, false);
             //  headState = lookAtTarget;
-            headAction = LOOK_REAR_AT_NEAREST_OBSTACLE_ACTION;
+            headAction = LOOK_REAR_AT_OBSTACLE_ACTION;
         }
     }
 
@@ -388,7 +388,7 @@ public class CoordinatedMotionState implements EnvFSMState<RobotCommand> {
         logger.atDebug().log("Start LookStraight");
         lookStraightState.init(context);
         //headState = lookStraightState;
-        headAction = LOOK_STRIGHT_ACTION;
+        headAction = LOOK_STRAIGHT_ACTION;
     }
 
     /**

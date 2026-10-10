@@ -51,7 +51,7 @@ import static org.mmarini.wheelly.apis.RobotStatusId.*;
 import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.*;
 import static org.mmarini.wheelly.fsm.HeadActionId.CONTINUE_HEAD_ACTION;
-import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRAIGHT_ACTION;
 import static org.mmarini.wheelly.fsm.MoveActionId.*;
 
 public class MicroActionTest {
@@ -84,7 +84,7 @@ public class MicroActionTest {
         Point2D target = Complex.fromDeg(robotDeg).opposite().at(robotLocation,
                 MICRO_DISTANCE + DEFAULT_ROBOT_SPEC.targetRange());
         MockFSMContext[] ctx = MockFSMContext.builder()
-                .add(MICRO_BACKWARD_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(MICRO_BACKWARD_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 .add(worldBuilder)
                 .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
                         worldBuilder.addTime(COMMITMENT_TIME)
@@ -130,7 +130,7 @@ public class MicroActionTest {
                 .at(robotLocation,
                         MICRO_DISTANCE + DEFAULT_ROBOT_SPEC.targetRange());
         MockFSMContext[] ctx = MockFSMContext.builder()
-                .add(MICRO_BACKWARD_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(MICRO_BACKWARD_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 .add(worldBuilder)
                 .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
                         worldBuilder.addTime(COMMITMENT_TIME)
@@ -175,7 +175,7 @@ public class MicroActionTest {
         Point2D target = Complex.fromDeg(robotDeg).at(robotLocation,
                 MICRO_DISTANCE + DEFAULT_ROBOT_SPEC.targetRange());
         MockFSMContext[] ctx = MockFSMContext.builder()
-                .add(MICRO_FORWARD_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(MICRO_FORWARD_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 .add(worldBuilder)
                 .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
                         worldBuilder.addTime(COMMITMENT_TIME)
@@ -219,7 +219,7 @@ public class MicroActionTest {
         Point2D target = Complex.fromDeg(robotDeg).at(robotLocation,
                 MICRO_DISTANCE + DEFAULT_ROBOT_SPEC.targetRange());
         MockFSMContext[] ctx = MockFSMContext.builder()
-                .add(MICRO_FORWARD_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(MICRO_FORWARD_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 .add(worldBuilder)
                 .add(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION,
                         worldBuilder.addTime(COMMITMENT_TIME)

@@ -53,7 +53,7 @@ import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.apis.WorldModelBuilder.GRID_SIZE;
 import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.*;
 import static org.mmarini.wheelly.fsm.HeadActionId.CONTINUE_HEAD_ACTION;
-import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRAIGHT_ACTION;
 import static org.mmarini.wheelly.fsm.MoveActionId.*;
 
 public class TurnActionTest {
@@ -130,7 +130,7 @@ public class TurnActionTest {
                 .robotDir(robotDeg);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(MICRO_LEFT_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(MICRO_LEFT_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate left
@@ -186,7 +186,7 @@ public class TurnActionTest {
                 .robotDir(robotDeg);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(MICRO_RIGHT_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(MICRO_RIGHT_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate left
@@ -245,7 +245,7 @@ public class TurnActionTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_MARKER_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_MARKER_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate to obstacle
@@ -309,7 +309,7 @@ public class TurnActionTest {
                 .orElseThrow();
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_MARKER_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_MARKER_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - contact
@@ -368,7 +368,7 @@ public class TurnActionTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - after completion
@@ -419,7 +419,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate to obstacle
@@ -484,7 +484,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - contact
@@ -549,7 +549,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_FACE_NEAREST_OBSTACLE_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - after completion
@@ -591,7 +591,7 @@ public class TurnActionTest {
                 .robotDir(robotDeg);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_LEFT_SCAN_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_LEFT_SCAN_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate left
@@ -650,7 +650,7 @@ public class TurnActionTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_MARKER_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_MARKER_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - contact
@@ -709,7 +709,7 @@ public class TurnActionTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_MARKER_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_MARKER_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate to obstacle
@@ -768,7 +768,7 @@ public class TurnActionTest {
                 .addMarker(MARKER_A, markerLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_MARKER_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_MARKER_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - after completion
@@ -819,7 +819,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_OBSTACLE_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate to obstacle
@@ -884,7 +884,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_OBSTACLE_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - after completion
@@ -935,7 +935,7 @@ public class TurnActionTest {
         Complex mapObstacleDir = Complex.direction(robotLocation, mapObstacleLocation);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_REAR_NEAREST_OBSTACLE_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_REAR_NEAREST_OBSTACLE_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - contact
@@ -991,7 +991,7 @@ public class TurnActionTest {
                 .robotDir(robotDeg);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TURN_RIGHT_SCAN_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(TURN_RIGHT_SCAN_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - rotate left

@@ -58,7 +58,7 @@ class PanoramicScanStateTest {
     void setUp() {
         this.builder = new WorldModelBuilder();
         this.onCompletionContexts = new ArrayList<>();
-        this.state = new PanoramicScanState(ANGLE_INTERVAL_DEG)
+        this.state = new PanoramicScanState(1, ANGLE_INTERVAL_DEG)
                 .onCompletion((ctx, def) -> {
                     onCompletionContexts.add(ctx);
                     return def;

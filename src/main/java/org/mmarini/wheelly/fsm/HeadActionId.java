@@ -49,7 +49,7 @@ public enum HeadActionId {
      * Directs the sensor head to re-align itself forward, locking into a straight
      * position parallel to the robot's primary forward driving axis.
      */
-    LOOK_STRIGHT_ACTION,
+    LOOK_STRAIGHT_ACTION,
 
     /**
      * Initiates a periodic panoramic sensory sweep, driving the head to perform continuous
@@ -61,23 +61,35 @@ public enum HeadActionId {
      * Commands the sensor head to actively track and face the closest identified marker
      * using a standard forward-looking orientation.
      */
-    LOOK_FACE_AT_NEAREST_MARKER_ACTION,
+    LOOK_FACE_AT_MARKER_ACTION,
 
     /**
      * Commands the sensor head to track the closest identified marker by reversing its
      * primary gaze vector, resulting in a rear-looking alignment profile.
      */
-    LOOK_REAR_AT_NEAREST_MARKER_ACTION,
+    LOOK_REAR_AT_MARKER_ACTION,
 
     /**
      * Directs the sensor head to lock its focus directly onto the nearest detected physical
      * obstacle to ensure real-time distance assessment.
      */
-    LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION,
+    LOOK_FACE_AT_OBSTACLE_ACTION,
 
     /**
      * Directs the sensor head to monitor the nearest detected physical obstacle from a
      * reversed perspective, using a rear-facing alignment.
      */
-    LOOK_REAR_AT_NEAREST_OBSTACLE_ACTION
+    LOOK_REAR_AT_OBSTACLE_ACTION,
+
+    /**
+     * Directs the sensor head to lock its focus directly onto a designated
+     * exploration target to facilitate autonomous mapping of unknown territory.
+     */
+    LOOK_FACE_AT_EXPLORATION_TARGET_ACTION,
+
+    /**
+     * Directs the sensor head to lock its focus directly onto a designated
+     * exploration target located behind the unit to facilitate autonomous mapping.
+     */
+    LOOK_REAR_AT_EXPLORATION_TARGET_ACTION
 }

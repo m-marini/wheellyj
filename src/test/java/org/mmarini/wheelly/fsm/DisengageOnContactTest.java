@@ -49,7 +49,7 @@ import static org.mmarini.wheelly.apis.RobotStatusId.*;
 import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.*;
 import static org.mmarini.wheelly.fsm.HeadActionId.CONTINUE_HEAD_ACTION;
-import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRAIGHT_ACTION;
 import static org.mmarini.wheelly.fsm.MoveActionId.*;
 
 public class DisengageOnContactTest {
@@ -96,7 +96,7 @@ public class DisengageOnContactTest {
 
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(DISENGAGE_ON_CONTACT_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(DISENGAGE_ON_CONTACT_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - before commitment
@@ -190,7 +190,7 @@ public class DisengageOnContactTest {
 
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(DISENGAGE_ON_CONTACT_ACTION, LOOK_STRIGHT_ACTION, worldBuilder)
+                .add(DISENGAGE_ON_CONTACT_ACTION, LOOK_STRAIGHT_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 2 - before commitment

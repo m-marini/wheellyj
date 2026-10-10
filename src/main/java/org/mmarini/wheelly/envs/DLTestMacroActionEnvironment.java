@@ -47,13 +47,13 @@ import static org.mmarini.wheelly.fsm.MoveActionId.*;
  */
 public class DLTestMacroActionEnvironment extends DLMacroActionEnvironment {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-test-macro-actions-schema-0.1";
-    public static final AgentAction HALT_STRAIGHT_ACTION = new AgentAction(HALT_ACTION, LOOK_STRIGHT_ACTION);
+    public static final AgentAction HALT_STRAIGHT_ACTION = new AgentAction(HALT_ACTION, LOOK_STRAIGHT_ACTION);
     public static final AgentAction CONTINUE_ACTION = new AgentAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
     public static final String ACTION_ID = "action";
     public static final AgentAction HALT_SCAN_ACTION = new AgentAction(HALT_ACTION, SCAN_ACTION);
     public static final String FULL_SCAN_ID = "fullScan";
-    public static final AgentAction TURN_RIGHT_SCAN = new AgentAction(TURN_RIGHT_SCAN_ACTION, LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION);
-    public static final AgentAction EXPLORE_ACTION = new AgentAction(EXPLORE_NEAREST_UNKNOWN_AREA, LOOK_STRIGHT_ACTION);
+    public static final AgentAction TURN_RIGHT_SCAN = new AgentAction(TURN_RIGHT_SCAN_ACTION, LOOK_FACE_AT_OBSTACLE_ACTION);
+    public static final AgentAction EXPLORE_ACTION = new AgentAction(EXPLORE_NEAREST_UNKNOWN_AREA, LOOK_STRAIGHT_ACTION);
     public static final String EXPLORE_ID = "explore";
 
     /**

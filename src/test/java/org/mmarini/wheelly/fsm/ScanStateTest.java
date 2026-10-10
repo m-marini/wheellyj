@@ -63,7 +63,7 @@ class ScanStateTest {
     @BeforeEach
     void setUp() {
         this.builder = new WorldModelBuilder();
-        this.state = new ScanState();
+        this.state = new ScanState(1);
     }
 
     @ParameterizedTest

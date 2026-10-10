@@ -54,7 +54,7 @@ import static org.mmarini.wheelly.fsm.AsyncMovePathStateTest.CONTINGENCY_TIME;
 import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.BASE_HEAD_CONFIG;
 import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.COMMITMENT_TIME;
 import static org.mmarini.wheelly.fsm.HeadActionId.CONTINUE_HEAD_ACTION;
-import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRAIGHT_ACTION;
 import static org.mmarini.wheelly.fsm.MockFSMContext.PATH_TIME;
 import static org.mmarini.wheelly.fsm.MoveActionId.*;
 
@@ -110,7 +110,7 @@ public class TrackTest {
         // And contexts
         List<MockFSMContext> ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(EXPLORE_NEAREST_UNKNOWN_AREA, LOOK_STRIGHT_ACTION, path, worldBuilder)
+                .add(EXPLORE_NEAREST_UNKNOWN_AREA, LOOK_STRAIGHT_ACTION, path, worldBuilder)
                 // 1 - first
                 .add()
                 // 2 - before commitment
@@ -231,7 +231,7 @@ public class TrackTest {
         // And contexts
         List<MockFSMContext> ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(TRACK_NEAREST_MARKER, LOOK_STRIGHT_ACTION, path, worldBuilder)
+                .add(TRACK_NEAREST_MARKER, LOOK_STRAIGHT_ACTION, path, worldBuilder)
                 // 1 - first
                 .add()
                 // 2 - before commitment

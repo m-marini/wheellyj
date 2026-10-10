@@ -84,11 +84,12 @@ public class PanoramicScanState extends AbstractCompletableState<HeadStatus> {
      * Initialises a new {@code FullScanState} instance with a specified duration commitment
      * and directional scanning granularity.
      *
-     * @param angleIntervalDeg the angular interval between consecutive scanning points in degrees
+     * @param minNumberOfSamples
+     * @param angleIntervalDeg   the angular interval between consecutive scanning points in degrees
      */
-    public PanoramicScanState(int angleIntervalDeg) {
+    public PanoramicScanState(int minNumberOfSamples, int angleIntervalDeg) {
         super();
-        this.scanState = new ScanState()
+        this.scanState = new ScanState(minNumberOfSamples)
                 .onCompletion(this::onCompletion);
         this.angleIntervalDeg = angleIntervalDeg;
         currentStepIndex = -1;

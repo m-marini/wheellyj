@@ -121,7 +121,7 @@ public class LookObstacleTest {
                 .sub(robotDir);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(HALT_ACTION, LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION, worldBuilder)
+                .add(HALT_ACTION, LOOK_FACE_AT_OBSTACLE_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 3 - after completion
@@ -136,7 +136,7 @@ public class LookObstacleTest {
         MockFSMContext ctx = ctxs[idx++];
         RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION, state.headAction());
+        assertEquals(LOOK_FACE_AT_OBSTACLE_ACTION, state.headAction());
         assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(headDir.toIntDeg(), cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
@@ -152,7 +152,7 @@ public class LookObstacleTest {
                 .robotDir(robotDeg);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(HALT_ACTION, LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION, worldBuilder)
+                .add(HALT_ACTION, LOOK_FACE_AT_OBSTACLE_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 3 - after completion
@@ -167,7 +167,7 @@ public class LookObstacleTest {
         MockFSMContext ctx = ctxs[idx++];
         RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
+        assertEquals(LOOK_STRAIGHT_ACTION, state.headAction());
         assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
@@ -176,7 +176,7 @@ public class LookObstacleTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
+        assertEquals(LOOK_STRAIGHT_ACTION, state.headAction());
         assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
@@ -208,7 +208,7 @@ public class LookObstacleTest {
 
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(HALT_ACTION, LOOK_REAR_AT_NEAREST_OBSTACLE_ACTION, worldBuilder)
+                .add(HALT_ACTION, LOOK_REAR_AT_OBSTACLE_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 3 - after completion
@@ -223,7 +223,7 @@ public class LookObstacleTest {
         MockFSMContext ctx = ctxs[idx++];
         RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(LOOK_REAR_AT_NEAREST_OBSTACLE_ACTION, state.headAction());
+        assertEquals(LOOK_REAR_AT_OBSTACLE_ACTION, state.headAction());
         assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(headDir.toIntDeg(), cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
@@ -239,7 +239,7 @@ public class LookObstacleTest {
                 .robotDir(robotDeg);
         MockFSMContext[] ctxs = MockFSMContext.builder()
                 // 0 - init
-                .add(HALT_ACTION, LOOK_REAR_AT_NEAREST_OBSTACLE_ACTION, worldBuilder)
+                .add(HALT_ACTION, LOOK_REAR_AT_OBSTACLE_ACTION, worldBuilder)
                 // 1 - first
                 .add(worldBuilder)
                 // 3 - after completion
@@ -254,7 +254,7 @@ public class LookObstacleTest {
         MockFSMContext ctx = ctxs[idx++];
         RobotCommand cmd = state.tick(ctx);
         // Then
-        assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
+        assertEquals(LOOK_STRAIGHT_ACTION, state.headAction());
         assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
@@ -263,7 +263,7 @@ public class LookObstacleTest {
         ctx = ctxs[idx++];
         cmd = state.tick(ctx);
         // Then
-        assertEquals(LOOK_STRIGHT_ACTION, state.headAction());
+        assertEquals(LOOK_STRAIGHT_ACTION, state.headAction());
         assertEquals(HALT, cmd.motionStatus().status());
         assertEquals(0, cmd.headStatus().direction());
         assertEquals(1, ctx.nextActionCount());
