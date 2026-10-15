@@ -28,6 +28,12 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.envs.MacroEnvState;
+import org.mmarini.wheelly.fsm.AgentAction;
+import org.mmarini.wheelly.fsm.HeadActionId;
+import org.mmarini.wheelly.fsm.MoveActionId;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -80,6 +86,25 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
         worldSpec = readWorldSpec();
         topology = readTopology();
         return this;
+    }
+
+    private AgentAction readAgentAction() throws IOException {
+        MoveActionId move = readMoveActionId();
+        HeadActionId head = readHeadActionId();
+        return new AgentAction(move, head);
+    }
+
+    public MacroEnvState readMacroEnvState() throws IOException {
+        WorldModel model = readModel();
+        MoveActionId move = readMoveActionId();
+        HeadActionId head = readHeadActionId();
+        return new MacroEnvState(model, move, head);
+    }
+
+    public Tuple2<MacroEnvState, AgentAction> readMacroEnvStep() throws IOException {
+        MacroEnvState state = readMacroEnvState();
+        AgentAction action = readAgentAction();
+        return Tuple2.of(state, action);
     }
 
     @Override

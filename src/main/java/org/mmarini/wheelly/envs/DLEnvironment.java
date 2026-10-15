@@ -131,6 +131,15 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
         this.agent = agent;
     }
 
+    /**
+     * Configures the inference writer used to log execution data and session telemetry.
+     * <p>
+     * When a new writer is assigned, the internal header status is reset to ensure that
+     * metadata layout information is properly initialised on the new target.
+     * </p>
+     *
+     * @param inferenceWriter the {@link InferenceWriter} instance to assign for logging
+     */
     public void inferenceWriter(InferenceWriter inferenceWriter) {
         this.inferenceWriter = inferenceWriter;
         headerWritten = false;
@@ -164,8 +173,7 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
                                 model.worldSpec(),
                                 model.getRadarMap().topology());
                     }
-                    inferenceWriter.write(model)
-                            .write(commands);
+                    inferenceWriter.write(model, commands);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

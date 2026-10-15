@@ -51,8 +51,11 @@ import java.util.function.DoubleConsumer;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Connects the world modeller to reinforcement learning agent
- * generating state signals and converting actions to robot command
+ * Connects the world modeller to the reinforcement learning agent.
+ * <p>
+ * This class is responsible for generating state signals from environmental data
+ * and converting agent actions back into low-level robot commands.
+ * </p>
  */
 public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, EnvState {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-macro-actions-schema-0.1";
@@ -78,8 +81,9 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
     /**
      * Creates the deep learning environment from a JSON configuration file.
      *
-     * @param root the document root
+     * @param root the document root node
      * @param file the configuration file
+     * @return the initialised {@link DLMacroActionEnvironment} instance
      * @throws IOException if a validation or reading error occurs
      */
     public static DLMacroActionEnvironment create(JsonNode root, File file) throws IOException {
@@ -127,7 +131,9 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
     }
 
     /**
-     * Returns the action function
+     * Returns the action function definitions for macro actions.
+     *
+     * @return the macro action function
      */
     public ActionFunction actionFunction() {
         return MACRO_ACTION_FUNCTION;
@@ -139,8 +145,9 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
     }
 
     /**
+     * Returns the connected agent connector interface.
      *
-     * Returns the agent
+     * @return the active {@link AgentConnector} instance
      */
     public AgentConnector agent() {
         return agent;
@@ -160,11 +167,23 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
         this.agent = agent;
     }
 
+    /**
+     * Sets the current world model context.
+     *
+     * @param worldModel the world model instance to store
+     * @return this environment instance for method chaining
+     */
     public DLMacroActionEnvironment currentWorldModel(WorldModel worldModel) {
         this.currentWorldModel = requireNonNull(worldModel);
         return this;
     }
 
+    /**
+     * Decodes raw action signals into discrete agent execution command IDs.
+     *
+     * @param actions the map containing movement and heading signals
+     * @return the decoded {@link AgentAction} wrapper
+     */
     private AgentAction decodeAction(Map<String, Signal> actions) {
         int moveCode = actions.get(MOVE_ID).getInt(0, 0);
         MoveActionId moveId = MoveActionId.values()[moveCode];
@@ -175,6 +194,8 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
 
     /**
      * Validates that all required operational dependencies are connected.
+     *
+     * @throws IllegalStateException if the agent or the state function is missing
      */
     private void ensureConnected() {
         if (agent == null) {
@@ -185,11 +206,21 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
         }
     }
 
+    /**
+     * Configures the active inference writer logging target.
+     *
+     * @param inferenceWriter the destination writer for session logs
+     */
     public void inferenceWriter(InferenceWriter inferenceWriter) {
         this.inferenceWriter = inferenceWriter;
         this.headerWritten = false;
     }
 
+    /**
+     * Determines and processes the next action transition step for the reinforcement learning loop.
+     *
+     * @return the generated {@link AgentAction} to execute
+     */
     public AgentAction nextAction() {
         WorldModel model = worldModel();
         BasicEnvState state = new BasicEnvState(model);
@@ -236,8 +267,11 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
                                 currentWorldModel.worldSpec(),
                                 currentWorldModel.getRadarMap().topology());
                     }
-                    inferenceWriter.write(worldModel())
-                            .write(nextAction);
+                    inferenceWriter.write(
+                            new MacroEnvState(worldModel(),
+                                    motionState.currentAction(),
+                                    headState.currentAction()),
+                            nextAction);
                 } catch (IOException e) {
                     logger.atError().setCause(e).log("Error writing inference");
                 }
@@ -249,23 +283,59 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
     }
 
     /**
-     * Returns the rewards flow
+     * Registers a callback function to be executed when a new reward is received.
+     * <p>
+     * If a callback is already present, the new callback is chained to the existing one
+     * and executed sequentially.
+     * </p>
+     *
+     * @param callback the consumer function that receives the reward value
+     * @return this environment instance for method chaining
      */
     public DLMacroActionEnvironment onReward(DoubleConsumer callback) {
         this.onReward = onReward != null ? onReward.andThen(callback) : callback;
         return this;
     }
 
+    /**
+     * Calculates the reward transition by evaluating the step change between states.
+     * <p>
+     * If a reward function is registered, it computes the reward dynamically based on the
+     * transition from the previous state to the current state given the action taken.
+     * Otherwise, it defaults to zero.
+     * </p>
+     *
+     * @param state0  the previous environment state before the action execution
+     * @param actions the macro action executed by the agent during the transition
+     * @param state1  the resulting environment state after the action execution
+     * @return the calculated reward value, or {@code 0.0} if no reward function is configured
+     */
     @Override
     public double reward(EnvState state0, EnvAction actions, EnvState state1) {
         return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
+    /**
+     * Sets the reward function used to evaluate agent behaviours and transitions.
+     *
+     * @param rewardFunc the {@link RewardFunction} instance to assign for reward calculation
+     */
     @Override
     public void setRewardFunc(RewardFunction rewardFunc) {
         this.rewardFunc = rewardFunc;
     }
 
+    /**
+     * Extracts and encodes the sensory signals from the current environment state.
+     * <p>
+     * This method analyses the provided environmental state using the connected state function
+     * to generate a map of input signals ready for reinforcement learning agent consumption.
+     * </p>
+     *
+     * @param model the current {@link EnvState} context to extract signals from
+     * @return a map pairing signal identifiers with their processed {@link Signal} values
+     * @throws NullPointerException if the provided model is null
+     */
     @Override
     public Map<String, Signal> state(EnvState model) {
         requireNonNull(model);
@@ -273,18 +343,45 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
         return stateFunc.signals(model);
     }
 
+    /**
+     * Returns the specification of the state signals generated by this environment.
+     * <p>
+     * The specification characterises the structural layout, dimensions, and types of
+     * sensory data that the environment provides to the reinforcement learning agent.
+     * </p>
+     *
+     * @return a map pairing signal identifiers with their corresponding {@link SignalSpec}
+     */
     @Override
     public Map<String, SignalSpec> stateSpec() {
         return stateFunc.spec();
     }
 
+    /**
+     * Returns the current world model containing the latest telemetry and environmental data.
+     * <p>
+     * This snapshot represents the robot's internal belief and perception of its surroundings
+     * at the current execution step.
+     * </p>
+     *
+     * @return the active {@link WorldModel} instance
+     */
     @Override
     public WorldModel worldModel() {
         return currentWorldModel;
     }
 
     /**
-     * Immutable container representing the historical context of the environment step.
+     * Stores the historical context of a single environment execution step.
+     * <p>
+     * This record holds snapshots of the previous state, features, and actions required
+     * to compute rewards and evaluate transition outcomes during reinforcement learning cycles.
+     * </p>
+     *
+     * @param prevState    the environment state before the transition occurred
+     * @param signals0     the sensory input signals associated with the previous state
+     * @param prevCommands the decoded macro commands executed during the step
+     * @param prevActions  the raw action signals generated by the agent for the step
      */
     private record EnvironmentStepState(
             BasicEnvState prevState,
@@ -292,6 +389,9 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
             AgentAction prevCommands,
             Map<String, Signal> prevActions
     ) {
+        /**
+         * Creates an environment step state instance and validates that all properties are non-null.
+         */
         private EnvironmentStepState {
             requireNonNull(prevState);
             requireNonNull(signals0);

@@ -31,6 +31,9 @@ package org.mmarini.wheelly.apis;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.envs.MacroEnvState;
+import org.mmarini.wheelly.fsm.AgentAction;
 import org.mmarini.wheelly.fsm.HeadActionId;
 import org.mmarini.wheelly.fsm.MoveActionId;
 
@@ -71,9 +74,11 @@ class InferenceFileTest {
     public static final HeadStatus SCAN_STATUS = HeadStatus.scan(Angle.DEG90);
     public static final HeadStatus TRACK_FRONT_STATUS = HeadStatus.trackFrontFace(new Point2D.Double(2, 3));
     public static final HeadStatus TRACK_REAR_STATUS = HeadStatus.trackRearFace(new Point2D.Double(-2, -3));
+    public static final AgentAction AGENT_ACTION = new AgentAction(MoveActionId.MICRO_FORWARD_ACTION, HeadActionId.SCAN_ACTION);
     private static final Map<String, LabelMarker> MARKERS = Map.of(
             "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
     public static final WorldModel MODEL = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS, null, null, null);
+    public static final MacroEnvState MACRO_ENV_STATE = new MacroEnvState(MODEL, MoveActionId.MICRO_FORWARD_ACTION, HeadActionId.SCAN_ACTION);
     private InferenceFileWriter writer;
 
     @BeforeEach
@@ -133,6 +138,29 @@ class InferenceFileTest {
     }
 
     @Test
+    void testDLMacroActionStep() throws IOException {
+        writer.write(MACRO_ENV_STATE, AGENT_ACTION);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
+            Tuple2<MacroEnvState, AgentAction> step = reader.readMacroEnvStep();
+            MacroEnvState state = step._1;
+            WorldModel model = state.worldModel();
+            RadarMap radarRead = model.radarMap();
+            assertEquals(MODEL.robotStatus(), model.robotStatus());
+            assertEquals(MODEL.markers(), model.markers());
+            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
+            assertEquals(RADAR.topology().width(), radarRead.topology().width());
+            assertEquals(RADAR.topology().height(), radarRead.topology().height());
+            assertEquals(RADAR.topology().gridSize(), radarRead.topology().gridSize());
+            assertEquals(RADAR.topology().center(), radarRead.topology().center());
+            assertArrayEquals(RADAR.cells(), radarRead.cells());
+            assertEquals(MACRO_ENV_STATE.headActionId(), state.headActionId());
+            assertEquals(MACRO_ENV_STATE.moveActionId(), state.moveActionId());
+            assertEquals(AGENT_ACTION, step._2);
+            assertThrows(EOFException.class, reader::readByte);
+        }
+    }
+
+    @Test
     void testHeadActionId() throws IOException {
         for (HeadActionId value : HeadActionId.values()) {
             writer.write(value);
@@ -179,6 +207,27 @@ class InferenceFileTest {
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
             WheellyLidarMessage motionRead = reader.readLidarMessage();
             assertEquals(LIDAR_MESSAGE, motionRead);
+            assertThrows(EOFException.class, reader::readByte);
+        }
+    }
+
+    @Test
+    void testMacroEnvState() throws IOException {
+        writer.write(MACRO_ENV_STATE);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
+            MacroEnvState state = reader.readMacroEnvState();
+            WorldModel model = state.worldModel();
+            RadarMap radarRead = model.radarMap();
+            assertEquals(MODEL.robotStatus(), model.robotStatus());
+            assertEquals(MODEL.markers(), model.markers());
+            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
+            assertEquals(RADAR.topology().width(), radarRead.topology().width());
+            assertEquals(RADAR.topology().height(), radarRead.topology().height());
+            assertEquals(RADAR.topology().gridSize(), radarRead.topology().gridSize());
+            assertEquals(RADAR.topology().center(), radarRead.topology().center());
+            assertArrayEquals(RADAR.cells(), radarRead.cells());
+            assertEquals(MACRO_ENV_STATE.headActionId(), state.headActionId());
+            assertEquals(MACRO_ENV_STATE.moveActionId(), state.moveActionId());
             assertThrows(EOFException.class, reader::readByte);
         }
     }

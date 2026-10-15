@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.apis;
 
+import org.mmarini.wheelly.envs.MacroEnvState;
 import org.mmarini.wheelly.fsm.AgentAction;
 import org.mmarini.wheelly.fsm.HeadActionId;
 import org.mmarini.wheelly.fsm.MoveActionId;
@@ -184,6 +185,17 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     /**
      * Writes the model
      *
+     * @param state the state
+     */
+    default <T extends InferenceWriter> T write(MacroEnvState state) throws IOException {
+        return write(state.worldModel())
+                .write(state.moveActionId())
+                .write(state.headActionId());
+    }
+
+    /**
+     * Writes the model
+     *
      * @param model the model
      */
     default <T extends InferenceWriter> T write(WorldModel model) throws IOException {
@@ -303,6 +315,12 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     default <T extends InferenceWriter> T write(AgentAction value) throws IOException {
         write(value.moveId());
         write(value.headId());
+        return (T) this;
+    }
+
+    default <T extends InferenceWriter> T write(MacroEnvState macroEnvState, AgentAction agentAction) throws IOException {
+        write(macroEnvState)
+                .write(agentAction);
         return (T) this;
     }
 
