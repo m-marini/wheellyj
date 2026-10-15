@@ -30,6 +30,8 @@ package org.mmarini.wheelly.apis;
 
 import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.fsm.HeadActionId;
+import org.mmarini.wheelly.fsm.MoveActionId;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
@@ -109,13 +111,21 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         return Angle.fromDeg(readInt());
     }
 
+    default HeadActionId readHeadActionId() throws IOException {
+        return HeadActionId.values()[readInt()];
+    }
+
     default HeadStatus readHeadStatus() throws IOException {
-        HeadStatus.HeadStatusId id = HeadStatus.HeadStatusId.values()[readInt()];
+        HeadStatus.HeadStatusId id = readHeadStatusId();
         return switch (id) {
             case FIX_DIRECTION -> HeadStatus.scan(readDeg());
             case FRONT_TRACK -> HeadStatus.trackFrontFace(readPoint2D());
             case REAR_TRACK -> HeadStatus.trackRearFace(readPoint2D());
         };
+    }
+
+    default HeadStatus.HeadStatusId readHeadStatusId() throws IOException {
+        return HeadStatus.HeadStatusId.values()[readInt()];
     }
 
     /**
@@ -136,7 +146,7 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         double xPulses = readDouble();
         double yPulses = readDouble();
         int robotYawDeg = readInt();
-        HeadStatus.HeadStatusId status = HeadStatus.HeadStatusId.values()[readInt()];
+        HeadStatus.HeadStatusId status = readHeadStatusId();
         int headTargetDeg = readInt();
         double xTarget = readDouble();
         double yTarget = readDouble();
@@ -187,7 +197,7 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         double leftPps = readFloat();
         double rightPps = readFloat();
         int imuFailure = readInt();
-        MotionStatus.MotionStatusId status = MotionStatus.MotionStatusId.values()[readInt()];
+        MotionStatus.MotionStatusId status = readMotionStatusId();
         int targetDeg = readInt();
         int leftTargetPps = readInt();
         int rightTargetPps = readInt();
@@ -196,18 +206,26 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         double xTarget = readDouble();
         double yTarget = readDouble();
         return new WheellyMotionMessage(simulationTime, xPulses, yPulses,
-                directionDeg, leftPps, rightPps, imuFailure, MotionStatus.MotionStatusId.HALT, targetDeg,
+                directionDeg, leftPps, rightPps, imuFailure, status, targetDeg,
                 leftTargetPps, rightTargetPps, leftPower, rightPower, xTarget, yTarget);
     }
 
     default MotionStatus readMotionStatus() throws IOException {
-        MotionStatus.MotionStatusId id = MotionStatus.MotionStatusId.values()[readInt()];
+        MotionStatus.MotionStatusId id = readMotionStatusId();
         return switch (id) {
             case HALT -> MotionStatus.halt();
             case ROTATE -> MotionStatus.rotate(readDeg());
             case FORWARD -> MotionStatus.forward(readPoint2D());
             case BACKWARD -> MotionStatus.backward(readPoint2D());
         };
+    }
+
+    default MotionStatus.MotionStatusId readMotionStatusId() throws IOException {
+        return MotionStatus.MotionStatusId.values()[readInt()];
+    }
+
+    default MoveActionId readMoveActionId() throws IOException {
+        return MoveActionId.values()[readInt()];
     }
 
     default Point2D readPoint2D() throws IOException {

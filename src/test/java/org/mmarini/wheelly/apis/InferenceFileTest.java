@@ -32,6 +32,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.fsm.HeadActionId;
+import org.mmarini.wheelly.fsm.MoveActionId;
 
 import java.awt.geom.Point2D;
 import java.io.EOFException;
@@ -67,12 +69,12 @@ class InferenceFileTest {
     public static final MotionStatus FORWARD_MOTION = MotionStatus.forward(new Point2D.Double(1, 2));
     public static final MotionStatus BACKWARD_MOTION = MotionStatus.backward(new Point2D.Double(-1, -2));
     public static final MotionStatus ROTATE_MOTION = MotionStatus.rotate(Angle.DEG180);
-    private static final Map<String, LabelMarker> MARKERS = Map.of(
-            "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
-    public static final WorldModel MODEL = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS, null, null, null);
     public static final HeadStatus SCAN_STATUS = HeadStatus.scan(Angle.DEG90);
     public static final HeadStatus TRACK_FRONT_STATUS = HeadStatus.trackFrontFace(new Point2D.Double(2, 3));
     public static final HeadStatus TRACK_REAR_STATUS = HeadStatus.trackRearFace(new Point2D.Double(-2, -3));
+    private static final Map<String, LabelMarker> MARKERS = Map.of(
+            "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
+    public static final WorldModel MODEL = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS, null, null, null);
     private InferenceFileWriter writer;
 
     @BeforeEach
@@ -132,20 +134,16 @@ class InferenceFileTest {
     }
 
     @Test
-    void testHeader() {
-        Tuple2<WorldModelSpec, GridTopology> header = assertDoesNotThrow(() -> {
-            writer.writeHeader(WORLD_MODEL_SPEC, TOPOLOGY);
-            try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-                return reader.readHeader();
+    void testHeadActionId() throws IOException {
+        for (HeadActionId value : HeadActionId.values()) {
+            writer.write(value);
+        }
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
+            for (HeadActionId value : HeadActionId.values()) {
+                assertEquals(value, reader.readHeadActionId());
             }
-        });
-        WorldModelSpec spec = header._1;
-        GridTopology topology = header._2;
-        assertEquals(WORLD_MODEL_SPEC, spec);
-        assertEquals(TOPOLOGY.center(), topology.center());
-        assertEquals(TOPOLOGY.width(), topology.width());
-        assertEquals(TOPOLOGY.height(), topology.height());
-        assertEquals(TOPOLOGY.gridSize(), topology.gridSize());
+            assertThrows(EOFException.class, reader::readByte);
+        }
     }
 
     @Test
@@ -165,31 +163,20 @@ class InferenceFileTest {
     }
 
     @Test
-    void testMarkers() throws IOException {
-        writer.write(MARKERS);
-        try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-            Map<String, LabelMarker> markersRead = reader.readMarkers();
-            assertEquals(MARKERS, markersRead);
-            assertThrows(IOException.class, reader::readByte);
-        }
-    }
-
-    @Test
-    void testModel() throws IOException {
-        writer.write(MODEL);
-        try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-            WorldModel model = reader.readModel();
-            RadarMap radarRead = model.radarMap();
-            assertEquals(MODEL.robotStatus(), model.robotStatus());
-            assertEquals(MODEL.markers(), model.markers());
-            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
-            assertEquals(RADAR.topology().width(), radarRead.topology().width());
-            assertEquals(RADAR.topology().height(), radarRead.topology().height());
-            assertEquals(RADAR.topology().gridSize(), radarRead.topology().gridSize());
-            assertEquals(RADAR.topology().center(), radarRead.topology().center());
-            assertArrayEquals(RADAR.cells(), radarRead.cells());
-            assertThrows(IOException.class, reader::readByte);
-        }
+    void testHeader() {
+        Tuple2<WorldModelSpec, GridTopology> header = assertDoesNotThrow(() -> {
+            writer.writeHeader(WORLD_MODEL_SPEC, TOPOLOGY);
+            try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
+                return reader.readHeader();
+            }
+        });
+        WorldModelSpec spec = header._1;
+        GridTopology topology = header._2;
+        assertEquals(WORLD_MODEL_SPEC, spec);
+        assertEquals(TOPOLOGY.center(), topology.center());
+        assertEquals(TOPOLOGY.width(), topology.width());
+        assertEquals(TOPOLOGY.height(), topology.height());
+        assertEquals(TOPOLOGY.gridSize(), topology.gridSize());
     }
 
     @Test
@@ -224,6 +211,34 @@ class InferenceFileTest {
     }
 
     @Test
+    void testMarkers() throws IOException {
+        writer.write(MARKERS);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
+            Map<String, LabelMarker> markersRead = reader.readMarkers();
+            assertEquals(MARKERS, markersRead);
+            assertThrows(IOException.class, reader::readByte);
+        }
+    }
+
+    @Test
+    void testModel() throws IOException {
+        writer.write(MODEL);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
+            WorldModel model = reader.readModel();
+            RadarMap radarRead = model.radarMap();
+            assertEquals(MODEL.robotStatus(), model.robotStatus());
+            assertEquals(MODEL.markers(), model.markers());
+            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
+            assertEquals(RADAR.topology().width(), radarRead.topology().width());
+            assertEquals(RADAR.topology().height(), radarRead.topology().height());
+            assertEquals(RADAR.topology().gridSize(), radarRead.topology().gridSize());
+            assertEquals(RADAR.topology().center(), radarRead.topology().center());
+            assertArrayEquals(RADAR.cells(), radarRead.cells());
+            assertThrows(IOException.class, reader::readByte);
+        }
+    }
+
+    @Test
     void testMotion() throws IOException {
         writer.write(MOTION_MESSAGE);
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
@@ -248,6 +263,19 @@ class InferenceFileTest {
             assertEquals(ROTATE_MOTION, status);
             status = reader.readMotionStatus();
             assertEquals(MotionStatus.halt(), status);
+            assertThrows(EOFException.class, reader::readByte);
+        }
+    }
+
+    @Test
+    void testMoveActionId() throws IOException {
+        for (MoveActionId value : MoveActionId.values()) {
+            writer.write(value);
+        }
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
+            for (MoveActionId value : MoveActionId.values()) {
+                assertEquals(value, reader.readMoveActionId());
+            }
             assertThrows(EOFException.class, reader::readByte);
         }
     }

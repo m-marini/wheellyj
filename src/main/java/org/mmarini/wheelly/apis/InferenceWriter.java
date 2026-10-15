@@ -29,6 +29,8 @@
 package org.mmarini.wheelly.apis;
 
 import org.mmarini.NotImplementedException;
+import org.mmarini.wheelly.fsm.HeadActionId;
+import org.mmarini.wheelly.fsm.MoveActionId;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
@@ -53,7 +55,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
     }
 
     default <T extends InferenceWriter> T write(MotionStatus status) throws IOException {
-        write(status.status().ordinal());
+        write(status.status());
         return (T) switch (status.status()) {
             case HALT -> this;
             case FORWARD, BACKWARD -> write(status.target());
@@ -61,11 +63,20 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         };
     }
 
+    default <T extends InferenceWriter> T write(MotionStatus.MotionStatusId status) throws IOException {
+        return write(status.ordinal());
+    }
+
     default <T extends InferenceWriter> T write(HeadStatus status) throws IOException {
-        write(status.status().ordinal());
+        write(status.status());
         return FIX_DIRECTION.equals(status.status())
                 ? write(status.direction())
                 : write(status.target());
+    }
+
+    default <T extends InferenceWriter> T write(HeadStatus.HeadStatusId status) throws IOException {
+        write(status.ordinal());
+        return (T) this;
     }
 
     /**
@@ -133,21 +144,22 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param motion the motion message
      */
     default <T extends InferenceWriter> T write(WheellyMotionMessage motion) throws IOException {
-        return write(motion.time())
-                .write((float) motion.xPulses())
-                .write((float) motion.yPulses())
-                .write(motion.directionDeg())
-                .write((float) motion.leftPps())
-                .write((float) motion.rightPps())
-                .write(motion.imuFailure())
-                .write(motion.status().ordinal())
-                .write(motion.targetDeg())
-                .write(motion.leftTargetPps())
-                .write(motion.rightTargetPps())
-                .write(motion.leftPower())
-                .write(motion.rightPower())
-                .write(motion.xTarget())
-                .write(motion.yTarget());
+        write(motion.time());
+        write((float) motion.xPulses());
+        write((float) motion.yPulses());
+        write(motion.directionDeg());
+        write((float) motion.leftPps());
+        write((float) motion.rightPps());
+        write(motion.imuFailure());
+        write(motion.status());
+        write(motion.targetDeg());
+        write(motion.leftTargetPps());
+        write(motion.rightTargetPps());
+        write(motion.leftPower());
+        write(motion.rightPower());
+        write(motion.xTarget());
+        write(motion.yTarget());
+        return (T) this;
     }
 
     /**
@@ -236,17 +248,18 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * Returns the lidar message
      */
     default <T extends InferenceWriter> T write(WheellyLidarMessage message) throws IOException {
-        return write(message.time())
-                .write(message.headDirectionDeg())
-                .write(message.frontDistance())
-                .write(message.rearDistance())
-                .write(message.xPulses())
-                .write(message.yPulses())
-                .write(message.robotYawDeg())
-                .write(message.headTargetDeg())
-                .write(message.trackingState().ordinal())
-                .write(message.xTarget())
-                .write(message.yTarget());
+        write(message.time());
+        write(message.headDirectionDeg());
+        write(message.frontDistance());
+        write(message.rearDistance());
+        write(message.xPulses());
+        write(message.yPulses());
+        write(message.robotYawDeg());
+        write(message.headTargetDeg());
+        write(message.trackingState());
+        write(message.xTarget());
+        write(message.yTarget());
+        return (T) this;
     }
 
     /**
@@ -283,6 +296,16 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         return write(spec.robotSpec())
                 .write(spec.numSectors())
                 .write(spec.robotMapSize());
+    }
+
+    default <T extends InferenceWriter> T write(MoveActionId value) throws IOException {
+        write(value.ordinal());
+        return (T) this;
+    }
+
+    default <T extends InferenceWriter> T write(HeadActionId value) throws IOException {
+        write(value.ordinal());
+        return (T) this;
     }
 
     /**
