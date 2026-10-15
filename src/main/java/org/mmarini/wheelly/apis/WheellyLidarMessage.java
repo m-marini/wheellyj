@@ -61,8 +61,8 @@ import static org.mmarini.wheelly.apis.RobotSpec.pulses2Location;
  * @param target           the mapped 2D coordinate point representing the sensor target position
  */
 public record WheellyLidarMessage(long time,
-                                  int headDirectionDeg, int frontDistance, int rearDistance, double xPulses,
-                                  double yPulses, int robotYawDeg, int headTargetDeg,
+                                  int headDirectionDeg, int frontDistance, int rearDistance,
+                                  double xPulses, double yPulses, int robotYawDeg, int headTargetDeg,
                                   HeadStatus.HeadStatusId trackingState,
                                   double xTarget,
                                   double yTarget, Angle headDirection,

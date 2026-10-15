@@ -34,6 +34,8 @@ import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.Map;
 
+import static org.mmarini.wheelly.apis.HeadStatus.HeadStatusId.FIX_DIRECTION;
+
 /**
  * World model dumper
  */
@@ -48,6 +50,22 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                 .write(camera.qrCode())
                 .write(camera.width())
                 .write(camera.height());
+    }
+
+    default <T extends InferenceWriter> T write(MotionStatus status) throws IOException {
+        write(status.status().ordinal());
+        return (T) switch (status.status()) {
+            case HALT -> this;
+            case FORWARD, BACKWARD -> write(status.target());
+            case ROTATE -> write(status.targetDir());
+        };
+    }
+
+    default <T extends InferenceWriter> T write(HeadStatus status) throws IOException {
+        write(status.status().ordinal());
+        return FIX_DIRECTION.equals(status.status())
+                ? write(status.direction())
+                : write(status.target());
     }
 
     /**
@@ -123,10 +141,13 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                 .write((float) motion.rightPps())
                 .write(motion.imuFailure())
                 .write(motion.status().ordinal())
+                .write(motion.targetDeg())
                 .write(motion.leftTargetPps())
                 .write(motion.rightTargetPps())
                 .write(motion.leftPower())
-                .write(motion.rightPower());
+                .write(motion.rightPower())
+                .write(motion.xTarget())
+                .write(motion.yTarget());
     }
 
     /**
@@ -221,7 +242,11 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
                 .write(message.rearDistance())
                 .write(message.xPulses())
                 .write(message.yPulses())
-                .write(message.robotYawDeg());
+                .write(message.robotYawDeg())
+                .write(message.headTargetDeg())
+                .write(message.trackingState().ordinal())
+                .write(message.xTarget())
+                .write(message.yTarget());
     }
 
     /**

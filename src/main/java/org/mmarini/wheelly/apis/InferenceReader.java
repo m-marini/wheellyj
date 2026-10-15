@@ -109,6 +109,15 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         return Angle.fromDeg(readInt());
     }
 
+    default HeadStatus readHeadStatus() throws IOException {
+        HeadStatus.HeadStatusId id = HeadStatus.HeadStatusId.values()[readInt()];
+        return switch (id) {
+            case FIX_DIRECTION -> HeadStatus.scan(readDeg());
+            case FRONT_TRACK -> HeadStatus.trackFrontFace(readPoint2D());
+            case REAR_TRACK -> HeadStatus.trackRearFace(readPoint2D());
+        };
+    }
+
     /**
      * Returns the world model from file or null if end of file
      */
@@ -127,8 +136,12 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         double xPulses = readDouble();
         double yPulses = readDouble();
         int robotYawDeg = readInt();
+        HeadStatus.HeadStatusId status = HeadStatus.HeadStatusId.values()[readInt()];
+        int headTargetDeg = readInt();
+        double xTarget = readDouble();
+        double yTarget = readDouble();
         return new WheellyLidarMessage(simTime, frontDistance, rearDistance, xPulses, yPulses,
-                robotYawDeg, headDirectionDeg, HeadStatus.HeadStatusId.FIX_DIRECTION, 0, 0, 0);
+                robotYawDeg, headDirectionDeg, status, headTargetDeg, xTarget, yTarget);
     }
 
     /**
@@ -174,13 +187,27 @@ public interface InferenceReader extends AutoCloseable, DataReader {
         double leftPps = readFloat();
         double rightPps = readFloat();
         int imuFailure = readInt();
-        int status = readInt();
+        MotionStatus.MotionStatusId status = MotionStatus.MotionStatusId.values()[readInt()];
+        int targetDeg = readInt();
         int leftTargetPps = readInt();
         int rightTargetPps = readInt();
         int leftPower = readInt();
         int rightPower = readInt();
+        double xTarget = readDouble();
+        double yTarget = readDouble();
         return new WheellyMotionMessage(simulationTime, xPulses, yPulses,
-                directionDeg, leftPps, rightPps, imuFailure, MotionStatus.MotionStatusId.HALT, 0, leftTargetPps, rightTargetPps, leftPower, rightPower, 0, 0);
+                directionDeg, leftPps, rightPps, imuFailure, MotionStatus.MotionStatusId.HALT, targetDeg,
+                leftTargetPps, rightTargetPps, leftPower, rightPower, xTarget, yTarget);
+    }
+
+    default MotionStatus readMotionStatus() throws IOException {
+        MotionStatus.MotionStatusId id = MotionStatus.MotionStatusId.values()[readInt()];
+        return switch (id) {
+            case HALT -> MotionStatus.halt();
+            case ROTATE -> MotionStatus.rotate(readDeg());
+            case FORWARD -> MotionStatus.forward(readPoint2D());
+            case BACKWARD -> MotionStatus.backward(readPoint2D());
+        };
     }
 
     default Point2D readPoint2D() throws IOException {

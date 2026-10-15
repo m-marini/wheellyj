@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.mmarini.Tuple2;
 
 import java.awt.geom.Point2D;
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -63,10 +64,15 @@ class InferenceFileTest {
             CONTACTS_MESSAGE, InferenceFileReader.DEFAULT_SUPPLY_MESSAGE, InferenceFileReader.DEFAULT_DECODE_VOLTAGE, CORRELATED_CAMERA_EVENT, LIDAR_MESSAGE);
     public static final WorldModelSpec WORLD_MODEL_SPEC = new WorldModelSpec(DEFAULT_ROBOT_SPEC,
             NUM_SECTORS, GRID_MAP_SIZE);
+    public static final MotionStatus FORWARD_MOTION = MotionStatus.forward(new Point2D.Double(1, 2));
+    public static final MotionStatus BACKWARD_MOTION = MotionStatus.backward(new Point2D.Double(-1, -2));
+    public static final MotionStatus ROTATE_MOTION = MotionStatus.rotate(Angle.DEG180);
     private static final Map<String, LabelMarker> MARKERS = Map.of(
             "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
     public static final WorldModel MODEL = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS, null, null, null);
-
+    public static final HeadStatus SCAN_STATUS = HeadStatus.scan(Angle.DEG90);
+    public static final HeadStatus TRACK_FRONT_STATUS = HeadStatus.trackFrontFace(new Point2D.Double(2, 3));
+    public static final HeadStatus TRACK_REAR_STATUS = HeadStatus.trackRearFace(new Point2D.Double(-2, -3));
     private InferenceFileWriter writer;
 
     @BeforeEach
@@ -101,6 +107,7 @@ class InferenceFileTest {
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
             RobotCommands commandRead = reader.readCommands();
             assertEquals(COMMANDS, commandRead);
+            assertThrows(EOFException.class, reader::readByte);
         }
     }
 
@@ -110,6 +117,7 @@ class InferenceFileTest {
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
             WheellyContactsMessage contactsRead = reader.readContacts();
             assertEquals(CONTACTS_MESSAGE, contactsRead);
+            assertThrows(EOFException.class, reader::readByte);
         }
     }
 
@@ -119,6 +127,7 @@ class InferenceFileTest {
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
             CorrelatedCameraEvent cameraRead = reader.readCorrelatedCamera();
             assertEquals(CORRELATED_CAMERA_EVENT, cameraRead);
+            assertThrows(EOFException.class, reader::readByte);
         }
     }
 
@@ -140,22 +149,18 @@ class InferenceFileTest {
     }
 
     @Test
-    void testInference() throws IOException {
-        writer.write(MODEL, COMMANDS);
+    void testHeadStatus() throws IOException {
+        writer.write(SCAN_STATUS);
+        writer.write(TRACK_FRONT_STATUS);
+        writer.write(TRACK_REAR_STATUS);
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-            Tuple2<WorldModel, RobotCommands> t = reader.readRecord();
-            WorldModel model = t._1;
-            RadarMap radarRead = model.radarMap();
-            assertEquals(MODEL.robotStatus(), model.robotStatus());
-            assertEquals(MODEL.markers(), model.markers());
-            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
-            assertEquals(RADAR.topology().width(), radarRead.topology().width());
-            assertEquals(RADAR.topology().height(), radarRead.topology().height());
-            assertEquals(RADAR.topology().gridSize(), radarRead.topology().gridSize());
-            assertEquals(RADAR.topology().center(), radarRead.topology().center());
-            assertArrayEquals(RADAR.cells(), radarRead.cells());
-            RobotCommands commands = t._2;
-            assertEquals(COMMANDS, commands);
+            HeadStatus status = reader.readHeadStatus();
+            assertEquals(SCAN_STATUS, status);
+            status = reader.readHeadStatus();
+            assertEquals(TRACK_FRONT_STATUS, status);
+            status = reader.readHeadStatus();
+            assertEquals(TRACK_REAR_STATUS, status);
+            assertThrows(EOFException.class, reader::readByte);
         }
     }
 
@@ -188,11 +193,62 @@ class InferenceFileTest {
     }
 
     @Test
+    void testInference() throws IOException {
+        writer.write(MODEL, COMMANDS);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
+            Tuple2<WorldModel, RobotCommands> t = reader.readRecord();
+            WorldModel model = t._1;
+            RadarMap radarRead = model.radarMap();
+            assertEquals(MODEL.robotStatus(), model.robotStatus());
+            assertEquals(MODEL.markers(), model.markers());
+            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
+            assertEquals(RADAR.topology().width(), radarRead.topology().width());
+            assertEquals(RADAR.topology().height(), radarRead.topology().height());
+            assertEquals(RADAR.topology().gridSize(), radarRead.topology().gridSize());
+            assertEquals(RADAR.topology().center(), radarRead.topology().center());
+            assertArrayEquals(RADAR.cells(), radarRead.cells());
+            RobotCommands commands = t._2;
+            assertEquals(COMMANDS, commands);
+            assertThrows(EOFException.class, reader::readByte);
+        }
+    }
+
+    @Test
+    void testLidar() throws IOException {
+        writer.write(LIDAR_MESSAGE);
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
+            WheellyLidarMessage motionRead = reader.readLidarMessage();
+            assertEquals(LIDAR_MESSAGE, motionRead);
+            assertThrows(EOFException.class, reader::readByte);
+        }
+    }
+
+    @Test
     void testMotion() throws IOException {
         writer.write(MOTION_MESSAGE);
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
             WheellyMotionMessage motionRead = reader.readMotion();
             assertEquals(MOTION_MESSAGE, motionRead);
+            assertThrows(EOFException.class, reader::readByte);
+        }
+    }
+
+    @Test
+    void testMotionStatus() throws IOException {
+        writer.write(FORWARD_MOTION);
+        writer.write(BACKWARD_MOTION);
+        writer.write(ROTATE_MOTION);
+        writer.write(MotionStatus.halt());
+        try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
+            MotionStatus status = reader.readMotionStatus();
+            assertEquals(FORWARD_MOTION, status);
+            status = reader.readMotionStatus();
+            assertEquals(BACKWARD_MOTION, status);
+            status = reader.readMotionStatus();
+            assertEquals(ROTATE_MOTION, status);
+            status = reader.readMotionStatus();
+            assertEquals(MotionStatus.halt(), status);
+            assertThrows(EOFException.class, reader::readByte);
         }
     }
 
