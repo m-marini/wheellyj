@@ -110,6 +110,8 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
     private volatile EnvironmentStepState stepState;
     private WorldModel currentWorldModel;
     private DoubleConsumer onReward;
+    private InferenceWriter inferenceWriter;
+    private boolean headerWritten;
 
     /**
      * Creates the deep learning environment
@@ -183,6 +185,11 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
         }
     }
 
+    public void inferenceWriter(InferenceWriter inferenceWriter) {
+        this.inferenceWriter = inferenceWriter;
+        this.headerWritten = false;
+    }
+
     public AgentAction nextAction() {
         WorldModel model = worldModel();
         BasicEnvState state = new BasicEnvState(model);
@@ -222,6 +229,19 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
             AgentAction nextAction = nextAction();
             headState.init(this, nextAction.headId());
             motionState.init(this, nextAction.moveId());
+            if (inferenceWriter != null) {
+                try {
+                    if (!headerWritten) {
+                        inferenceWriter.writeHeader(InferenceWriter.Type.DL_MACRO_ACTION,
+                                currentWorldModel.worldSpec(),
+                                currentWorldModel.getRadarMap().topology());
+                    }
+                    inferenceWriter.write(worldModel())
+                            .write(nextAction);
+                } catch (IOException e) {
+                    logger.atError().setCause(e).log("Error writing inference");
+                }
+            }
         }
         MotionStatus motionCmd = motionState.tick(this);
         HeadStatus headCmd = headState.tick(this);

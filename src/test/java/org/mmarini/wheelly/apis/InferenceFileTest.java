@@ -31,7 +31,6 @@ package org.mmarini.wheelly.apis;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.fsm.HeadActionId;
 import org.mmarini.wheelly.fsm.MoveActionId;
 
@@ -82,7 +81,7 @@ class InferenceFileTest {
         FILE.delete();
         this.writer = assertDoesNotThrow(() -> {
             InferenceFileWriter file = InferenceFileWriter.fromFile(FILE);
-            file.writeHeader(WORLD_MODEL_SPEC, TOPOLOGY);
+            file.writeHeader(InferenceWriter.Type.DL_MACRO_ACTION, WORLD_MODEL_SPEC, TOPOLOGY);
             return file;
         });
     }
@@ -107,7 +106,7 @@ class InferenceFileTest {
     void testCommands() throws IOException {
         writer.write(COMMANDS);
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-            RobotCommands commandRead = reader.readCommands();
+            RobotCommand commandRead = reader.readCommand();
             assertEquals(COMMANDS, commandRead);
             assertThrows(EOFException.class, reader::readByte);
         }
@@ -163,40 +162,14 @@ class InferenceFileTest {
     }
 
     @Test
-    void testHeader() {
-        Tuple2<WorldModelSpec, GridTopology> header = assertDoesNotThrow(() -> {
-            writer.writeHeader(WORLD_MODEL_SPEC, TOPOLOGY);
-            try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-                return reader.readHeader();
-            }
-        });
-        WorldModelSpec spec = header._1;
-        GridTopology topology = header._2;
-        assertEquals(WORLD_MODEL_SPEC, spec);
-        assertEquals(TOPOLOGY.center(), topology.center());
-        assertEquals(TOPOLOGY.width(), topology.width());
-        assertEquals(TOPOLOGY.height(), topology.height());
-        assertEquals(TOPOLOGY.gridSize(), topology.gridSize());
-    }
-
-    @Test
-    void testInference() throws IOException {
-        writer.write(MODEL, COMMANDS);
+    void testHeader() throws IOException {
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-            Tuple2<WorldModel, RobotCommands> t = reader.readRecord();
-            WorldModel model = t._1;
-            RadarMap radarRead = model.radarMap();
-            assertEquals(MODEL.robotStatus(), model.robotStatus());
-            assertEquals(MODEL.markers(), model.markers());
-            assertEquals(RADAR.cleanTimestamp(), radarRead.cleanTimestamp());
-            assertEquals(RADAR.topology().width(), radarRead.topology().width());
-            assertEquals(RADAR.topology().height(), radarRead.topology().height());
-            assertEquals(RADAR.topology().gridSize(), radarRead.topology().gridSize());
-            assertEquals(RADAR.topology().center(), radarRead.topology().center());
-            assertArrayEquals(RADAR.cells(), radarRead.cells());
-            RobotCommands commands = t._2;
-            assertEquals(COMMANDS, commands);
-            assertThrows(EOFException.class, reader::readByte);
+            assertEquals(InferenceWriter.Type.DL_MACRO_ACTION, reader.type());
+            assertEquals(WORLD_MODEL_SPEC, reader.worldSpec());
+            assertEquals(TOPOLOGY.center(), reader.topology().center());
+            assertEquals(TOPOLOGY.width(), reader.topology().width());
+            assertEquals(TOPOLOGY.height(), reader.topology().height());
+            assertEquals(TOPOLOGY.gridSize(), reader.topology().gridSize());
         }
     }
 

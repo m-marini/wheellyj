@@ -1,3 +1,31 @@
+/*
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -6,6 +34,7 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+import org.mmarini.NotImplementedException;
 import org.mmarini.Tuple2;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
@@ -16,12 +45,10 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
-import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.util.Objects.requireNonNull;
 
@@ -31,7 +58,6 @@ import static java.util.Objects.requireNonNull;
  * Parses the status log seeking for specific records
  */
 public class FilterLog {
-    public static final double RANGE = 4.9;
     public static final int NUM_RECORDS = 10;
     private static final Logger logger = LoggerFactory.getLogger(FilterLog.class);
 
@@ -64,7 +90,9 @@ public class FilterLog {
     }
 
     static List<Tuple2<WorldModel, RobotCommands>> filter(File file1, int start, int size) {
+        throw new NotImplementedException();
         // Seek inference
+        /*
         List<Tuple2<WorldModel, RobotCommands>> result = new ArrayList<>();
         try (InferenceFileReader file = InferenceFileReader.fromFile(file1)) {
             int recordNumber = 0;
@@ -78,6 +106,8 @@ public class FilterLog {
         } catch (IOException e) {
         }
         return result;
+
+         */
     }
 
     /**
@@ -98,7 +128,9 @@ public class FilterLog {
     }
 
     static int seek(File file1) {
+        throw new NotImplementedException();
         // Read inference
+        /*
         try (InferenceFileReader file = InferenceFileReader.fromFile(file1)) {
             for (int recordNumber = 0; ; recordNumber++) {
                 Point2D loc = file.readRecord()
@@ -110,6 +142,8 @@ public class FilterLog {
         } catch (IOException e) {
             return -1;
         }
+
+         */
     }
 
     private static void simulate(List<Tuple2<WorldModel, RobotCommands>> list, int numRecord) throws IOException {

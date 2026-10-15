@@ -28,8 +28,6 @@
 
 package org.mmarini.wheelly.apis;
 
-import org.mmarini.NotImplementedException;
-import org.mmarini.Tuple2;
 import org.mmarini.wheelly.fsm.HeadActionId;
 import org.mmarini.wheelly.fsm.MoveActionId;
 
@@ -64,18 +62,10 @@ public interface InferenceReader extends AutoCloseable, DataReader {
      *
      * @throws IOException in case of error
      */
-    default RobotCommands readCommands() throws IOException {
-        throw new NotImplementedException();
-            /* TODO
-
-        return switch (status) {
-            case HALT -> RobotCommands.halt(headDeg);
-            case ROTATE -> RobotCommands.rotate(headDeg, readInt());
-            case FORWARD -> RobotCommands.forward(headDeg, readPoint2D());
-            case BACKWARD -> RobotCommands.backward(headDeg, readPoint2D());
-        };
-
-             */
+    default RobotCommand readCommand() throws IOException {
+        MotionStatus motionStatus = readMotionStatus();
+        HeadStatus headStatus = readHeadStatus();
+        return new RobotCommand(motionStatus, headStatus);
     }
 
     /**
@@ -126,13 +116,6 @@ public interface InferenceReader extends AutoCloseable, DataReader {
 
     default HeadStatus.HeadStatusId readHeadStatusId() throws IOException {
         return HeadStatus.HeadStatusId.values()[readInt()];
-    }
-
-    /**
-     * Returns the world model from file or null if end of file
-     */
-    default Tuple2<WorldModelSpec, GridTopology> readHeader() throws IOException {
-        return Tuple2.of(readWorldSpec(), readTopology());
     }
 
     /**
@@ -241,17 +224,6 @@ public interface InferenceReader extends AutoCloseable, DataReader {
      * @throws IOException in case of error
      */
     RadarMap readRadar() throws IOException;
-
-    /**
-     * Returns the world model from file or null if end of file
-     *
-     * @throws IOException in case of error
-     */
-    default Tuple2<WorldModel, RobotCommands> readRecord() throws IOException {
-        WorldModel model = readModel();
-        RobotCommands commands = readCommands();
-        return Tuple2.of(model, commands);
-    }
 
     default RobotSpec readRobotSpec() throws IOException {
         return new RobotSpec(readDouble(), // maxRadarDistance

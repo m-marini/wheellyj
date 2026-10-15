@@ -47,9 +47,7 @@ import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.envs.EnvironmentApi;
-import org.mmarini.wheelly.envs.RewardFunction;
-import org.mmarini.wheelly.envs.WithRewardCallback;
+import org.mmarini.wheelly.envs.*;
 import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.swing.*;
 import org.mmarini.yaml.Locator;
@@ -67,8 +65,10 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -262,15 +262,18 @@ public class Wheelly {
         }
 
         // Creates the model dumper
-        Optional.ofNullable(this.args.getString("inference")).ifPresent(file -> {
-            try {
-                this.modelDumper = InferenceFileWriter.fromFile(
-                                new File(this.args.getString("inference")))
-                        .writeHeader(worldModeller.worldModelSpec(), worldModeller.radarModeller().topology());
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error dumping inference to {}", file);
+        String inference = this.args.getString("inference");
+        if (inference != null) {
+            this.modelDumper = InferenceFileWriter.fromFile(
+                    new File(this.args.getString("inference")));
+            switch (environment) {
+                case DLEnvironment env -> env.inferenceWriter(modelDumper);
+                case DLMacroActionEnvironment env -> env.inferenceWriter(modelDumper);
+                default -> {
+                }
             }
-        });
+        }
+
         if (!(robot instanceof SimRobot)) {
             toolBar.relocateButton().setEnabled(false);
         }

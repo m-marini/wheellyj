@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,8 +28,6 @@
 
 package org.mmarini.wheelly.apis;
 
-import org.mmarini.Tuple2;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -47,7 +45,6 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
     public static final WheellySupplyMessage DEFAULT_SUPPLY_MESSAGE = new WheellySupplyMessage(0, 0);
     public static final IntToDoubleFunction DEFAULT_DECODE_VOLTAGE = x -> 12d;
 
-
     /**
      * Returns the world model dumper
      *
@@ -57,13 +54,13 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
     public static InferenceFileReader fromFile(File file) throws IOException {
         requireNonNull(file);
         file.getCanonicalFile().getParentFile().mkdirs();
-
         FileInputStream stream = new FileInputStream(file);
         return new InferenceFileReader(stream, file.length()).init();
     }
 
     private WorldModelSpec worldSpec;
     private GridTopology topology;
+    private InferenceWriter.Type type;
 
     /**
      * Creates the world model reader
@@ -79,9 +76,9 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
      * Initialises file by reading the header
      */
     private InferenceFileReader init() throws IOException {
-        Tuple2<WorldModelSpec, GridTopology> header = readHeader();
-        worldSpec = header._1;
-        topology = header._2;
+        type = InferenceWriter.Type.values()[readInt()];
+        worldSpec = readWorldSpec();
+        topology = readTopology();
         return this;
     }
 
@@ -123,6 +120,10 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
      */
     public GridTopology topology() {
         return topology;
+    }
+
+    public InferenceWriter.Type type() {
+        return type;
     }
 
     /**

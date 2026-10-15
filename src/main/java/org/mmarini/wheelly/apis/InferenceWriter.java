@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.apis;
 
-import org.mmarini.NotImplementedException;
+import org.mmarini.wheelly.fsm.AgentAction;
 import org.mmarini.wheelly.fsm.HeadActionId;
 import org.mmarini.wheelly.fsm.MoveActionId;
 
@@ -95,17 +95,9 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param command the command
      */
     default <T extends InferenceWriter> T write(RobotCommand command) throws IOException {
-        throw new NotImplementedException();
-        /* TODO
-        write(commands.status().ordinal())
-                .write(commands.scanDirection());
-        switch (commands.status()) {
-            case ROTATE -> write(commands.rotationDirection());
-            case FORWARD, BACKWARD -> write(commands.moveTarget());
-        }
+        write(command.motionStatus())
+                .write(command.headStatus());
         return (T) this;
-
-         */
     }
 
     /**
@@ -308,13 +300,27 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         return (T) this;
     }
 
+    default <T extends InferenceWriter> T write(AgentAction value) throws IOException {
+        write(value.moveId());
+        write(value.headId());
+        return (T) this;
+    }
+
     /**
      * Write the header of inference file
      *
      * @param spec     the world spec
      * @param topology the grid topology
      */
-    default <T extends InferenceWriter> T writeHeader(WorldModelSpec spec, GridTopology topology) throws IOException {
-        return write(spec).write(topology);
+    default <T extends InferenceWriter> T writeHeader(Type type, WorldModelSpec spec, GridTopology topology) throws IOException {
+        write(type.ordinal());
+        write(spec);
+        write(topology);
+        return (T) this;
+    }
+
+    enum Type {
+        DL_ENVIRONMENT,
+        DL_MACRO_ACTION
     }
 }

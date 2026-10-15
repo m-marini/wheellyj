@@ -35,7 +35,6 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.mmarini.Tuple2;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.engines.ProcessorContextApi;
@@ -53,7 +52,6 @@ import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -87,8 +85,6 @@ public class RobotExecutor {
         parser.addArgument("-c", "--config")
                 .setDefault("executor.yml")
                 .help("specify yaml configuration file");
-        parser.addArgument("-d", "--dump")
-                .help("specify inference dump file");
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent shuttingDown (no window messages)");
@@ -229,11 +225,6 @@ public class RobotExecutor {
     private WorldModeller modeller;
 
     /**
-     * The serialization file writer handling binary text dumps of inference matrices and models evaluation metrics.
-     */
-    private InferenceFileWriter dumpFile;
-
-    /**
      * Initialises a new {@link RobotExecutor} instance, allocating visual panels, tracking structures,
      * and default state flags.
      *
@@ -262,7 +253,7 @@ public class RobotExecutor {
      * Initialises the operational context components by parsing configurations, loading schemas,
      * connecting the robot api layers, and linking the state machine decision agent pipelines.
      *
-     * @throws Throwable if errors occur during configuration parsing, verification validations, or initialization sequences
+     * @throws Throwable if errors occur during configuration parsing, verification validations, or initialisation sequences
      */
     void createContext() throws Throwable {
         File confFile = new File(this.args.getString("config"));
@@ -289,14 +280,6 @@ public class RobotExecutor {
 
         this.sessionDuration = this.args.getLong("time") * 1000;
         logger.atInfo().setMessage("Session will be running for {} sec...").addArgument(sessionDuration).log();
-
-        String dumpFile = this.args.getString("dump");
-        if (dumpFile != null) {
-            File file = new File(dumpFile);
-            file.delete();
-            this.dumpFile = InferenceFileWriter.fromFile(file);
-            logger.atInfo().log("Writing dump {}", file);
-        }
         if (!(this.robot instanceof SimRobot)) {
             toolBar.relocateButton().setEnabled(false);
         }
@@ -354,9 +337,6 @@ public class RobotExecutor {
         agent.readTriggers()
                 .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onTrigger);
-        modeller.addOnInference(t ->
-                SwingUtilities.invokeLater(() ->
-                        onInference(t)));
     }
 
     /**
@@ -422,14 +402,6 @@ public class RobotExecutor {
      * and releasing graphical user interface resources.
      */
     private void onControllerShutdown() {
-        if (dumpFile != null) {
-            try {
-                dumpFile.close();
-                logger.atInfo().log("Closed dump file {}", args.getString("dump"));
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error shuttingDown dump file {}", args.getString("dump"));
-            }
-        }
         allFrames.forEach(JFrame::dispose);
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
@@ -446,29 +418,6 @@ public class RobotExecutor {
     private void onControllerStatus(String status) {
         sensorMonitor.onControllerStatus(status);
         comMonitor.onControllerStatus(status);
-    }
-
-    /**
-     * Handles inference cycle evaluation logs by serialising active environment world models
-     * and composite robot commands into the designated external dump file.
-     *
-     * @param result the tuple container pairing the active {@link WorldModel} with the processed {@link RobotCommand}
-     */
-    private void onInference(Tuple2<WorldModel, RobotCommand> result) {
-        if (dumpFile != null) {
-            WorldModel world = result._1;
-            RobotCommand commands = result._2;
-            try {
-                dumpFile.write(world, commands);
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error writing dump file {}", args.getString("dump"));
-                try {
-                    dumpFile.close();
-                } catch (IOException ignored) {
-                }
-                dumpFile = null;
-            }
-        }
     }
 
     /**
@@ -632,9 +581,6 @@ public class RobotExecutor {
         createFlows();
         initUI();
         toolBar.playButton().setEnabled(false);
-        if (dumpFile != null) {
-            dumpFile.writeHeader(modeller.worldModelSpec(), modeller.radarModeller().topology());
-        }
 
         // Configure the user interface
         logger.atInfo().log("Starting session ...");

@@ -82,6 +82,7 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
 
     private final ActionFunction actionFunc;
     private final Function<WorldModelSpec, StateFunction> stateFunctionBuilder;
+    private InferenceWriter inferenceWriter;
     private StateFunction stateFunc;
     private RewardFunction rewardFunc;
     private AgentConnector agent;
@@ -90,6 +91,7 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
     private Map<String, Signal> signals0;
     private Map<String, Signal> prevActions;
     private DoubleConsumer onReward;
+    private boolean headerWritten;
 
     /**
      * Creates the deep learning environment
@@ -129,6 +131,11 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
         this.agent = agent;
     }
 
+    public void inferenceWriter(InferenceWriter inferenceWriter) {
+        this.inferenceWriter = inferenceWriter;
+        headerWritten = false;
+    }
+
     @Override
     public RobotCommand onInference(WorldModel model) {
         requireNonNull(model);
@@ -148,6 +155,20 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
             agent = agent.observe(result);
             if (onReward != null) {
                 onReward.accept(reward);
+            }
+            if (inferenceWriter != null) {
+                try {
+                    if (!headerWritten) {
+                        headerWritten = true;
+                        inferenceWriter.writeHeader(InferenceWriter.Type.DL_ENVIRONMENT,
+                                model.worldSpec(),
+                                model.getRadarMap().topology());
+                    }
+                    inferenceWriter.write(model)
+                            .write(commands);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
         // Split status
