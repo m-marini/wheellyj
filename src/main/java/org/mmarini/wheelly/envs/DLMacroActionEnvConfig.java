@@ -37,8 +37,6 @@ import org.mmarini.yaml.Utils;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.engines.AbstractSearchAndMoveState.DEFAULT_GROWTH_DISTANCE;
-import static org.mmarini.wheelly.engines.AbstractSearchAndMoveState.DEFAULT_SAFETY_DISTANCE;
 import static org.mmarini.yaml.Utils.EMPTY_CLASSES;
 import static org.mmarini.yaml.Utils.EMPTY_OBJECTS;
 
@@ -50,20 +48,12 @@ import static org.mmarini.yaml.Utils.EMPTY_OBJECTS;
  * and functional builders to coordinate autonomous robotic navigation and adaptive behaviours.
  * </p>
  *
- * @param maxIterations                the maximum number of sampling iterations allowed for the RRT expansion loop
- * @param minGoals                     the minimum number of valid goal nodes the random tree must reach or validate
- * @param maxSearchTime                the maximum permitted execution duration for the RRT solver before timing out, in milliseconds
- * @param maxRobotGoalToMarkerDistance the maximum allowed distance between the robot's target goal and the environment marker
- * @param pathSafetyDistance           the clearance buffer maintained around tree edges and vertices to ensure obstacle avoidance
- * @param growthDistance               the step size (delta) by which the RRT extends its branches towards a randomly sampled point
- * @param stateFunctionBuilder         the builder function responsible for initialising specific state processing logics
- * @param fsmConfig                    the configuration wrapper for the underlying finite state machine
+ * @param stateFunctionBuilder the functional builder mapping a {@link WorldModelSpec} to its corresponding {@link StateFunction}
+ * @param fsmConfig            the configuration parameters governing the underlying finite state machine macro-actions
  */
-public record DLMacroActionEnvConfig(int maxIterations, int minGoals, long maxSearchTime,
-                                     double maxRobotGoalToMarkerDistance, double pathSafetyDistance,
-                                     double growthDistance,
-                                     Function<WorldModelSpec, StateFunction> stateFunctionBuilder,
-                                     MacroActionConfig fsmConfig
+public record DLMacroActionEnvConfig(
+        Function<WorldModelSpec, StateFunction> stateFunctionBuilder,
+        MacroActionConfig fsmConfig
 ) {
     /**
      * The JSON property identifier for the state function builder object.
@@ -71,91 +61,35 @@ public record DLMacroActionEnvConfig(int maxIterations, int minGoals, long maxSe
     public static final String STATE_FUNCTION_ID = "stateFunction";
 
     /**
-     * The default fallback threshold for the minimum number of target goals.
-     */
-    public static final int DEFAULT_MIN_GOALS = 1;
-
-    /**
-     * The JSON property identifier for the maximum RRT sampling iterations.
-     */
-    public static final String MAX_ITERATIONS_ID = "maxIterations";
-
-    /**
-     * The JSON property identifier for the minimum goal nodes requirement.
-     */
-    public static final String MIN_GOALS_ID = "minGoals";
-
-    /**
-     * The JSON property identifier for the RRT search execution time limit.
-     */
-    public static final String MAX_SEARCH_TIME_ID = "maxSearchTime";
-
-    /**
-     * The JSON property identifier for the maximum distance between the robot goal and the marker.
-     */
-    public static final String MAX_ROBOT_GOAL_TO_MARKER_DISTANCE_ID = "maxRobotGoalToMarkerDistance";
-
-    /**
-     * The JSON property identifier for the obstacle clearance safety distance.
-     */
-    public static final String PATH_SAFETY_DISTANCE_ID = "pathSafetyDistance";
-
-    /**
-     * The JSON property identifier for the RRT incremental step growth distance.
-     */
-    public static final String GROWTH_DISTANCE_ID = "growthDistance";
-    public static final int DEFAULT_MAX_ITERATIONS = Integer.MAX_VALUE;
-
-    /**
      * Parses and instantiates a {@code DLMacroActionEnvConfig} from a given JSON tree layout.
      * <p>
-     * This utility extracts structural parameters, obstacle clearance bounds, and dynamic RRT
-     * expansion metrics defined via specific configuration schemas.
+     * This utility extracts the functional state mapping block from the designated sub-path
+     * and delegates the parsing of structural macro-action timeout thresholds and parameters
+     * to the FSM configuration layer.
      * </p>
      *
      * @param root    the root node containing the environment JSON data definition
      * @param locator the context tracker pointing to the relative configuration scope
      * @return a fully populated configuration record instance
+     * @throws NullPointerException if any parsed sub-component evaluates to {@code null}
      */
     public static DLMacroActionEnvConfig fromJson(JsonNode root, Locator locator) {
         Function<WorldModelSpec, StateFunction> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
                 EMPTY_OBJECTS, EMPTY_CLASSES);
-        int maxIterations = locator.path(MAX_ITERATIONS_ID).getNode(root).asInt(DEFAULT_MAX_ITERATIONS);
-        int minGoals = locator.path(MIN_GOALS_ID).getNode(root).asInt(DEFAULT_MIN_GOALS);
-        long maxSearchTime = locator.path(MAX_SEARCH_TIME_ID).getNode(root).asLong();
-        double maxRobotGoalToMarkerDistance = locator.path(MAX_ROBOT_GOAL_TO_MARKER_DISTANCE_ID).getNode(root).asDouble();
-        double pathSafetyDistance = locator.path(PATH_SAFETY_DISTANCE_ID).getNode(root).asDouble(DEFAULT_SAFETY_DISTANCE);
-        double growthDistance = locator.path(GROWTH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_GROWTH_DISTANCE);
         MacroActionConfig fsmConfig = MacroActionConfig.fromJson(root, locator);
-        return new DLMacroActionEnvConfig(maxIterations, minGoals, maxSearchTime,
-                maxRobotGoalToMarkerDistance, pathSafetyDistance, growthDistance,
+        return new DLMacroActionEnvConfig(
                 stateFuncBuilder, fsmConfig);
     }
 
     /**
-     * Canonically initialises the state data, functional dependencies, and RRT metrics for the environment model.
-     * <p>
-     * Structural builders, finite state machines, and sampling parameters are validated to ensure robust runtime operation.
-     * </p>
+     * Constructs a {@code DLMacroActionEnvConfig} validating that both parameters are non-null.
      *
-     * @param maxIterations                the RRT iteration limit for tree generation
-     * @param minGoals                     the minimum goal nodes required for path validation
-     * @param maxSearchTime                the execution timeout constraint in milliseconds
-     * @param maxRobotGoalToMarkerDistance the maximum allowed distance between the robot's target goal and the marker
-     * @param pathSafetyDistance           the protective obstacle clearance buffer distance
-     * @param growthDistance               the RRT edge extension step size
-     * @param stateFunctionBuilder         the mapping logic provider
-     * @param fsmConfig                    the predefined FSM workflow configuration block
-     * @throws NullPointerException if any of the target object arguments are {@code null}
+     * @param stateFunctionBuilder the functional builder mapping a {@link WorldModelSpec} to its corresponding {@link StateFunction}
+     * @param fsmConfig            the configuration parameters governing the underlying finite state machine macro-actions
+     * @throws NullPointerException if either the {@code fsmConfig} or the {@code stateFunctionBuilder} is {@code null}
      */
-    public DLMacroActionEnvConfig(int maxIterations, int minGoals, long maxSearchTime, double maxRobotGoalToMarkerDistance, double pathSafetyDistance, double growthDistance, Function<WorldModelSpec, StateFunction> stateFunctionBuilder, MacroActionConfig fsmConfig) {
-        this.maxIterations = maxIterations;
-        this.minGoals = minGoals;
-        this.maxSearchTime = maxSearchTime;
-        this.fsmConfig = requireNonNull(fsmConfig);
-        this.maxRobotGoalToMarkerDistance = maxRobotGoalToMarkerDistance;
-        this.pathSafetyDistance = pathSafetyDistance;
-        this.growthDistance = growthDistance;
-        this.stateFunctionBuilder = requireNonNull(stateFunctionBuilder);
+    public DLMacroActionEnvConfig {
+        requireNonNull(fsmConfig);
+        requireNonNull(stateFunctionBuilder);
     }
 }

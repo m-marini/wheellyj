@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -56,7 +56,7 @@ import static org.mmarini.wheelly.apis.AreaExpression.*;
 public record MarkerLocator(double locationDecay, double cleanDecay, long correlationInterval, int minNumberEvents,
                             double markerSize, AtomicReference<MarkerLocatorStatus> status) {
 
-    public static final Complex CLEAR_REDUCTION_ANGLE = Complex.fromDeg(3);
+    public static final Angle CLEAR_REDUCTION_ANGLE = Angle.fromDeg(3);
 
     /**
      * Creates the marker locator
@@ -131,10 +131,10 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
      * @param radius    the signal distance (m)
      * @param fov       the field of view
      */
-    private static Parser createCleaningArea(Point2D centre, Complex direction, double radius, Complex fov) {
+    private static Parser createCleaningArea(Point2D centre, Angle direction, double radius, Angle fov) {
         return and(
                 circle(centre, radius),
-                angle(centre, direction, fov.divAngle(2))
+                angle(centre, direction, fov.div(2))
         ).createParser();
     }
 
@@ -148,8 +148,8 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
      * @param time      the current time (ms)
      */
     private Map<String, LabelMarker> filterCleaningArea(Map<String, LabelMarker> map,
-                                                        Point2D centre, Complex direction, double distance,
-                                                        Complex fov, long time) {
+                                                        Point2D centre, Angle direction, double distance,
+                                                        Angle fov, long time) {
         List<LabelMarker> markers = map.values().stream().toList();
         Parser parser = createCleaningArea(centre, direction, distance, fov);
         return markers.stream()
@@ -191,9 +191,9 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
             // Correlated messages
             double distance = cameraEvent.markerDistance();
             double maxDistance = robotSpec.maxRadarDistance();
-            Complex lidarFov = robotSpec.lidarFOV();
-            Complex cameraFov = robotSpec.cameraFOV();
-            Complex cameraAzimuth = cameraEvent.lidarYaw();
+            Angle lidarFov = robotSpec.lidarFOV();
+            Angle cameraFov = robotSpec.cameraFOV();
+            Angle cameraAzimuth = cameraEvent.lidarYaw();
             double clearDistance = (distance == 0 ? maxDistance : distance + markerSize / 2);
             Point2D lidarLocation = robotSpec.frontLidarLocation(cameraEvent.robotLocation(), cameraEvent.robotDirection(), cameraEvent.headDirection());
 
@@ -205,14 +205,14 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                         clearDistance, lidarFov, lidarTime);
             }
             CorrelatedCameraEvent prevEvent = status.get().prevEvent();
-            Complex cleanFov = Complex.fromRad(min(lidarFov.toRad(), cameraFov.toRad()));
+            Angle cleanFov = Angle.fromRad(min(lidarFov.toRad(), cameraFov.toRad()));
             if (!RobotSpec.UNKNOWN_QR_CODE.equals(cameraEvent.qrCode())
                     // qr code recognized
-                    && cameraEvent.camerEvent().direction().isClose0(robotSpec.lidarFOV())
+                    && cameraEvent.camerEvent().direction().isFront(robotSpec.lidarFOV())
                 // camera label direction correlated with the lidar receptive angle
             ) {
                 // Marker recognized
-                Complex markerDirection = cameraEvent.markerYaw();
+                Angle markerDirection = cameraEvent.markerYaw();
                 Point2D markerLocation = markerDirection.at(lidarLocation, distance);
                 LabelMarker mapMarker = map.get(cameraEvent.qrCode());
                 Map<String, LabelMarker> map1 = filterCleaningArea(map, lidarLocation, cameraAzimuth,

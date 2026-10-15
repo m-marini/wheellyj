@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022-2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -169,7 +169,7 @@ class GeometryTest {
         );
 
         // When ...
-        List<Tuple2<Point2D, Complex>> result = Geometry.computeAllSafePoints(center, vertices).toList();
+        List<Tuple2<Point2D, Angle>> result = Geometry.computeAllSafePoints(center, vertices).toList();
 
         // Then ...
         assertNotNull(result);
@@ -178,10 +178,10 @@ class GeometryTest {
         assertThat(result.get(2)._1, pointCloseTo(0, 0.5, 1e-3));
         assertThat(result.get(3)._1, pointCloseTo(2, 0, 1e-3));
 
-        assertThat(result.getFirst()._2.sub(Complex.DEG180).abs().toDeg(), lessThan(1.0));
-        assertThat(result.get(1)._2.sub(Complex.DEG270).abs().toDeg(), lessThan(1.0));
-        assertThat(result.get(2)._2.sub(Complex.DEG0).abs().toDeg(), lessThan(1.0));
-        assertThat(result.get(3)._2.sub(Complex.DEG90).abs().toDeg(), lessThan(1.0));
+        assertThat(result.getFirst()._2.sub(Angle.DEG180).abs().toDeg(), lessThan(1.0));
+        assertThat(result.get(1)._2.sub(Angle.DEG270).abs().toDeg(), lessThan(1.0));
+        assertThat(result.get(2)._2.sub(Angle.DEG0).abs().toDeg(), lessThan(1.0));
+        assertThat(result.get(3)._2.sub(Angle.DEG90).abs().toDeg(), lessThan(1.0));
     }
 
     @Test
@@ -251,7 +251,7 @@ class GeometryTest {
             assertThat(vertex.distance(center), lessThanOrEqualTo(3.001));
         }
 
-        List<Tuple2<Point2D, Complex>> result1 = Geometry.computeAllSafePoints(center, vertices).toList();
+        List<Tuple2<Point2D, Angle>> result1 = Geometry.computeAllSafePoints(center, vertices).toList();
 
         Point2D nearest = result1.getFirst()._1;
         double minDistance = nearest.distance(center);
@@ -287,7 +287,7 @@ class GeometryTest {
     })
     void horizontalIntersectTest(double xq, double yq, double y, double alpha, double dAlpha, String xl, String xr) {
         double[] result = Geometry.horizontalArcIntersect(new Point2D.Double(xq, yq), y,
-                Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
+                Angle.fromDeg(alpha), Angle.fromDeg(dAlpha));
         if ("inf".equals(xl)) {
             assertEquals(Double.POSITIVE_INFINITY, result[0]);
         } else if ("-inf".equals(xl)) {
@@ -331,7 +331,7 @@ class GeometryTest {
     void horizontalIntervalTest(double xq, double yq, double alpha, double dAlpha, double xl, double xr, double y, boolean exists, double xn, double yn, double xf, double yf) {
         Tuple2<Point2D, Point2D> result = Geometry.horizontalArcInterval(new Point2D.Double(xq, yq),
                 xl, xr, y,
-                Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
+                Angle.fromDeg(alpha), Angle.fromDeg(dAlpha));
         assertThat(result, exists ?
                 tupleOf(
                         pointCloseTo(xn, yn, 1e-3),
@@ -351,7 +351,7 @@ class GeometryTest {
 
         // When computes squareLineInterval
         List<Point2D> result = Geometry.lineSquareProjections(from,
-                Complex.fromDeg(direction), center, size);
+                Angle.fromDeg(direction), center, size);
 
         // Then the result should match the existence
         Matcher<Point2D>[] matchers = (Matcher<Point2D>[]) expected.stream()
@@ -381,7 +381,7 @@ class GeometryTest {
         Point2D to = new Point2D.Double(xt, yt);
 
         // When projectLine
-        Point2D p = Geometry.projectLine(center, Complex.fromDeg(direction), to);
+        Point2D p = Geometry.projectLine(center, Angle.fromDeg(direction), to);
 
         // Then result should be ...
         assertThat(p, pointCloseTo(xp, yp, 1e-3));
@@ -416,7 +416,7 @@ class GeometryTest {
         Tuple2<Point2D, Point2D> result = Geometry.squareArcInterval(
                 new Point2D.Double(xp, yp), size,
                 new Point2D.Double(xq, yq),
-                Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
+                Angle.fromDeg(alpha), Angle.fromDeg(dAlpha));
         assertThat(result, exists
                 ? tupleOf(
                 pointCloseTo(xn, yn, 1e-3),
@@ -449,7 +449,7 @@ class GeometryTest {
     })
     void verticalIntersectTest(double xq, double yq, double x, double alpha, double dAlpha, String yr, String yf) {
         double[] result = Geometry.verticalArcIntersect(new Point2D.Double(xq, yq), x,
-                Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
+                Angle.fromDeg(alpha), Angle.fromDeg(dAlpha));
         if ("inf".equals(yr)) {
             assertEquals(Double.POSITIVE_INFINITY, result[0]);
         } else if ("-inf".equals(yr)) {
@@ -494,7 +494,7 @@ class GeometryTest {
                               boolean exists, double xn, double yn, double xft, double yft) {
         Tuple2<Point2D, Point2D> result = Geometry.verticalArcInterval(
                 new Point2D.Double(xq, yq), yr, yf, x,
-                Complex.fromDeg(alpha), Complex.fromDeg(dAlpha));
+                Angle.fromDeg(alpha), Angle.fromDeg(dAlpha));
         assertThat(result, exists
                 ? tupleOf(
                 pointCloseTo(xn, yn, 1e-3),

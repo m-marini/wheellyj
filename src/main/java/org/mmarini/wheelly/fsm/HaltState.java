@@ -28,45 +28,49 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.MotionStatus;
 
 /**
  * Represents a concrete FSM state where the robot platform is brought to a complete halt.
  * <p>
  * This state enforces an absolute stop safety <b>behaviour</b> across all locomotion
- * and directional mechanisms for a designated temporal window. While active, it
- * continuously outputs a general halt instruction and monitors the minimum commitment
- * threshold. Once the interval expires, it requests the context to schedule macro-action
- * inference for the subsequent execution tick.
+ * and directional mechanisms. While active, it continuously outputs a halt instruction
+ * and monitors the robot's motion status. Once the robot confirms it has achieved a
+ * complete standstill, the state marks itself as completed.
  * </p>
  */
-public class HaltState extends AbstractCompletableState {
+public class HaltState extends AbstractCompletableState<MotionStatus> {
     /**
-     * Constructs a {@code HaltState} with a specified initial timestamp to anchor
-     * its minimum commitment duration.
-     *
-     * @param commitmentDuration the timestamp representing the reference point utilised
-     *                           to calculate state expiration
+     * Constructs a {@code HaltState} to handle the robot's stationary transition logic.
      */
-    public HaltState(long commitmentDuration) {
-        super(commitmentDuration);
+    public HaltState() {
     }
 
     /**
-     * Executes the stationary logic for the current execution tick, issuing zero-motion commands.
+     * Initialises the state within the given finite state machine context.
+     *
+     * @param context the {@link EnvFSMContext} tracking the shared operational data
+     */
+    @Override
+    public void init(EnvFSMContext context) {
+        super.init(context);
+    }
+
+    /**
+     * Executes the stationary logic for the current execution tick, issuing halt commands.
      * <p>
-     * If the minimum commitment time has elapsed, this method requests the execution
-     * context to schedule a macro-action reasoning cycle for the next tick. Regardless of
-     * expiration, it triggers comprehensive halt parameters to <b>optimise</b> vehicle stabilisation.
+     * This method checks if the robot platform has successfully stopped. If the robot's
+     * status indicates a complete standstill, the state is marked as completed; otherwise,
+     * it continues to enforce the halt signal to <b>optimise</b> vehicle stabilisation.
      * </p>
      *
      * @param context the {@link EnvFSMContext} tracking the shared operational data
-     * @return the {@link RobotCommands} commanding an immediate and complete standstill of the robot
+     * @return the {@link MotionStatus} indicating or commanding a complete standstill of the robot
      */
     @Override
-    public RobotCommands tick(EnvFSMContext context) {
-        return expired(context)
-                ? complete(context)
-                : RobotCommands.halt();
+    public MotionStatus tick(EnvFSMContext context) {
+        return context.worldModel().robotStatus().halt()
+                ? complete(context, MotionStatus.halt())
+                : MotionStatus.halt();
     }
 }

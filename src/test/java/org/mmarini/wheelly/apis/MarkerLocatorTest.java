@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -64,10 +64,9 @@ public class MarkerLocatorTest {
     public static final double MARKER_SIZE = 0.2;
     public static final String LABEL_A = "A";
     public static final String LABEL_B = "B";
-    MarkerLocator locator;
 
     static CameraEvent createCameraEvent(long cameraTime, String label, int labelDeg) {
-        return new CameraEvent(cameraTime, label, 0, 0, new Point2D[0], Complex.fromDeg(labelDeg));
+        return new CameraEvent(cameraTime, label, 0, 0, new Point2D[0], Angle.fromDeg(labelDeg));
     }
 
     static CorrelatedCameraEvent createCorrelateEvent(double xRobot, double yRobot, int robotDeg, int headDeg, int distance, String label, int labelDeg) {
@@ -78,7 +77,8 @@ public class MarkerLocatorTest {
 
     static WheellyLidarMessage createLidar(double xRobot, double yRobot, int robotDeg, int headDeg, int distance) {
         Point2D pulses = location2Pulses(xRobot, yRobot);
-        return new WheellyLidarMessage(MarkerLocatorTest.T0, distance, 0, pulses.getX(), pulses.getY(), robotDeg, headDeg);
+        return new WheellyLidarMessage(MarkerLocatorTest.T0, distance, 0, pulses.getX(), pulses.getY(),
+                robotDeg, headDeg, HeadStatus.HeadStatusId.FIX_DIRECTION, 0, 0, 0);
     }
 
     static LabelMarker createMarkerAt(CorrelatedCameraEvent event, int markerDeg, double markerDistance) {
@@ -91,7 +91,7 @@ public class MarkerLocatorTest {
 
     static LabelMarker createMarkerAt(long markerTime, long cleanTime, CorrelatedCameraEvent event, int markerDeg, double markerDistance) {
         Point2D lidarLocation = DEFAULT_ROBOT_SPEC.frontLidarLocation(event.robotLocation(), event.robotDirection(), event.headDirection());
-        Point2D markerLocation = event.lidarYaw().add(Complex.fromDeg(markerDeg)).at(lidarLocation, markerDistance);
+        Point2D markerLocation = event.lidarYaw().add(Angle.fromDeg(markerDeg)).at(lidarLocation, markerDistance);
         return new LabelMarker(LABEL_A, markerLocation, 1, markerTime, cleanTime);
     }
 
@@ -100,6 +100,20 @@ public class MarkerLocatorTest {
         WheellyLidarMessage lidar = createLidar(xRobot, yRobot, robotDeg, headDeg, distance);
         CameraEvent camera = createCameraEvent(UNCORRELATED_CAMERA_TIME, MarkerLocatorTest.LABEL_A, labelDeg);
         return new CorrelatedCameraEvent(camera, lidar);
+    }
+
+    static Stream<Arguments> dataExistingMarker() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-2.0, 2.0, 9) // xRobot
+                .uniform(-2.0, 2.0, 9) // yRobot
+                .uniform(0, 359) // robotDeg
+                .uniform(-90, 90) // headDeg
+                .exponential(400, 1500, 5) // distance
+                .uniform(-DEFAULT_LIDAR_FOV_DEG / 2, DEFAULT_LIDAR_FOV_DEG / 2) // labelDeg
+                .uniform(0, 3000, 17) //  dTimeMarker
+                .uniform(0, 359) // markerDeg
+                .exponential(0.4, 2, 17) // markerDistance
+                .build(100);
     }
 
     static Stream<Arguments> dataNewBehindDifferentMarkerInRange() {
@@ -233,19 +247,7 @@ public class MarkerLocatorTest {
                 .build(100);
     }
 
-    static Stream<Arguments> dataExistingMarker() {
-        return RandomArgumentsGenerator.create(SEED)
-                .uniform(-2.0, 2.0, 9) // xRobot
-                .uniform(-2.0, 2.0, 9) // yRobot
-                .uniform(0, 359) // robotDeg
-                .uniform(-90, 90) // headDeg
-                .exponential(400, 1500, 5) // distance
-                .uniform(-DEFAULT_LIDAR_FOV_DEG / 2, DEFAULT_LIDAR_FOV_DEG / 2) // labelDeg
-                .uniform(0, 3000, 17) //  dTimeMarker
-                .uniform(0, 359) // markerDeg
-                .exponential(0.4, 2, 17) // markerDistance
-                .build(100);
-    }
+    MarkerLocator locator;
 
     Stream<Arguments> dataUnknownNearInRange() {
         return RandomArgumentsGenerator.create(SEED)
@@ -293,12 +295,12 @@ public class MarkerLocatorTest {
         // And the marker should be located between signal location and marker location
         double gamma = Math.expm1(-(double) dTimeMarker / DECAY_TIME) + 1;
         double notGamma = 1 - gamma;
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
+        Angle robotDir = Angle.fromDeg(robotDeg);
+        Angle headDir = Angle.fromDeg(headDeg);
         Point2D robotLocation = new Point2D.Double(xRobot, yRobot);
         Point2D lidarLocation = DEFAULT_ROBOT_SPEC.frontLidarLocation(robotLocation,
                 robotDir, headDir);
-        Complex labelDir = robotDir.add(headDir).add(Complex.fromDeg(labelDeg));
+        Angle labelDir = robotDir.add(headDir).add(Angle.fromDeg(labelDeg));
         Point2D labelLocation = labelDir.at(lidarLocation, mm2m(distance));
 
         Point2D expectedMarker = add(
@@ -337,12 +339,12 @@ public class MarkerLocatorTest {
         assertEquals(T0, marker.markerTime());
 
         // And should be located at signal location
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
+        Angle robotDir = Angle.fromDeg(robotDeg);
+        Angle headDir = Angle.fromDeg(headDeg);
         Point2D robotLocation = new Point2D.Double(xRobot, yRobot);
         Point2D lidarLocation = DEFAULT_ROBOT_SPEC.frontLidarLocation(robotLocation,
                 robotDir, headDir);
-        Complex labelDir = robotDir.add(headDir).add(Complex.fromDeg(labelDeg));
+        Angle labelDir = robotDir.add(headDir).add(Angle.fromDeg(labelDeg));
         Point2D expected = labelDir.at(lidarLocation, mm2m(distance));
         assertThat(marker.location(), pointCloseTo(expected, MM));
     }
@@ -382,12 +384,12 @@ public class MarkerLocatorTest {
         assertEquals(T0, markerB.markerTime());
 
         // And should be located at signal location
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
+        Angle robotDir = Angle.fromDeg(robotDeg);
+        Angle headDir = Angle.fromDeg(headDeg);
         Point2D robotLocation = new Point2D.Double(xRobot, yRobot);
         Point2D lidarLocation = DEFAULT_ROBOT_SPEC.frontLidarLocation(robotLocation,
                 robotDir, headDir);
-        Complex labelDir = robotDir.add(headDir).add(Complex.fromDeg(labelDeg));
+        Angle labelDir = robotDir.add(headDir).add(Angle.fromDeg(labelDeg));
         Point2D expected = labelDir.at(lidarLocation, mm2m(distance));
         assertThat(markerB.location(), pointCloseTo(expected, MM));
     }
@@ -421,12 +423,12 @@ public class MarkerLocatorTest {
         assertEquals(T0, marker.markerTime());
 
         // And should be located at signal location
-        Complex robotDir = Complex.fromDeg(robotDeg);
-        Complex headDir = Complex.fromDeg(headDeg);
+        Angle robotDir = Angle.fromDeg(robotDeg);
+        Angle headDir = Angle.fromDeg(headDeg);
         Point2D robotLocation = new Point2D.Double(xRobot, yRobot);
         Point2D cameraLocation = DEFAULT_ROBOT_SPEC.cameraLocation(robotLocation,
                 robotDir, headDir);
-        Complex labelDir = robotDir.add(headDir).add(Complex.fromDeg(labelDeg));
+        Angle labelDir = robotDir.add(headDir).add(Angle.fromDeg(labelDeg));
         Point2D expected = labelDir.at(cameraLocation, mm2m(distance));
         assertThat(marker.location(), pointCloseTo(expected, MM));
     }

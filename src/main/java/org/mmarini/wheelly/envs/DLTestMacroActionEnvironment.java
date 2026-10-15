@@ -42,37 +42,52 @@ import static org.mmarini.wheelly.fsm.HeadActionId.*;
 import static org.mmarini.wheelly.fsm.MoveActionId.*;
 
 /**
- * Connects the world modeller to reinforcement learning agent
- * generating state signals and converting actions to robot command
+ * Represents a specialized test environment designed to validate macro-action transitions
+ * and simulate predictable agent behaviours.
+ * <p>
+ * This class extends the standard deep learning environment framework, substituting the neural
+ * policy with deterministic execution cycles. It provides scripted action routines such as
+ * full panoramic field sweeps and targeted area explorations to evaluate state telemetry synchronisation.
+ * </p>
  */
 public class DLTestMacroActionEnvironment extends DLMacroActionEnvironment {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-test-macro-actions-schema-0.1";
-    public static final AgentAction HALT_STRAIGHT_ACTION = new AgentAction(HALT_ACTION, LOOK_STRIGHT_ACTION);
+    public static final AgentAction HALT_STRAIGHT_ACTION = new AgentAction(HALT_ACTION, LOOK_STRAIGHT_ACTION);
     public static final AgentAction CONTINUE_ACTION = new AgentAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
     public static final String ACTION_ID = "action";
     public static final AgentAction HALT_SCAN_ACTION = new AgentAction(HALT_ACTION, SCAN_ACTION);
     public static final String FULL_SCAN_ID = "fullScan";
-    public static final AgentAction TURN_RIGHT_SCAN = new AgentAction(TURN_RIGHT_SCAN_ACTION, LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION);
-    public static final AgentAction EXPLORE_ACTION = new AgentAction(EXPLORE_NEAREST_UNKNOWN_AREA, LOOK_STRIGHT_ACTION);
+    public static final AgentAction TURN_RIGHT_SCAN = new AgentAction(TURN_RIGHT_SCAN_ACTION, LOOK_FACE_AT_OBSTACLE_ACTION);
+    public static final AgentAction EXPLORE_ACTION = new AgentAction(EXPLORE_UNKNOWN_AREA, LOOK_STRAIGHT_ACTION);
     public static final String EXPLORE_ID = "explore";
 
     /**
-     * Creates the deep learning environment from a JSON configuration file.
+     * Creates the test deep learning environment from a JSON configuration file.
+     * <p>
+     * This utility delegates execution initialisation to the root locator block, ignoring the physical
+     * file instance to parse raw configuration blocks directly from the document node tree.
+     * </p>
      *
-     * @param root the document root
-     * @param file the configuration file
-     * @throws IOException if a validation or reading error occurs
+     * @param root the root node containing the environment JSON data definition
+     * @param file the physical configuration file reference (currently unused)
+     * @return a fully initialised {@link DLTestMacroActionEnvironment} instance
+     * @throws IOException if schema validation rules fail or data reading is disrupted
      */
     public static DLTestMacroActionEnvironment create(JsonNode root, File file) throws IOException {
         return create(root, Locator.root());
     }
 
     /**
-     * Creates the deep learning environment from a JSON configuration file.
+     * Creates the test deep learning environment from a JSON configuration block.
+     * <p>
+     * This method validates the targets against the dedicated testing schema, extracts structural seed values
+     * for deterministic pseudo-randomisation, and maps the action identifier string to a specific behaviour.
+     * </p>
      *
-     * @param root    the document
-     * @param locator the locator of configuration
-     * @throws IOException if a validation or reading error occurs
+     * @param root    the root node containing the environment JSON data definition
+     * @param locator the context tracker pointing to the relative configuration scope
+     * @return a fully initialised {@link DLTestMacroActionEnvironment} instance
+     * @throws IOException if schema validation rules fail or data reading is disrupted
      */
     public static DLTestMacroActionEnvironment create(JsonNode root, Locator locator) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
@@ -87,11 +102,12 @@ public class DLTestMacroActionEnvironment extends DLMacroActionEnvironment {
     private int ct;
 
     /**
-     * Creates the deep learning environment
+     * Constructs a {@code DLTestMacroActionEnvironment} and maps the requested action identifier
+     * to its matching deterministic supplier function.
      *
-     * @param config         the configuration
-     * @param random         the random generator
-     * @param actionFunction the action function
+     * @param config         the configuration parameters defining environment specifications
+     * @param random         the pseudo-random generator utilised for internal kinematics variations
+     * @param actionFunction the identifier string selecting the behavioural test script pattern
      */
     public DLTestMacroActionEnvironment(DLMacroActionEnvConfig config, Random random, String actionFunction) {
         super(config, random);
@@ -102,6 +118,11 @@ public class DLTestMacroActionEnvironment extends DLMacroActionEnvironment {
         };
     }
 
+    /**
+     * Executes a deterministic exploration script loop modulated across a 160-tick execution cycle.
+     *
+     * @return the sequential {@link AgentAction} assigned for the current step interval
+     */
     private AgentAction explore() {
         return switch (ct = (ct + 1) % 160) {
             case 1 -> HALT_SCAN_ACTION;
@@ -116,6 +137,11 @@ public class DLTestMacroActionEnvironment extends DLMacroActionEnvironment {
         };
     }
 
+    /**
+     * Executes a periodic scanning sequence script modulated across a 40-tick execution cycle.
+     *
+     * @return the sequential {@link AgentAction} assigned for the current step interval
+     */
     private AgentAction fullScan() {
         return switch (ct = (ct + 1) % 40) {
             case 1 -> HALT_SCAN_ACTION;
@@ -124,10 +150,20 @@ public class DLTestMacroActionEnvironment extends DLMacroActionEnvironment {
         };
     }
 
+    /**
+     * Returns a baseline stationary safety fallback action pattern.
+     *
+     * @return the default constant {@link #HALT_STRAIGHT_ACTION}
+     */
     private AgentAction haltStraight() {
         return HALT_STRAIGHT_ACTION;
     }
 
+    /**
+     * Fetches the next scripted or deterministic action instruction mapping this testing routine cycle.
+     *
+     * @return the computed {@link AgentAction} dispatched by the current active testing routine
+     */
     @Override
     public AgentAction nextAction() {
         return actionFunction.get();

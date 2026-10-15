@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022-2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -73,7 +73,7 @@ class PolarMapTest {
     })
     void sectorIndex(short expectedIdx, int numSectors, int direction) {
         PolarMap polarMap = PolarMap.create(numSectors);
-        int idx = polarMap.sectorIndex(Complex.fromDeg(direction));
+        int idx = polarMap.sectorIndex(Angle.fromDeg(direction));
 
         assertEquals(expectedIdx, idx);
     }

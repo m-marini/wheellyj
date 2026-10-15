@@ -58,7 +58,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
                        long cleanTimestamp
 ) {
     private static final Logger logger = LoggerFactory.getLogger(RadarMap.class);
-    public static final Complex SAFE_DIRECTION_WIDTH = Complex.fromDeg(75);
+    public static final Angle SAFE_DIRECTION_WIDTH = Angle.fromDeg(75);
 
     /**
      * Returns the empty radar map
@@ -157,7 +157,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param safeDistance the safe distance (m)
      * @param maxDistance  the maximum distance of targets
      */
-    public Optional<Point2D> findSafeTarget(Point2D location, Complex escapeDir, double safeDistance, double maxDistance) {
+    public Optional<Point2D> findSafeTarget(Point2D location, Angle escapeDir, double safeDistance, double maxDistance) {
         long t0 = System.currentTimeMillis();
         AreaExpression sensibleArea = and(
                 // Filter for distance no longer then maxDistance
@@ -191,7 +191,7 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      */
     public boolean freeTrajectory(Point2D from, Point2D to, double safeDistance) {
         double size = topology.gridSize();
-        Complex dir = Complex.direction(from, to);
+        Angle dir = Angle.direction(from, to);
         double distance = from.distance(to);
         double maxDistance = distance + safeDistance;
         double width = safeDistance + topology.gridSize() / sqrt(2);
@@ -297,17 +297,17 @@ public record RadarMap(GridTopology topology, MapCell[] cells,
      * @param contactsRadius    the radius of contacts receptive area (m)
      * @param contactsTimestamp the contacts timestamp (ms)
      */
-    public RadarMap setContactsAt(Point2D location, Complex direction, boolean frontContact, boolean rearContact, double contactsRadius, long contactsTimestamp) {
+    public RadarMap setContactsAt(Point2D location, Angle direction, boolean frontContact, boolean rearContact, double contactsRadius, long contactsTimestamp) {
         if (!frontContact && !rearContact) {
             return this;
         }
         AreaExpression distanceArea = circle(location, contactsRadius);
         AreaExpression contactArea = frontContact && !rearContact
                 // Front contact only
-                ? rightHalfPlane(location, direction.add(Complex.DEG270))
+                ? rightHalfPlane(location, direction.add(Angle.DEG270))
                 : !frontContact
                 // Rear contact only
-                ? rightHalfPlane(location, direction.add(Complex.DEG90))
+                ? rightHalfPlane(location, direction.add(Angle.DEG90))
                 : null;
         AreaExpression sensibleArea = contactArea != null
                 ? and(distanceArea, contactArea)

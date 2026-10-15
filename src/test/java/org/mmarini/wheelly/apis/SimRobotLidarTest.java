@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.wheelly.TestFunctions.waitForMessages;
 import static org.mmarini.wheelly.apis.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.apis.RobotSpec.*;
+import static org.mmarini.wheelly.apis.SimRobot.*;
 import static org.mmarini.wheelly.apis.SimRobotObstacleTest.GRID_SIZE;
 import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.apis.Utils.m2mm;
@@ -118,8 +119,8 @@ public class SimRobotLidarTest {
      */
     void createFrontObstacle(int obsDirDeg, double obsDistance) {
         Point2D lidar = robot.frontLidarLocation();
-        Complex headDir = robot.headAbsDirection();
-        Complex obsDir = headDir.add(Complex.fromDeg(obsDirDeg));
+        Angle headDir = robot.headAbsDirection();
+        Angle obsDir = headDir.add(Angle.fromDeg(obsDirDeg));
         Point2D obsLoc = obsDir.at(lidar, obsDistance + DEFAULT_OBSTACLE_RADIUS);
         Obstacle obstacle = new Obstacle(obsLoc, DEFAULT_OBSTACLE_RADIUS, null);
         robot.obstacleMap(List.of(obstacle));
@@ -133,22 +134,23 @@ public class SimRobotLidarTest {
      */
     void createRearObstacle(int obsDirDeg, double obsDistance) {
         Point2D lidar = robot.rearLidarLocation();
-        Complex headDir = robot.headAbsDirection();
-        Complex obsDir = headDir.opposite().add(Complex.fromDeg(obsDirDeg));
+        Angle headDir = robot.headAbsDirection();
+        Angle obsDir = headDir.opposite().add(Angle.fromDeg(obsDirDeg));
         Point2D obsLoc = obsDir.at(lidar, obsDistance + DEFAULT_OBSTACLE_RADIUS);
         Obstacle obstacle = new Obstacle(obsLoc, DEFAULT_OBSTACLE_RADIUS, null);
         robot.obstacleMap(List.of(obstacle));
     }
 
     void createRobot(double xRobot, double yRobot, int robotDirDeg, int headDirDeg) {
-        robot = new SimRobot(DEFAULT_ROBOT_SPEC, new Random(SEED), new Random(SEED),
-                0, 10,
-                SimRobot.DEFAULT_MOTION_INTERVAL, LIDAR_INTERVAL, SimRobot.DEFAULT_CAMERA_INTERVAL, SimRobot.DEFAULT_STALEMATE_INTERVAL,
-                0, 0, List.of(MapBuilder.empty(41, GRID_SIZE)), 0, 0,
-                CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD, SimRobot.DEFAULT_WORLD_SIZE);
+
+        robot = new SimRobot(new SimRobot.SimRobotConfig(
+                DEFAULT_ROBOT_SPEC, 10, 0, DEFAULT_MOTION_INTERVAL, LIDAR_INTERVAL, DEFAULT_CAMERA_INTERVAL,
+                DEFAULT_STALEMATE_INTERVAL, CHANGE_MAP_PERIOD, CHANGE_MAP_PERIOD, 0, 0, DEFAULT_WORLD_SIZE, 0, 0,
+                List.of(MapBuilder.empty(41, GRID_SIZE)), DEFAULT_ANTI_GIMBAL_RADIUS),
+                new Random(SEED), new Random(SEED));
         robot.robotPos(xRobot, yRobot);
-        robot.robotDir(Complex.fromDeg(robotDirDeg));
-        robot.sensorDirection(Complex.fromDeg(headDirDeg));
+        robot.robotDir(Angle.fromDeg(robotDirDeg));
+        robot.sensorDirection(Angle.fromDeg(headDirDeg));
         robot.addOnLidar(lidars::add);
     }
 
@@ -159,7 +161,8 @@ public class SimRobotLidarTest {
 
     @ParameterizedTest(name = "[{index}] @({0},{1}) R{2} Head {3} DEG obs {4} DEG D{5}")
     @MethodSource("dataLidarInnerObstacle")
-    void testFrontLidarInnerObstacle(double xRobot, double yRobot, int robotDir, int headDir, int obsDir, double obsDistance) {
+    void testFrontLidarInnerObstacle(double xRobot, double yRobot, int robotDir, int headDir, int obsDir,
+                                     double obsDistance) {
         // Given a robot location and direction and sensor direction
         // And front obstacle distance and direction
         createRobot(xRobot, yRobot, robotDir, headDir);
@@ -184,7 +187,8 @@ public class SimRobotLidarTest {
             "dataLidarFarOuterObstacle",
             "dataLidarFarObstacle"
     })
-    void testFrontLidarOuterObstacle(double xRobot, double yRobot, int robotDir, int headDir, int obsDir, double obsDistance) {
+    void testFrontLidarOuterObstacle(double xRobot, double yRobot, int robotDir, int headDir, int obsDir,
+                                     double obsDistance) {
         // Given a robot location and direction and sensor direction
         // And front obstacle distance and direction
         createRobot(xRobot, yRobot, robotDir, headDir);
@@ -205,7 +209,8 @@ public class SimRobotLidarTest {
 
     @ParameterizedTest(name = "[{index}] @({0},{1}) R{2} Head {3} DEG obs {4} DEG D{5}")
     @MethodSource("dataLidarInnerObstacle")
-    void testRearLidarInnerObstacle(double xRobot, double yRobot, int robotDir, int headDir, int obsDir, double obsDistance) {
+    void testRearLidarInnerObstacle(double xRobot, double yRobot, int robotDir, int headDir, int obsDir,
+                                    double obsDistance) {
         // Given a robot location and direction and sensor direction
         // And front obstacle distance and direction
         createRobot(xRobot, yRobot, robotDir, headDir);
@@ -231,7 +236,8 @@ public class SimRobotLidarTest {
             "dataLidarFarOuterObstacle",
             "dataLidarFarObstacle"
     })
-    void testRearLidarOuterObstacle(double xRobot, double yRobot, int robotDir, int headDir, int obsDir, double obsDistance) {
+    void testRearLidarOuterObstacle(double xRobot, double yRobot, int robotDir, int headDir, int obsDir,
+                                    double obsDistance) {
         // Given a robot location and direction and sensor direction
         // And front obstacle distance and direction
         createRobot(xRobot, yRobot, robotDir, headDir);

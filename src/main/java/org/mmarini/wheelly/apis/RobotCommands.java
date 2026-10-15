@@ -38,193 +38,41 @@ import static java.util.Objects.requireNonNull;
  * Store the command parameters for the required robot state
  *
  * @param status            the status
- * @param scanDirection     the scan direction (DEG)
+ * @param moveTarget        the target location
  * @param rotationDirection the rotation direction (DEG)
- * @param target            the target location
+ * @param headStatus
+ * @param scanDirection     the scan direction (DEG)
+ * @param headTarget
  */
-public record RobotCommands(RobotStatusId status, int scanDirection, int rotationDirection,
-                            Point2D target) implements EnvAction {
+public record RobotCommands(MotionStatus.MotionStatusId status, Point2D moveTarget, int rotationDirection,
+                            HeadStatus.HeadStatusId headStatus, int scanDirection,
+                            Point2D headTarget) implements EnvAction {
 
-    static RobotCommands HALT = new RobotCommands(RobotStatusId.HALT, 0, 0, null);
+    static RobotCommands HALT = new RobotCommands(MotionStatus.MotionStatusId.HALT, new Point2D.Double(),
+            0, HeadStatus.HeadStatusId.FIX_DIRECTION, 0, new Point2D.Double());
 
-    /**
-     * Returns the goto backward command
-     *
-     * @param target the target location
-     */
-    public static RobotCommands backward(Point2D target) {
-        return new RobotCommands(RobotStatusId.BACKWARD, 0, 0, target);
-    }
-
-    /**
-     * Returns the goto backward command
-     *
-     * @param scanDirection the scan direction (DEG)
-     * @param target        the target location
-     */
-    public static RobotCommands backward(int scanDirection, Point2D target) {
-        return new RobotCommands(RobotStatusId.BACKWARD, scanDirection, 0, target);
-    }
-
-    /**
-     * Returns the goto backward command
-     *
-     * @param scanDirection the scan direction
-     * @param target        the target location
-     */
-    public static RobotCommands backward(Complex scanDirection, Point2D target) {
-        return backward(scanDirection.toIntDeg(), target);
-    }
-
-    /**
-     * Returns the goto forward command with frontal head
-     *
-     * @param target the target location
-     */
-    public static RobotCommands forward(Point2D target) {
-        return forward(0, target);
-    }
-
-    /**
-     * Returns the goto forward command
-     *
-     * @param scanDirection the scan direction (DEG)
-     * @param target        the target location
-     */
-    public static RobotCommands forward(int scanDirection, Point2D target) {
-        return new RobotCommands(RobotStatusId.FORWARD, scanDirection, 0, target);
-    }
-
-    /**
-     * Returns the goto forward command
-     *
-     * @param scanDirection the scan direction
-     * @param target        the target location
-     */
-    public static RobotCommands forward(Complex scanDirection, Point2D target) {
-        return forward(scanDirection.toIntDeg(), target);
-    }
-
-    /**
-     * Returns the halt command
-     *
-     * @param scanDirection the scan direction
-     */
-    public static RobotCommands halt(Complex scanDirection) {
-        return halt(scanDirection.toIntDeg());
-    }
-
-    /**
-     * Returns the halt command
-     *
-     * @param scanDirection the scan direction (DEG)
-     */
-    public static RobotCommands halt(int scanDirection) {
-        return scanDirection == 0
-                ? HALT
-                : new RobotCommands(RobotStatusId.HALT, scanDirection, 0, null);
-    }
-
-    /**
-     * Returns the halt command with frontal head
-     */
     public static RobotCommands halt() {
         return HALT;
     }
 
-    /**
-     * Returns the rotate command
-     *
-     * @param scanDirection     the scan direction
-     * @param rotationDirection the rotation direction
-     */
-    public static RobotCommands rotate(Complex scanDirection, Complex rotationDirection) {
-        return rotate(scanDirection.toIntDeg(), rotationDirection.toIntDeg());
-    }
-
-    /**
-     * Returns the rotate command
-     *
-     * @param scanDirection     the scan direction (DEG)
-     * @param rotationDirection the rotation direction (DEG)
-     */
-    public static RobotCommands rotate(int scanDirection, int rotationDirection) {
-        return new RobotCommands(RobotStatusId.ROTATE, scanDirection, rotationDirection, null);
-    }
-
-    /**
-     * Returns the rotate command with frontal head
-     *
-     * @param rotationDirection the rotation direction (DEG)
-     */
-    public static RobotCommands rotate(int rotationDirection) {
-        return rotate(0, rotationDirection);
-    }
-
-    /**
-     * Returns the rotate command with frontal head
-     *
-     * @param rotationDirection the rotation direction
-     */
-    public static RobotCommands rotate(Complex rotationDirection) {
-        return rotate(rotationDirection.toIntDeg());
-    }
-
-    /**
-     * Returns the commands by merging motion command and head command
-     *
-     * @param motionCommands the motion command
-     * @param headCommands   the head command
-     */
-    public static RobotCommands merge(RobotCommands motionCommands, RobotCommands headCommands) {
-        return new RobotCommands(motionCommands.status, headCommands.scanDirection, motionCommands.rotationDirection, motionCommands.target);
-    }
-
-    /**
-     * Creates the robot status command
-     *
-     * @param status            the status
-     * @param scanDirection     the scan direction
-     * @param rotationDirection the rotation direction
-     * @param target            the target location
-     */
-    public RobotCommands(RobotStatusId status, int scanDirection, int rotationDirection, Point2D target) {
-        this.status = requireNonNull(status);
-        this.scanDirection = scanDirection;
-        this.rotationDirection = rotationDirection;
-        this.target = target;
+    public RobotCommands {
+        requireNonNull(status);
+        requireNonNull(moveTarget);
+        requireNonNull(headStatus);
+        requireNonNull(headTarget);
     }
 
     /**
      * Returns true if halt command
      */
     public boolean isHalt() {
-        return RobotStatusId.HALT.equals(status);
+        return MotionStatus.MotionStatusId.HALT.equals(status);
     }
 
     /**
      * Returns true if rotate command
      */
     public boolean isRotate() {
-        return RobotStatusId.ROTATE.equals(status);
-    }
-
-    /**
-     * Sets the scan direction
-     *
-     * @param scanDirection scan direction
-     */
-    public RobotCommands scanDirection(Complex scanDirection) {
-        return scanDirection(scanDirection.toIntDeg());
-    }
-
-    /**
-     * Sets the scan direction
-     *
-     * @param scanDirection scan direction (DEG)
-     */
-    public RobotCommands scanDirection(int scanDirection) {
-        return scanDirection == this.scanDirection ? this
-                : new RobotCommands(status, scanDirection, rotationDirection, target);
+        return MotionStatus.MotionStatusId.ROTATE.equals(status);
     }
 }

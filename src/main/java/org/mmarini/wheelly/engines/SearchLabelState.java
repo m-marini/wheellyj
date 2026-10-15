@@ -49,7 +49,7 @@ import static org.mmarini.wheelly.engines.SearchRefreshState.NEAREST_TARGET_PROB
  * Exits are:
  * <ul>
  *  <li><code>completed</code> at selection of path</li>
- *  <li><code>notFound</code> if no labeled point</li>
+ *  <li><code>notFound</code> if no labelled point</li>
  * </ul>
  * </p>
  */

@@ -32,7 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.Angle;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 import org.mmarini.wheelly.envs.BasicEnvState;
 import org.mmarini.wheelly.envs.RewardFunction;
@@ -48,7 +48,7 @@ import static org.hamcrest.Matchers.closeTo;
 class LabelTest {
 
     static BasicEnvState createState(int robotDeg, int headDeg, double leftPps, double rightPps, int obstacleDir, double distance) {
-        Point2D marker = Complex.fromDeg(obstacleDir).at(new Point2D.Double(0, 0), distance);
+        Point2D marker = Angle.fromDeg(obstacleDir).at(new Point2D.Double(0, 0), distance);
         return new BasicEnvState(new WorldModelBuilder()
                 .robotDir(robotDeg)
                 .headAngle(headDeg)
@@ -112,7 +112,7 @@ class LabelTest {
                 leftPps, rightPps,
                 obstacleDir, distance);
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

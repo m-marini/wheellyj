@@ -30,6 +30,28 @@ package org.mmarini.wheelly.envs;
 
 import java.util.function.DoubleConsumer;
 
+/**
+ * Defines a fluent builder contract for components that support the registration of
+ * asynchronous performance reward callback interceptors.
+ * <p>
+ * Implementations of this interface allow external monitoring utilities, logging systems,
+ * or training telemetry observers to safely intercept computed scalar reward values
+ * generated during the reinforcement learning environment execution cycle.
+ * </p>
+ */
 public interface WithRewardCallback {
+
+    /**
+     * Registers a callback consumer to intercept computed scalar reward values, supporting
+     * a self-referential fluent API chaining structure.
+     * <p>
+     * The registered callback receives a primitive {@code double} representing the computed
+     * performance reward scalar emitted during policy optimisation or environmental step evaluation.
+     * </p>
+     *
+     * @param <T>      the specific concrete type implementing {@code WithRewardCallback} to preserve method chaining
+     * @param callback the {@link DoubleConsumer} execution lambda to invoke when a reward scalar is generated
+     * @return the self-referential instance of this component for fluid builder invocation sequences
+     */
     <T extends WithRewardCallback> T onReward(DoubleConsumer callback);
 }

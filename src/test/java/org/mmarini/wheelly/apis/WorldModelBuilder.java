@@ -78,7 +78,7 @@ public class WorldModelBuilder {
     }
 
     public WorldModelBuilder addMarker(String id, double markerDeg, double markerDistance) {
-        Complex robotMarkerDir = Complex.fromDeg(markerDeg).add(robotDir());
+        Angle robotMarkerDir = Angle.fromDeg(markerDeg).add(robotDir());
         Point2D markerLocation = robotMarkerDir.at(robotLocation(), markerDistance);
         markersBuilder.addMarker(id, markerLocation);
         return this;
@@ -93,7 +93,7 @@ public class WorldModelBuilder {
 
     public WorldModelBuilder applyMap(String mapText) {
         radarMapBuilder.radarMap(mapText);
-        markersBuilder.markers(radarMapBuilder.topology(), mapText);
+        markersBuilder.markers(radarMapBuilder.topology().gridSize(), mapText);
         robotLocation(mapText, ROBOT_ID);
         return this;
     }
@@ -166,6 +166,11 @@ public class WorldModelBuilder {
         return this;
     }
 
+    public WorldModelBuilder halt() {
+        this.robotStatusBuilder.halt();
+        return this;
+    }
+
     public WorldModelBuilder headAngle(int headAngle) {
         this.robotStatusBuilder.headAngle(headAngle);
         return this;
@@ -176,8 +181,18 @@ public class WorldModelBuilder {
         return this;
     }
 
+    public WorldModelBuilder mapRadar(String mapText) {
+        radarMapBuilder.radarMap(mapText);
+        return this;
+    }
+
     public WorldModelBuilder mapRadar(UnaryOperator<MapCell> cellMapper) {
         radarMapBuilder.map(cellMapper);
+        return this;
+    }
+
+    public WorldModelBuilder moving(boolean forward) {
+        robotStatusBuilder.moving(forward);
         return this;
     }
 
@@ -211,17 +226,12 @@ public class WorldModelBuilder {
         return this;
     }
 
-    public WorldModelBuilder robotDir(Complex robotDirDeg) {
+    public WorldModelBuilder robotDir(Angle robotDirDeg) {
         return robotDir(robotDirDeg.toIntDeg());
     }
 
-    public Complex robotDir() {
+    public Angle robotDir() {
         return this.robotStatusBuilder.robotDir();
-    }
-
-    public WorldModelBuilder robotHalt(boolean halt) {
-        this.robotStatusBuilder.halt(halt);
-        return this;
     }
 
     public Point2D robotLocation() {
@@ -234,7 +244,7 @@ public class WorldModelBuilder {
     }
 
     public WorldModelBuilder robotLocation(String mapText, String id) {
-        robotStatusBuilder.robotLocation(RadarMapBuilder.parseMap(radarMapBuilder.topology(), mapText)
+        robotStatusBuilder.robotLocation(RadarMapBuilder.parseMap(radarMapBuilder.topology().gridSize(), mapText)
                 .filter(t -> id.equals(t._2))
                 .map(Tuple2::getV1)
                 .findAny()

@@ -37,6 +37,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
+import org.mmarini.NotImplementedException;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.swing.ComMonitor;
@@ -90,7 +91,7 @@ public class RobotCheckUp {
     public static final long EXTENSION_DURATION = 5000;
     public static final long ROTATION_TIMEOUT = round(PI * ROBOT_TRACK / DISTANCE_PER_PULSE / MAX_ROTATION_SPEED * 1000) + EXTENSION_DURATION;
     public static final long HALT_TIMEOUT = 500;
-    public static final Complex ROTATION_TOLERANCE = Complex.fromDeg(6);
+    public static final Angle ROTATION_TOLERANCE = Angle.fromDeg(6);
     public static final int TEST_SPEED = RobotSpec.MAX_PPS / 2;
     public static final double MOVEMENT_DISTANCE = 0.6;
     public static final long MOVEMENT_DURATION = round(MOVEMENT_DISTANCE / DISTANCE_PER_PULSE / TEST_SPEED * 1000) + EXTENSION_DURATION;
@@ -213,25 +214,37 @@ public class RobotCheckUp {
                     // Check for no test required
                     if (currentTest == directions.length) {
                         // Execute a halt move command
+                        throw new NotImplementedException();
+        /* TODO
                         controller.execute(command);
+
                         sensorPanel.setInfo("");
                         return results;
+
+         */
                     }
                     // move head
-                    controller.execute(command.scanDirection(directions[currentTest]));
+                    throw new NotImplementedException();
+        /* TODO
+controller.execute(command.scanDirection(directions[currentTest]));
+
                     // clean measures (time, counter, accumulator)
                     measureStart = time;
                     totFrontDistance = totRearDistance = 0;
                     sampleCount = 0;
                     measureFrontCount = measureRearCount = 0;
                     scannerMoveTime = 0;
+         */
                     // set scan command to the current test direction
-                    command = command.scanDirection(directions[currentTest]);
+        /* TODO
+command = command.scanDirection(directions[currentTest]);
+
                     logger.atInfo().log("Checking sensor to {} DEG ...", directions[currentTest]);
                     sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest]));
+         */
                 }
                 int sensDir = directions[currentTest];
-                Complex dir = status.headDirection();
+                Angle dir = status.headDirection();
                 // Check for head to the required direction
                 if (dir.isCloseTo(sensDir)) {
                     // Increase scan counter
@@ -266,12 +279,19 @@ public class RobotCheckUp {
                     currentTest++;
                     // Check for last direction test
                     if (currentTest >= directions.length) {
-                        controller.execute(command.scanDirection(0));
+                        throw new NotImplementedException();
+        /* TODO
+controller.execute(command.scanDirection(0));
+
                         sensorPanel.setInfo("");
                         return results;
+         */
                     }
                     // Move head the next direction
-                    controller.execute(command.scanDirection(directions[currentTest]));
+                    throw new NotImplementedException();
+        /* TODO
+controller.execute(command.scanDirection(directions[currentTest]));
+
                     logger.atInfo().log("Checking sensor to {} DEG ...", directions[currentTest]);
                     sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest]));
                     // reset all measures
@@ -280,6 +300,7 @@ public class RobotCheckUp {
                     sampleCount = 0;
                     measureFrontCount = measureRearCount = 0;
                     scannerMoveTime = 0;
+         */
                 }
                 return null;
             }
@@ -470,19 +491,19 @@ public class RobotCheckUp {
                 .addForwardTest(NORTH_TARGET)
                 .addBackwardTest(CENTRE_TARGET)
 
-                .addRotateTest(Complex.DEG90)
+                .addRotateTest(Angle.DEG90)
                 .addForwardTest(EAST_TARGET)
                 .addBackwardTest(CENTRE_TARGET)
 
-                .addRotateTest(Complex.DEG180)
+                .addRotateTest(Angle.DEG180)
                 .addForwardTest(SOUTH_TARGET)
                 .addBackwardTest(CENTRE_TARGET)
 
-                .addRotateTest(Complex.DEG270)
+                .addRotateTest(Angle.DEG270)
                 .addForwardTest(WEST_TARGET)
                 .addBackwardTest(CENTRE_TARGET)
 
-                .addRotateTest(Complex.DEG0);
+                .addRotateTest(Angle.DEG0);
     }
 
     /**
@@ -493,15 +514,15 @@ public class RobotCheckUp {
                 // Scan from left to right for the head field of view
                 createCheckUpScanner())
                 // Rotate clockwise and counterclockwise the robot
-                .addRotateTest(Complex.DEG0)
-                .addRotateTest(Complex.DEG90)
-                .addRotateTest(Complex.DEG180)
-                .addRotateTest(Complex.DEG270)
-                .addRotateTest(Complex.DEG0)
-                .addRotateTest(Complex.DEG270)
-                .addRotateTest(Complex.DEG180)
-                .addRotateTest(Complex.DEG90)
-                .addRotateTest(Complex.DEG0);
+                .addRotateTest(Angle.DEG0)
+                .addRotateTest(Angle.DEG90)
+                .addRotateTest(Angle.DEG180)
+                .addRotateTest(Angle.DEG270)
+                .addRotateTest(Angle.DEG0)
+                .addRotateTest(Angle.DEG270)
+                .addRotateTest(Angle.DEG180)
+                .addRotateTest(Angle.DEG90)
+                .addRotateTest(Angle.DEG0);
     }
 
     /**
@@ -634,7 +655,7 @@ public class RobotCheckUp {
             long numRotationFailure = rotateResults.stream()
                     .filter(result -> result.directionError.sub(ROTATION_TOLERANCE).positive()
                             || result.imuFailure != 0).count();
-            Complex maxDirectionError = Complex.DEG0;
+            Angle maxDirectionError = Angle.DEG0;
             double maxLocationError = 0;
             double maxRotationSpeed = 0;
             for (RotateResult r : rotateResults) {
@@ -696,8 +717,8 @@ public class RobotCheckUp {
     /**
      * Rotation result
      */
-    record RotateResult(long testDuration, Complex targetDir, Complex directionError, double locationError,
-                        Complex rotationAngle, int imuFailure) {
+    record RotateResult(long testDuration, Angle targetDir, Angle directionError, double locationError,
+                        Angle rotationAngle, int imuFailure) {
     }
 
     /**
@@ -742,7 +763,10 @@ public class RobotCheckUp {
                         // store start location
                         startLocation = status.location();
                         moveStart = time;
-                        controller.execute(RobotCommands.backward(target));
+                        throw new NotImplementedException();
+        /* TODO
+controller.execute(RobotCommands.backward(target));
+
                         sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()));
                     }
                     // Check for maximum distance travelled or test timeout or obstacle found
@@ -759,8 +783,10 @@ public class RobotCheckUp {
                                 distance,
                                 status.imuFailure()));
                         sensorPanel.setInfo("");
-                        controller.execute(RobotCommands.halt());
+controller.execute(RobotCommands.halt());
+
                         return true;
+         */
                     }
                     return false;
                 }
@@ -787,7 +813,9 @@ public class RobotCheckUp {
                         // store start location
                         startLocation = status.location();
                         moveStart = time;
-                        controller.execute(RobotCommands.forward(target));
+                        throw new NotImplementedException();
+        /* TODO
+controller.execute(RobotCommands.forward(target));
                         sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()));
                     }
                     // Check for maximum distance travelled or test timeout or obstacle found
@@ -804,8 +832,12 @@ public class RobotCheckUp {
                                 distance,
                                 status.imuFailure()));
                         sensorPanel.setInfo("");
+                        throw new NotImplementedException();
+                        /* TODO
                         controller.execute(RobotCommands.halt());
                         return true;
+
+                         */
                     }
                     return false;
                 }
@@ -818,24 +850,26 @@ public class RobotCheckUp {
          *
          * @param direction the direction
          */
-        public CompositeCheckupProcess addRotateTest(Complex direction) {
+        public CompositeCheckupProcess addRotateTest(Angle direction) {
             checkList.add(new Predicate<>() {
                 private long haltTime;
                 private long rotationStart;
-                private Complex startAngle;
+                private Angle startAngle;
                 private Point2D startLocation;
 
                 @Override
                 public boolean test(RobotStatus status) {
                     long time = status.robotTime();
-                    Complex dir = status.direction();
+                    Angle dir = status.direction();
                     if (startLocation == null) {
                         // store start location, time, rotation at the beginning of test
                         startLocation = status.location();
                         rotationStart = time;
                         startAngle = dir;
                         // Rotate to the desired direction
-                        controller.execute(RobotCommands.rotate(direction));
+                        throw new NotImplementedException();
+        /* TODO
+      controller.execute(RobotCommands.rotate(direction));
                         sensorPanel.setInfo(format("Checking rotation to %d DEG ...", direction.toIntDeg()));
                     }
                     // Check for rotation max duration
@@ -848,9 +882,14 @@ public class RobotCheckUp {
                         // Create the test result
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
                         // Stop robot
-                        controller.execute(RobotCommands.halt());
+                        throw new NotImplementedException();
+        /* TODO
+controller.execute(RobotCommands.halt());
+
                         sensorPanel.setInfo("");
                         return true;
+
+         */
                     }
                     // Check for robot moving
                     if (!status.halt()) {
@@ -862,24 +901,32 @@ public class RobotCheckUp {
                         // Store halt time
                         haltTime = time;
                     }
-                    Complex directionError = dir.sub(direction);
-                    Complex rotationAngle = dir.sub(startAngle);
+                    Angle directionError = dir.sub(direction);
+                    Angle rotationAngle = dir.sub(startAngle);
                     double distanceError = status.location().distance(startLocation);
                     // Check for direction
-                    if (directionError.isClose0(robot.robotSpec().directionRange())) {
+                    if (directionError.isFront(robot.robotSpec().directionRange())) {
                         // Rotation completed: generate the test result
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
-                        controller.execute(RobotCommands.halt());
+                        throw new NotImplementedException();
+        /* TODO
+controller.execute(RobotCommands.halt());
                         sensorPanel.setInfo("");
                         return true;
+
+         */
                     }
                     // Check for robot halt duration
                     if (time >= haltTime + HALT_TIMEOUT) {
                         // Halt timeout: generate test result
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
+                        throw new NotImplementedException();
+        /* TODO
                         controller.execute(RobotCommands.halt());
                         sensorPanel.setInfo("");
                         return true;
+
+         */
                     }
                     return false;
                 }

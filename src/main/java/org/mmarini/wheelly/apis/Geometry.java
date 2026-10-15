@@ -40,7 +40,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.lang.Math.*;
-import static org.mmarini.wheelly.apis.Complex.*;
+import static org.mmarini.wheelly.apis.Angle.*;
 
 /**
  * Utilities geometry functions
@@ -48,8 +48,8 @@ import static org.mmarini.wheelly.apis.Complex.*;
 public interface Geometry {
 
     double HALF_MM = 500e-6;
-    double BROAD_EPSILON = sin(toRadians(89.5)); // 89.5 DEG
-    Complex HALF_DEG_COMPLEX = Complex.fromDeg(0.5);
+    Angle HALF_DEG_COMPLEX = Angle.fromDeg(0.5);
+    double BROAD_ANGLE = toRadians(89.5);
 
     /**
      * Returns all the safe points from the vertices with the direction from the nearest point
@@ -59,7 +59,7 @@ public interface Geometry {
      * @param center   the center
      * @param vertices the vertices
      */
-    static Stream<Tuple2<Point2D, Complex>> computeAllSafePoints(Point2D center, List<Point2D> vertices) {
+    static Stream<Tuple2<Point2D, Angle>> computeAllSafePoints(Point2D center, List<Point2D> vertices) {
         // Finds nearest
         int nearestIndex = Utils.zipWithIndex(vertices)
                 .min(Comparator.comparingDouble(t -> center.distanceSq(t._2)))
@@ -75,7 +75,7 @@ public interface Geometry {
                 .map(i -> (i + nearestIndex) % n)
                 .mapToObj(i -> {
                     Point2D point = vertices.get(i);
-                    Complex direction = direction(center, point);
+                    Angle direction = direction(center, point);
                     if (i == nearestIndex) {
                         return Tuple2.of(center, direction);
                     } else {
@@ -118,7 +118,7 @@ public interface Geometry {
      * @param vertices the vertices
      */
     static Stream<Tuple2<Point2D, QVect>> computeFilteredSafePoints(Point2D center, List<Point2D> vertices) {
-        List<Tuple2<Point2D, Complex>> safePointsDirections = computeAllSafePoints(center, vertices).toList();
+        List<Tuple2<Point2D, Angle>> safePointsDirections = computeAllSafePoints(center, vertices).toList();
         List<Tuple2<Point2D, QVect>> safePoints = safePointsDirections.stream().map(t -> {
                     QVect ineq = QVect.line(t._1, t._2.add(DEG90));
                     return t.setV2(ineq);
@@ -142,7 +142,7 @@ public interface Geometry {
      * @param vertices the vertices
      */
     static Stream<Point2D> computeInnerVertices(Point2D center, List<Point2D> vertices) {
-        List<Tuple2<Point2D, Complex>> safePointsDirections = computeAllSafePoints(center, vertices).toList();
+        List<Tuple2<Point2D, Angle>> safePointsDirections = computeAllSafePoints(center, vertices).toList();
         List<Tuple2<Point2D, QVect>> safePoints = safePointsDirections.stream().map(t -> {
                     QVect ineq = QVect.line(t._1, t._2.add(DEG90));
                     return t.setV2(ineq);
@@ -244,40 +244,40 @@ public interface Geometry {
      * @param alpha  the direction from Q
      * @param dAlpha the size of direction interval
      */
-    static double[] horizontalArcIntersect(Point2D q, double y, Complex alpha, Complex dAlpha) {
+    static double[] horizontalArcIntersect(Point2D q, double y, Angle alpha, Angle dAlpha) {
         double xq = q.getX();
         double yq = q.getY();
         if (abs(y - yq) <= HALF_MM) {
             // y ~= yq
-            Complex dar = DEG90.sub(alpha).abs();
+            Angle dar = DEG90.sub(alpha).abs();
             if (!dar.sub(dAlpha).sub(HALF_DEG_COMPLEX).positive()) {
                 return new double[]{xq, Double.POSITIVE_INFINITY};
             }
-            Complex dal = DEG270.sub(alpha).abs();
+            Angle dal = DEG270.sub(alpha).abs();
             if (!dal.sub(dAlpha).sub(HALF_DEG_COMPLEX).positive()) {
                 return new double[]{Double.NEGATIVE_INFINITY, xq};
             }
             return new double[]{xq, xq};
         }
-        Complex al = alpha.sub(dAlpha);
-        Complex ar = alpha.add(dAlpha);
+        Angle al = alpha.sub(dAlpha);
+        Angle ar = alpha.add(dAlpha);
         double v = (y - yq) * al.tan() + xq;
         double v1 = (y - yq) * ar.tan() + xq;
         double xl;
         double xr;
         if (y > yq) {
             // front intersection
-            xl = al.isClose0Epsilon(BROAD_EPSILON)
+            xl = al.isFront(BROAD_ANGLE)
                     ? v
                     : Double.NEGATIVE_INFINITY;
-            xr = ar.isClose0Epsilon(BROAD_EPSILON)
+            xr = ar.isFront(BROAD_ANGLE)
                     ? v1
                     : Double.POSITIVE_INFINITY;
         } else {
-            xl = !ar.isRear(BROAD_EPSILON)
+            xl = !ar.isRear(BROAD_ANGLE)
                     ? Double.NEGATIVE_INFINITY
                     : v1;
-            xr = !al.isRear(BROAD_EPSILON)
+            xr = !al.isRear(BROAD_ANGLE)
                     ? Double.POSITIVE_INFINITY
                     : v;
         }
@@ -294,7 +294,7 @@ public interface Geometry {
      * @param alpha  the direction from point Q
      * @param dAlpha the direction range
      */
-    static Tuple2<Point2D, Point2D> horizontalArcInterval(Point2D q, double xl, double xr, double y, Complex alpha, Complex dAlpha) {
+    static Tuple2<Point2D, Point2D> horizontalArcInterval(Point2D q, double xl, double xr, double y, Angle alpha, Angle dAlpha) {
         double[] x0 = horizontalArcIntersect(q, y, alpha, dAlpha);
         if (x0[0] == Double.NEGATIVE_INFINITY && x0[1] == Double.POSITIVE_INFINITY) {
             return null;
@@ -326,7 +326,7 @@ public interface Geometry {
      * @param center    the square center (m)
      * @param size      the square size (m)
      */
-    static List<Point2D> lineSquareProjections(Point2D from, Complex direction, Point2D center, double size) {
+    static List<Point2D> lineSquareProjections(Point2D from, Angle direction, Point2D center, double size) {
         double xl = center.getX() - size / 2;
         double xr = center.getX() + size / 2;
         double yr = center.getY() - size / 2;
@@ -376,15 +376,15 @@ public interface Geometry {
      * @param direction the direction
      * @param to        the give point
      */
-    static Point2D projectLine(Point2D center, Complex direction, Point2D to) {
+    static Point2D projectLine(Point2D center, Angle direction, Point2D to) {
         double x0 = center.getX();
         double y0 = center.getY();
         double x1 = to.getX();
         double y1 = to.getY();
         double dx = x1 - x0;
         double dy = y1 - y0;
-        double sa = direction.x();
-        double ca = direction.y();
+        double sa = direction.sin();
+        double ca = direction.cos();
         double y = dx * sa + dy * ca;
         double x = dx * ca - dy * sa;
         return new Point2D.Double(x, y);
@@ -399,7 +399,7 @@ public interface Geometry {
      * @param alpha  the direction from point Q
      * @param dAlpha the direction range from point Q
      */
-    static Tuple2<Point2D, Point2D> squareArcInterval(Point2D p, double size, Point2D q, Complex alpha, Complex dAlpha) {
+    static Tuple2<Point2D, Point2D> squareArcInterval(Point2D p, double size, Point2D q, Angle alpha, Angle dAlpha) {
         double xp = p.getX();
         double yp = p.getY();
         double xq = q.getX();
@@ -432,38 +432,38 @@ public interface Geometry {
      * @param alpha  the direction from Q
      * @param dAlpha the size of direction interval (RAD)
      */
-    static double[] verticalArcIntersect(Point2D q, double x, Complex alpha, Complex dAlpha) {
+    static double[] verticalArcIntersect(Point2D q, double x, Angle alpha, Angle dAlpha) {
         double xq = q.getX();
         double yq = q.getY();
         if (abs(x - xq) < HALF_MM) {
-            Complex dar = alpha.abs();
+            Angle dar = alpha.abs();
             if (!dar.sub(dAlpha).sub(HALF_DEG_COMPLEX).positive()) {
                 return new double[]{yq, Double.POSITIVE_INFINITY};
             }
-            Complex dal = alpha.opposite().abs();
+            Angle dal = alpha.opposite().abs();
             if (!dal.sub(dAlpha).sub(HALF_DEG_COMPLEX).positive()) {
                 return new double[]{Double.NEGATIVE_INFINITY, yq};
             }
             return new double[]{yq, yq};
         }
-        Complex al = alpha.sub(dAlpha);
-        Complex ar = alpha.add(dAlpha);
+        Angle al = alpha.sub(dAlpha);
+        Angle ar = alpha.add(dAlpha);
         double yr;
         double yf;
         double v = (x - xq) * DEG90.sub(ar).tan() + yq;
         double v1 = (x - xq) * DEG90.sub(al).tan() + yq;
         if (x > xq) {
-            yr = !ar.isRight(BROAD_EPSILON)
+            yr = !ar.isRight(BROAD_ANGLE)
                     ? Double.NEGATIVE_INFINITY
                     : v;
-            yf = !al.isRight(BROAD_EPSILON)
+            yf = !al.isRight(BROAD_ANGLE)
                     ? Double.POSITIVE_INFINITY
                     : v1;
         } else {
-            yr = al.isLeft(BROAD_EPSILON) && al.y() > -1
+            yr = al.isLeft(BROAD_ANGLE) && al.cos() > -1
                     ? v1
                     : Double.NEGATIVE_INFINITY;
-            yf = ar.isLeft(BROAD_EPSILON) && ar.y() > -1
+            yf = ar.isLeft(BROAD_ANGLE) && ar.cos() > -1
                     ? v
                     : Double.POSITIVE_INFINITY;
         }
@@ -480,7 +480,7 @@ public interface Geometry {
      * @param alpha  the direction from point Q
      * @param dAlpha the direction range
      */
-    static Tuple2<Point2D, Point2D> verticalArcInterval(Point2D q, double yr, double yf, double x, Complex alpha, Complex dAlpha) {
+    static Tuple2<Point2D, Point2D> verticalArcInterval(Point2D q, double yr, double yf, double x, Angle alpha, Angle dAlpha) {
         double[] y0 = verticalArcIntersect(q, x, alpha, dAlpha);
         if (y0[0] == Double.NEGATIVE_INFINITY && y0[1] == Double.POSITIVE_INFINITY) {
             return null;

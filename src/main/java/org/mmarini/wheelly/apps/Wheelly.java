@@ -31,7 +31,6 @@ package org.mmarini.wheelly.apps;
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -48,9 +47,9 @@ import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.envs.DLEnvironment;
 import org.mmarini.wheelly.envs.EnvironmentApi;
 import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.envs.WithRewardCallback;
 import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.swing.*;
 import org.mmarini.yaml.Locator;
@@ -62,6 +61,7 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
@@ -287,20 +287,26 @@ public class Wheelly {
         toolBar.relocateButton().addActionListener(this::onRelocateButton);
         toolBar.learningButton().addActionListener(this::onLearningToggle);
         controller.addOnRobotStatus(this::onStatusReady);
-        controller.addOnCommand(sensorMonitor::onCommand);
-        controller.readErrors().subscribe(err -> {
-            comMonitor.onError(err);
-            logger.atError().setCause(err).log();
-        });
+        if (controller instanceof RobotController robotController) {
+            robotController.onMotionStatus(this::onMotionStatus);
+            robotController.onHeadStatus(this::onHeadStatus);
+        }
+        controller.readErrors()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
+                .subscribe(err -> {
+                    comMonitor.onError(err);
+                    logger.atError().setCause(err).log();
+                });
         controller.readControllerStatus()
                 .map(ControllerStatusMapper::map)
                 .distinct()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onControllerStatus);
         controller.readShutdown()
                 .observeOn(Schedulers.io())
                 .subscribe(this::onControllerShutdown);
         agent.readShutdown()
-                .observeOn(Schedulers.io())
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onAgentShutdown);
 
         controller.readShutdown().andThen(agent.readShutdown())
@@ -308,20 +314,21 @@ public class Wheelly {
                 .subscribe(this::onShutdownCompleted);
 
         worldModeller.addOnInference(this::onInference);
-
-        Observable<WindowEvent>[] windowObs = allFrames.stream()
-                .map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE))
-                .toArray(Observable[]::new);
-        Observable.mergeArray(windowObs)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .subscribe(this::onWindowClosing);
+        for (JFrame allFrame : allFrames) {
+            allFrame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent e) {
+                    onWindowClosing(e);
+                }
+            });
+        }
 
         if (robot instanceof MqttRobot mqttRobot) {
             comMonitor.addRobot(mqttRobot);
         }
-
-        if (environment instanceof DLEnvironment dlEnvironment) {
+        if (environment instanceof WithRewardCallback dlEnvironment) {
             dlEnvironment.onReward(reward -> {
+                logger.atInfo().log("on reward");
                 envPanel.setReward(reward);
                 sensorMonitor.onReward(reward);
             });
@@ -458,12 +465,17 @@ public class Wheelly {
         comMonitor.onControllerStatus(status);
     }
 
+    private void onHeadStatus(HeadStatus status) {
+        SwingUtilities.invokeLater(() ->
+                sensorMonitor.onHeadStatusCommand(status));
+    }
+
     /**
      * Handles the inference event
      *
      * @param inferenceResult the inference result
      */
-    private void onInference(Tuple2<WorldModel, RobotCommands> inferenceResult) {
+    private void onInference(Tuple2<WorldModel, RobotCommand> inferenceResult) {
         logger.atDebug().log("on Inference");
         WorldModel worldModel = inferenceResult._1;
         RobotStatus robotStatus = worldModel.robotStatus();
@@ -482,7 +494,7 @@ public class Wheelly {
         long robotClock = robotStatus.robotTime();
         envPanel.radarMap(worldModel.radarMap());
         envPanel.markers(markers.values());
-        Complex robotDir = robotStatus.direction();
+        Angle robotDir = robotStatus.direction();
 
         gridPanel.setGridMap(map);
         gridPanel.setRobotDirection(robotDir.sub(map.direction()));
@@ -509,10 +521,10 @@ public class Wheelly {
         logger.atDebug().log("on Inference end");
     }
 
-    private RobotCommands onInferenceProcess(WorldModel state) {
+    private RobotCommand onInferenceProcess(WorldModel state) {
         return active.get()
                 ? environment.onInference(state)
-                : RobotCommands.halt();
+                : RobotCommand.halt();
     }
 
     /**
@@ -541,13 +553,20 @@ public class Wheelly {
         agent.learning(learning);
     }
 
+    private void onMotionStatus(MotionStatus status) {
+        SwingUtilities.invokeLater(() ->
+                sensorMonitor.onMotionStatus(status));
+    }
+
     /**
      * Handles the obstacle map
      *
      * @param map the obstacle map
      */
     private void onObstacleMap(Collection<Obstacle> map) {
-        envPanel.obstacles(map);
+        SwingUtilities.invokeLater(() ->
+                envPanel.obstacles(map)
+        );
     }
 
     /**
@@ -616,18 +635,20 @@ public class Wheelly {
      * @param status the status
      */
     private void onStatusReady(RobotStatus status) {
-        envPanel.robotStatus(status);
-        sensorMonitor.onStatus(status);
         if (robotStartTimestamp < 0) {
             robotStartTimestamp = status.robotTime();
         }
-        long robotElapsed = status.robotTime() - robotStartTimestamp;
-        envPanel.setTimeRatio(controller.simRealSpeed());
+        SwingUtilities.invokeLater(() -> {
+            envPanel.robotStatus(status);
+            sensorMonitor.onStatus(status);
+            envPanel.setTimeRatio(controller.simRealSpeed());
+        });
         long now = System.currentTimeMillis();
         if (now > autosaveInstant) {
             agent.backup();
             autosaveInstant = now + savingInterval;
         }
+        long robotElapsed = status.robotTime() - robotStartTimestamp;
         if (robotElapsed > sessionDuration) {
             shutDown();
         }
@@ -647,9 +668,9 @@ public class Wheelly {
     /**
      * Handles the window shuttingDown events
      *
-     * @param windowEvent the event
+     * @param ignoredWindowEvent the event
      */
-    private void onWindowClosing(WindowEvent windowEvent) {
+    private void onWindowClosing(WindowEvent ignoredWindowEvent) {
         shutDown();
     }
 
@@ -675,8 +696,7 @@ public class Wheelly {
 
         if (robot instanceof SimRobot robot1) {
             // Add the obstacles location changes
-            robot1.readObstacleMap()
-                    .subscribe(this::onObstacleMap);
+            robot1.onObstacleMap(this::onObstacleMap);
             relocateButton.setEnabled(true);
         } else {
             relocateButton.setEnabled(false);

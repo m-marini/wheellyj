@@ -78,9 +78,9 @@ public class MarkersBuilder {
         return markers;
     }
 
-    public MarkersBuilder markers(GridTopology topology, String mapText) {
+    public MarkersBuilder markers(double gridSize, String mapText) {
         return addMarkers(() ->
-                RadarMapBuilder.parseMap(topology, mapText)
+                RadarMapBuilder.parseMap(gridSize, mapText)
                         .filter(t ->
                                 RadarMapBuilder.isMarker(t._2))
                         .map(t ->

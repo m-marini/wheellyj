@@ -79,7 +79,7 @@
     <logger name="org.mmarini.wheelly.envs.DLMacroActionEnvironment" level="DEBUG"/>
 
     <logger name="org.mmarini.wheelly.fsm.CoordinatedMotionState" level="DEBUG"/>
-    <logger name="org.mmarini.wheelly.fsm.AsyncMovePathState" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.fsm.MovePathState" level="DEBUG"/>
 
     <logger name="org.mmarini.wheelly.mqtt.MqttRobot" level="INFO"/>
 

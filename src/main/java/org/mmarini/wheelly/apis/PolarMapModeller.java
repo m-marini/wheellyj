@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -68,7 +68,7 @@ public record PolarMapModeller(int numSectors, double minDistance) {
      * @param direction   the direction of polar map
      * @param maxDistance the maximum distance (m)
      */
-    public PolarMap create(RadarMap map, Point2D centre, Complex direction, double maxDistance) {
+    public PolarMap create(RadarMap map, Point2D centre, Angle direction, double maxDistance) {
         GridTopology topology = map.topology();
         double gridSize = topology.gridSize();
 
@@ -84,14 +84,14 @@ public record PolarMapModeller(int numSectors, double minDistance) {
         MapCell[] notEmptyCells = new MapCell[numSectors];
 
         double thresholdDistance = max(minDistance, gridSize);
-        Complex dAlpha = Complex.fromRad(sectorAngle() * 1.25 / 2);
+        Angle dAlpha = Angle.fromRad(sectorAngle() * 1.25 / 2);
 
         topology.indicesByArea(circle(centre, maxDistance))
                 .mapToObj(map::cell)
                 .forEach(cell -> { // For each radar cell
                     for (int i = 0; i < numSectors; i++) { // for each polar sector
-                        Complex locSectorDir = sectorDirection(i);
-                        Complex sectorDir = locSectorDir.add(direction);
+                        Angle locSectorDir = sectorDirection(i);
+                        Angle sectorDir = locSectorDir.add(direction);
                         // Computes the contact point
                         Tuple2<Point2D, Point2D> interval = squareArcInterval(cell.location(), gridSize, centre,
                                 sectorDir, dAlpha);
@@ -150,7 +150,7 @@ public record PolarMapModeller(int numSectors, double minDistance) {
      *
      * @param i the sector index
      */
-    private Complex sectorDirection(int i) {
-        return Complex.fromRad(i * sectorAngle());
+    private Angle sectorDirection(int i) {
+        return Angle.fromRad(i * sectorAngle());
     }
 }

@@ -30,6 +30,21 @@ package org.mmarini.wheelly.envs;
 
 import org.mmarini.wheelly.apis.WorldModel;
 
+/**
+ * Defines the contract for an immutable snapshot of the reinforcement learning
+ * environment state at a specific execution step.
+ * <p>
+ * Implementations of this interface encapsulate the essential sensory, structural,
+ * and kinematic context required for agent observation parsing, reward evaluation,
+ * and behavioural modelling.
+ * </p>
+ */
 public interface EnvState {
+
+    /**
+     * Extracts the underlying world model snapshot associated with this state configuration.
+     *
+     * @return the {@link WorldModel} tracking telemetry data, robot status, and radar maps
+     */
     WorldModel worldModel();
 }

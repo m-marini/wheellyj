@@ -61,7 +61,6 @@ public class MockFSMContext implements EnvFSMContext {
         this.path = path;
     }
 
-    @Override
     public AgentAction nextAction() {
         nextActionCount++;
         return nextAction;
@@ -75,16 +74,6 @@ public class MockFSMContext implements EnvFSMContext {
         return Single.just(path)
                 .subscribeOn(Schedulers.io())
                 .delay(PATH_TIME, TimeUnit.MILLISECONDS);
-    }
-
-    @Override
-    public Single<List<Point2D>> pathToNearestMarker() {
-        return path();
-    }
-
-    @Override
-    public Single<List<Point2D>> pathToNearestUnknownArea() {
-        return path();
     }
 
     @Override

@@ -30,165 +30,173 @@ package org.mmarini.wheelly.fsm;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.Angle;
+import org.mmarini.wheelly.apis.HeadStatus;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.*;
 
-class HeadScanStateTest {
+class PanoramicScanStateTest {
 
-    public static final int[] SCAN_DEG_10 = {
-            -60, -50, -40, -30, -20, -10,
-            0, 10, 20, 30, 40, 50, 60
+    public static final Angle[] SCAN_DEG_10 = IntStream.range(0, 13)
+            .mapToObj(i -> Angle.fromDeg(i * 10 - 60))
+            .toArray(Angle[]::new);
+    public static final Angle[] SCAN_DEG_45 = new Angle[]{
+            Angle.fromDeg(-45),
+            Angle.fromDeg(0),
+            Angle.fromDeg(45)
     };
-    public static final int ANGLE_INTERVAL_DEG = 45;
+    public static final Angle ANGLE_INTERVAL = Angle.fromDeg(45);
     WorldModelBuilder builder;
-    HeadScanState state;
+    PanoramicScanState state;
     List<EnvFSMContext> onCompletionContexts;
 
     @BeforeEach
     void setUp() {
         this.builder = new WorldModelBuilder();
         this.onCompletionContexts = new ArrayList<>();
-        this.state = new HeadScanState(COMMITMENT_TIME, SCAN_INTERVAL, ANGLE_INTERVAL_DEG)
-                .onCompletion(ctx -> {
+        this.state = new PanoramicScanState(1, ANGLE_INTERVAL)
+                .onCompletion((ctx, def) -> {
                     onCompletionContexts.add(ctx);
-                    return RobotCommands.halt();
+                    return def;
                 });
     }
 
     @Test
     void testComputeHeadDeg() {
-        int[] heads = HeadScanState.computeHeadDeg(132, 10);
+        Angle[] heads = PanoramicScanState.computeHeadDeg(132, 10);
         assertArrayEquals(SCAN_DEG_10, heads);
     }
 
     @Test
     void testScan() {
         // Given ...
-        List<MockFSMContext> ctxs = MockFSMContext.builder()
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
                 // 0 - init
                 .add(builder)
                 // 1 - 1st
                 .add(builder)
-                // 2 - at commit time
-                .add(builder.addTime(COMMITMENT_TIME))
-                // 3 - at valid lidar signal
-                .add(builder.headAngle(SCAN_HEAD_DEG[0])
+                // 2 - at valid lidar signal -45 DEG
+                .add(builder.headAngle(SCAN_DEG_45[0].toIntDeg())
                         .addTime(1)
                         .updateLidarTime())
-                // 4 - scan interval without lidar message
-                .add(builder.addTime(SCAN_INTERVAL))
-                // 5 - head ok and no lidar signal
-                .add(builder.headAngle(SCAN_HEAD_DEG[2])
+                // 3 - scan interval without lidar message
+                .add(builder.addTime(1))
+                // 4 - head 0 DEG and no lidar message
+                .add(builder.headAngle(SCAN_DEG_45[1].toIntDeg())
                         .addTime(1))
-                // 6 - head ok and lidar signal
-                .add(builder.addTime(SCAN_INTERVAL)
+                // 5 - head 0 DEG and lidar message
+                .add(builder.addTime(1)
                         .updateLidarTime())
-                // 7 - after completion
+                // 6 - head 0 DEG and lidar message
+                .add(builder.addTime(1)
+                        .updateLidarTime())
+                // 7 - head 45 DEG and lidar message
+                .add(builder.addTime(1)
+                        .headAngle(SCAN_DEG_45[2].toIntDeg())
+                        .updateLidarTime())
+                // 8 - after completion
                 .add()
-                .build();
+                .build()
+                .iterator();
 
         // When init
-        Iterator<MockFSMContext> iter = ctxs.iterator();
         MockFSMContext ctx = iter.next();
         state.init(ctx);
 
         //--------
         // When 1st tick
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        HeadStatus cmd = state.tick(ctx);
         // Then command should scan at 1st direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd.scanDirection());
-        // And no committed
-        assertFalse(state.expired(ctx));
+        assertEquals(HeadStatus.scan(SCAN_DEG_45[0]), cmd);
         // And no completed
         assertFalse(state.completed());
         // And no completion triggered
         assertThat(onCompletionContexts, empty());
 
         //--------
-        // When 2 - at commit time
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        // Then command should scan at 1st direction
-        assertEquals(SCAN_HEAD_DEG[0], cmd.scanDirection());
-        // And committed
-        assertTrue(state.expired(ctx));
-        // And no completed
-        assertFalse(state.completed());
-        // And no completion triggered
-        assertThat(onCompletionContexts, empty());
-
-        //--------
-        // when 3 - at valid lidar signal
+        // when 2 - at valid lidar signal
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 2nd direction
-        assertEquals(SCAN_HEAD_DEG[1], cmd.scanDirection());
-        // And committed
-        assertTrue(state.expired(ctx));
+        assertEquals(HeadStatus.scan(SCAN_DEG_45[1]), cmd);
         // And no completed
         assertFalse(state.completed());
         // And no completion triggered
         assertThat(onCompletionContexts, empty());
 
-        // When 4 - scan interval without lidar message
+        // When 3 - scan interval without lidar message
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(SCAN_HEAD_DEG[2], cmd.scanDirection());
-        // And committed
-        assertTrue(state.expired(ctx));
-        // And no completed
-        assertFalse(state.completed());
-        // And no completion triggered
-        assertThat(onCompletionContexts, empty());
-
-        //--------
-        // When 5 - head ok and no lidar signal
-        ctx = iter.next();
-        cmd = state.tick(ctx);
-        // Then command should scan at 3rd direction
-        assertEquals(SCAN_HEAD_DEG[2], cmd.scanDirection());
-        // And committed
-        assertTrue(state.expired(ctx));
+        assertEquals(HeadStatus.scan(SCAN_DEG_45[1]), cmd);
         // And no completed
         assertFalse(state.completed());
         // And no completion triggered
         assertThat(onCompletionContexts, empty());
 
         //--------
-        // When 6 - head ok and lidar signal
+        // When 4 - head ok and no lidar signal
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(0, cmd.scanDirection());
-        // And committed
-        assertTrue(state.expired(ctx));
+        assertEquals(HeadStatus.scan(SCAN_DEG_45[1]), cmd);
+        // And no completed
+        assertFalse(state.completed());
+        // And no completion triggered
+        assertThat(onCompletionContexts, empty());
+
+        //--------
+        // When 5 - head OK and lidar signal 0 DEG
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then command should scan at 3rd direction
+        assertEquals(HeadStatus.scan(SCAN_DEG_45[2]), cmd);
+        // And no completed
+        assertFalse(state.completed());
+        // And completion triggered
+        assertThat(onCompletionContexts, empty());
+
+        //--------
+        // When 6 - head 0 DEG and lidar message
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then command should scan at 3rd direction
+        assertEquals(HeadStatus.scan(SCAN_DEG_45[2]), cmd);
+        // And no completed
+        assertFalse(state.completed());
+        // And completion triggered
+        assertThat(onCompletionContexts, empty());
+
+        //--------
+        // When 7 - head 45 DEG and lidar message
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then command should scan at 3rd direction
+        assertEquals(HeadStatus.scan(SCAN_DEG_45[2]), cmd);
         // And no completed
         assertTrue(state.completed());
         // And completion triggered
         assertThat(onCompletionContexts, contains(ctx));
 
         //--------
-        // When 7 - after completion
+        // When 8 - after completion
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan at 3rd direction
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(HeadStatus.lookStraight(), cmd);
         // And committed
-        assertTrue(state.expired(ctx));
         // And no completed
         assertTrue(state.completed());
         // And completion triggered
-        assertThat(onCompletionContexts, hasItem(ctx));
+        assertThat(onCompletionContexts, hasSize(1));
     }
 }

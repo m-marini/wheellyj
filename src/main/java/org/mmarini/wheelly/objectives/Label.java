@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.Angle;
 import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
@@ -64,8 +64,8 @@ public interface Label {
         double minDistance = locator.path("minDistance").getNode(root).asDouble();
         double maxDistance = locator.path("maxDistance").getNode(root).asDouble();
         double velocityThreshold = locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
-        Complex directionRange = Complex.fromDeg(locator.path("directionRange").getNode(root).asInt(DEFAULT_DIRECTION_RANGE));
-        Complex sensorRange = Complex.fromDeg(locator.path("sensorRange").getNode(root).asInt(DEFAULT_SENSOR_RANGE));
+        Angle directionRange = Angle.fromDeg(locator.path("directionRange").getNode(root).asInt(DEFAULT_DIRECTION_RANGE));
+        Angle sensorRange = Angle.fromDeg(locator.path("sensorRange").getNode(root).asInt(DEFAULT_SENSOR_RANGE));
         double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
         return label(label, minDistance, maxDistance, velocityThreshold, directionRange, sensorRange, reward);
     }
@@ -83,8 +83,8 @@ public interface Label {
      */
     static RewardFunction label(String label, double minDistance, double maxDistance,
                                 double velocityThreshold,
-                                Complex directionRange,
-                                Complex sensorRange,
+                                Angle directionRange,
+                                Angle sensorRange,
                                 double reward) {
         return (s0, a, s1) -> {
             RobotStatus robotStatus = s1.worldModel().robotStatus();
@@ -98,11 +98,11 @@ public interface Label {
                     && abs(robotStatus.rightPps()) < velocityThreshold) {
                 Point2D markerLocation = labelMarker.location();
                 double distance = markerLocation.distance(robotLocation);
-                Complex labeledDir = Complex.direction(robotLocation, markerLocation);
+                Angle labeledDir = Angle.direction(robotLocation, markerLocation);
                 if (distance >= minDistance && distance <= maxDistance
                         && labeledDir.isCloseTo(robotStatus.direction(), directionRange)
                         // and any sector in sensor direction range with a labeled target in distance range
-                        && robotStatus.headDirection().isCloseTo(Complex.DEG0, sensorRange)) {
+                        && robotStatus.headDirection().isCloseTo(Angle.DEG0, sensorRange)) {
                     return reward;
                 }
             }

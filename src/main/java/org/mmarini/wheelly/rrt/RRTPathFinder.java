@@ -174,8 +174,7 @@ public class RRTPathFinder {
                 .mapToObj(i -> map.cell(i).location())
                 .collect(Collectors.toSet());
         // Create the pathfinder to any of the resulting target locations
-        return create(config, map, safetyDistance, targetLocations, random
-        );
+        return create(config, map, safetyDistance, targetLocations, random);
     }
 
     /**

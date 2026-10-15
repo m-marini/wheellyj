@@ -13,68 +13,62 @@ properties:
     properties:
       class:
         type: string
-  maxIterations:
+  freeProb:
+    type: number
+    minimum: 0
+    maximum: 1
+  commitmentDuration:
     type: integer
-    minimum: 1
-  minGoals:
+    minimum: 0
+  growthDistance:
+    type: number
+    exclusiveMinimum: 0
+  markerStopDistance:
+    type: number
+    exclusiveMinimum: 0
+  maxIterations:
     type: integer
     minimum: 1
   maxSearchTime:
     type: integer
     minimum: 0
-  maxRobotGoalToMarkerDistance:
-    type: number
-    exclusiveMinimum: 0
-  pathSafetyDistance:
-    type: number
-    exclusiveMinimum: 0
-  growthDistance:
-    type: number
-    exclusiveMinimum: 0
-  commitmentDuration:
-    type: integer
-    minimum: 0
-  scanInterval:
-    type: integer
-    minimum: 0
-  microDistance:
-    type: number
-    exclusiveMinimum: 0
-  minMarkerDistance:
-    type: number
-    minimum: 0
-  minObstacleDistance:
-    type: number
-    minimum: 0
-  minHeadTargetDistance:
-    type: number
-    exclusiveMinimum: 0
-  safeDistance:
-    type: number
-    exclusiveMinimum: 0
-  turnScanAngle:
-    type: integer
-    minimum: 1
-    maximum: 180
   microAngle:
     type: integer
     minimum: 1
     maximum: 180
+  microDistance:
+    type: number
+    exclusiveMinimum: 0
+  minGoals:
+    type: integer
+    minimum: 1
+  minMarkerDistance:
+    type: number
+    minimum: 0
+  minNumberOfSamples:
+    type: integer
+    minimum: 1
+  minObstacleDistance:
+    type: number
+    minimum: 0
+  nearestTargetProb:
+    type: number
+    minimum: 0
+    maximum: 1
+  safeDistance:
+    type: number
+    exclusiveMinimum: 0
+  seed:
+    type: integer
   scanAngleInterval:
     type: integer
     minimum: 1
     maximum: 90
-  seed:
+  turnScanAngle:
     type: integer
+    minimum: 1
+    maximum: 180
 required:
   - $schema
   - class
   - stateFunction
-  - maxSearchTime
-  - maxRobotGoalToMarkerDistance
-  - commitmentDuration
-  - scanInterval
-  - microDistance
-  - minMarkerDistance
-  - minObstacleDistance
-  - minHeadTargetDistance

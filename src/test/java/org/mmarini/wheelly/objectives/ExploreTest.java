@@ -73,7 +73,7 @@ class ExploreTest {
         BasicEnvState state0 = createState(knownCount0);
         BasicEnvState state1 = createState(knownCount1);
 
-        double result = f.applyAsDouble(state0, null, state1);
+        double result = f.reward(state0, null, state1);
 
         assertThat(result, closeTo(expected, 1e-4));
     }
@@ -96,7 +96,7 @@ class ExploreTest {
         BasicEnvState state0 = createState(knownCount0);
         BasicEnvState state1 = createState(knownCount1);
 
-        double result = f.applyAsDouble(state0, null, state1);
+        double result = f.reward(state0, null, state1);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

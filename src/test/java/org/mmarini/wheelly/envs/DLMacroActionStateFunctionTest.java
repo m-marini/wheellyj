@@ -57,7 +57,7 @@ import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.apis.WorldModelBuilder.GRID_MAP_SIZE;
 import static org.mmarini.wheelly.envs.DLMacroActionStateFunction.*;
-import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRIGHT_ACTION;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_STRAIGHT_ACTION;
 import static org.mmarini.wheelly.fsm.MoveActionId.HALT_ACTION;
 
 class DLMacroActionStateFunctionTest {
@@ -137,7 +137,7 @@ class DLMacroActionStateFunctionTest {
                 .updateLidarTime()
                 .addTime(1)
                 .build();
-        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRIGHT_ACTION);
+        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         // When ...
         Map<String, Signal> signals = stateFunc.signals(state, state);
@@ -183,7 +183,7 @@ class DLMacroActionStateFunctionTest {
         Signal signal = signals.get(FSM_SIGNAL_ID);
         assertThat(signal, isA(ArraySignal.class));
         // And should contain the one hot action signals
-        INDArray expected = Nd4j.zeros(2, 22);
+        INDArray expected = Nd4j.zeros(2, 25);
         expected.putScalar(0, moveActionId.ordinal(), 1.0);
         expected.putScalar(0, headActionId.ordinal() + MoveActionId.values().length, 1.0);
         expected.putScalar(1, moveActionId.ordinal(), 1.0);
@@ -200,7 +200,7 @@ class DLMacroActionStateFunctionTest {
         WorldModel model = builder
                 .headAngle(headDeg)
                 .build();
-        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRIGHT_ACTION);
+        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         // When ...
         Map<String, Signal> signals = stateFunc.signals(state, state);
@@ -242,7 +242,7 @@ class DLMacroActionStateFunctionTest {
                 .addContactsCell(cellLocation)
                 .robotLocation(robotLocation)
                 .build();
-        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRIGHT_ACTION);
+        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().hasContact());
 
@@ -255,8 +255,8 @@ class DLMacroActionStateFunctionTest {
         INDArray signal = signals.get("map").toINDArray();
         assertArrayEquals(new long[]{2, DLStateFunction.NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
-        Complex cellDir = Complex.direction(robotLocation, cellLocation);
-        Complex cellDirRobotRelative = cellDir.sub(Complex.fromDeg(directionDeg));
+        Angle cellDir = Angle.direction(robotLocation, cellLocation);
+        Angle cellDirRobotRelative = cellDir.sub(Angle.fromDeg(directionDeg));
         Point2D mapCellLocation = cellDirRobotRelative.at(new Point2D.Double(), cellLocation.distance(robotLocation));
         GridMap gridMap = model.gridMap();
         GridTopology topology = gridMap.topology();
@@ -308,7 +308,7 @@ class DLMacroActionStateFunctionTest {
                 .robotDir(directionDeg)
                 .addEchoCell(cellLocation)
                 .build();
-        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRIGHT_ACTION);
+        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().echogenic());
 
@@ -321,8 +321,8 @@ class DLMacroActionStateFunctionTest {
         INDArray signal = signals.get("map").toINDArray();
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
-        Complex cellDir = Complex.direction(robotLocation, cellLocation);
-        Complex cellDirRobotRelative = cellDir.sub(Complex.fromDeg(directionDeg));
+        Angle cellDir = Angle.direction(robotLocation, cellLocation);
+        Angle cellDirRobotRelative = cellDir.sub(Angle.fromDeg(directionDeg));
         Point2D mapCellLocation = cellDirRobotRelative.at(new Point2D.Double(), cellLocation.distance(robotLocation));
         GridMap gridMap = model.gridMap();
         GridTopology topology = gridMap.topology();
@@ -374,7 +374,7 @@ class DLMacroActionStateFunctionTest {
                 .robotDir(directionDeg)
                 .addEmptyCell(cellLocation)
                 .build();
-        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRIGHT_ACTION);
+        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().empty());
 
@@ -387,8 +387,8 @@ class DLMacroActionStateFunctionTest {
         INDArray signal = signals.get("map").toINDArray();
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
-        Complex cellDir = Complex.direction(robotLocation, cellLocation);
-        Complex cellDirRobotRelative = cellDir.sub(Complex.fromDeg(directionDeg));
+        Angle cellDir = Angle.direction(robotLocation, cellLocation);
+        Angle cellDirRobotRelative = cellDir.sub(Angle.fromDeg(directionDeg));
         Point2D mapCellLocation = cellDirRobotRelative.at(new Point2D.Double(), cellLocation.distance(robotLocation));
         GridMap gridMap = model.gridMap();
         GridTopology topology = gridMap.topology();
@@ -440,7 +440,7 @@ class DLMacroActionStateFunctionTest {
                 .robotDir(directionDeg)
                 .addMarker("A", cellLocation)
                 .build();
-        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRIGHT_ACTION);
+        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
         //        WorldModel model = createModeller().updateForInference(createModelLabelMap(directionDeg, robotLocation, cellLocation));
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().echogenic());
@@ -454,8 +454,8 @@ class DLMacroActionStateFunctionTest {
         INDArray signal = signals.get("map").toINDArray();
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
-        Complex cellDir = Complex.direction(robotLocation, cellLocation);
-        Complex cellDirRobotRelative = cellDir.sub(Complex.fromDeg(directionDeg));
+        Angle cellDir = Angle.direction(robotLocation, cellLocation);
+        Angle cellDirRobotRelative = cellDir.sub(Angle.fromDeg(directionDeg));
         Point2D mapCellLocation = cellDirRobotRelative.at(new Point2D.Double(), cellLocation.distance(robotLocation));
         GridMap gridMap = model.gridMap();
         GridTopology topology = gridMap.topology();
@@ -514,7 +514,7 @@ class DLMacroActionStateFunctionTest {
                 .frontSensor(frontSensor)
                 .rearSensor(rearSensor)
                 .build();
-        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRIGHT_ACTION);
+        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         // When ...
         Map<String, Signal> signals = stateFunc.signals(state, state);
@@ -546,19 +546,22 @@ class DLMacroActionStateFunctionTest {
     })
     @MethodSource("dataRobotSignal")
     void testRobotSignal(double leftPps, double rightPps, int robotDeg, boolean halt) {
-        // Given
-        WorldModel model = builder
-                .robotSpeed(leftPps, rightPps)
-                .robotDir(robotDeg)
-                .robotHalt(halt)
-                .build();
+        // And a world model
+        if (halt) {
+            builder.halt();
+        } else {
+            builder.moving(true);
+        }
+        builder.robotSpeed(leftPps, rightPps)
+                .robotDir(robotDeg);
+        WorldModel model = builder.build();
         // And a env state
-        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRIGHT_ACTION);
+        MacroEnvState state = new MacroEnvState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
         // And expected signal
         INDArray expected = Nd4j.zeros(2, 11);
         double linSpeed = (leftPps + rightPps) / 2 / DEFAULT_ROBOT_SPEC.maxSpeed();
         double rotSpeed = (leftPps - rightPps) / 2 / DEFAULT_ROBOT_SPEC.maxSpeed();
-        Complex mapRelDir = model.gridMap().direction().sub(model.robotStatus().direction());
+        Angle mapRelDir = model.gridMap().direction().sub(model.robotStatus().direction());
         double sinMap = mapRelDir.sin();
         double cosMap = mapRelDir.cos();
         double haltSignal = halt ? 1 : 0;

@@ -29,8 +29,6 @@
 package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.reactivex.rxjava3.core.Single;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.NotImplementedException;
 import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.envs.ExecutionResult;
@@ -39,12 +37,10 @@ import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.fsm.*;
-import org.mmarini.wheelly.rrt.RRTPathFinder;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -53,8 +49,6 @@ import java.util.Random;
 import java.util.function.DoubleConsumer;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.engines.SearchRefreshState.FREE_PROB;
-import static org.mmarini.wheelly.engines.SearchRefreshState.NEAREST_TARGET_PROB;
 
 /**
  * Connects the world modeller to reinforcement learning agent
@@ -66,10 +60,9 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
     public static final String MOVE_ID = "move";
     public static final String HEAD_ID = "head";
     private static final Logger logger = LoggerFactory.getLogger(DLMacroActionEnvironment.class);
-    private static final double FIXED_SAFETY_MARGIN = 10e-3;
     private static final ActionFunction MACRO_ACTION_FUNCTION = new ActionFunction() {
         @Override
-        public List<RobotCommands> commands(Map<String, Signal> actions, WorldModel... states) {
+        public List<RobotCommand> commands(Map<String, Signal> actions, WorldModel... states) {
             throw new NotImplementedException();
         }
 
@@ -109,8 +102,8 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
     }
 
     private final DLMacroActionEnvConfig config;
-    private final Random random;
-    private final CoordinatedMotionState fsmState;
+    private final MotionMacroActionState motionState;
+    private final HeadMacroActionState headState;
     private StateFunction stateFunc;
     private RewardFunction rewardFunc;
     private volatile AgentConnector agent;
@@ -126,8 +119,8 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
      */
     public DLMacroActionEnvironment(DLMacroActionEnvConfig config, Random random) {
         this.config = requireNonNull(config);
-        this.random = requireNonNull(random);
-        this.fsmState = CoordinatedMotionState.create(config.fsmConfig());
+        this.motionState = new MotionMacroActionState(config.fsmConfig(), requireNonNull(random));
+        this.headState = new HeadMacroActionState(config.fsmConfig());
         logger.atDebug().log("Created");
     }
 
@@ -149,39 +142,6 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
      */
     public AgentConnector agent() {
         return agent;
-    }
-
-    public List<Point2D> computePathToNearestMarker() {
-        WorldModel worldModel = worldModel();
-        RadarMap map = worldModel.radarMap();
-        RobotStatus status = worldModel.robotStatus();
-        Point2D robotLocation = status.location();
-        List<Point2D> markers = worldModel.markers().values().stream()
-                .map(LabelMarker::location)
-                .filter(location -> {
-                    double d = robotLocation.distance(location);
-                    return d >= config.fsmConfig().minMarkerDistance();
-                })
-                .toList();
-        if (markers.isEmpty()) {
-            // no marker -> return empty path
-            return List.of();
-        }
-        RRTPathFinder.Config config1 = new RRTPathFinder.Config(config.growthDistance(), NEAREST_TARGET_PROB, FREE_PROB, robotLocation);
-        RRTPathFinder pathFinder = RRTPathFinder.createMarkerTargets(config1, map,
-                config.maxRobotGoalToMarkerDistance(), config.pathSafetyDistance() + FIXED_SAFETY_MARGIN,
-                random, markers.stream());
-        return searchPath(pathFinder);
-    }
-
-    private List<Point2D> computePathToNearestUnknownArea() {
-        WorldModel worldModel = worldModel();
-        RadarMap map = worldModel.radarMap();
-        RobotStatus status = worldModel.robotStatus();
-        RRTPathFinder.Config config1 = new RRTPathFinder.Config(config.growthDistance(), NEAREST_TARGET_PROB, FREE_PROB, status.location());
-        RRTPathFinder pathFinder = RRTPathFinder.createUnknownTargets(config1, map,
-                config.pathSafetyDistance() + FIXED_SAFETY_MARGIN, random);
-        return searchPath(pathFinder);
     }
 
     @Override
@@ -223,7 +183,6 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
         }
     }
 
-    @Override
     public AgentAction nextAction() {
         WorldModel model = worldModel();
         BasicEnvState state = new BasicEnvState(model);
@@ -251,66 +210,35 @@ public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, 
     }
 
     @Override
-    public RobotCommands onInference(WorldModel state) {
+    public RobotCommand onInference(WorldModel state) {
         requireNonNull(state);
         ensureConnected();
         currentWorldModel(state);
-        return this.fsmState.tick(this);
+        if (headState.completed()
+                || headState.expired()
+                || motionState.expired()
+                || motionState.completed()) {
+            // Generates a new macro action from inference engine
+            AgentAction nextAction = nextAction();
+            headState.init(this, nextAction.headId());
+            motionState.init(this, nextAction.moveId());
+        }
+        MotionStatus motionCmd = motionState.tick(this);
+        HeadStatus headCmd = headState.tick(this);
+        return new RobotCommand(motionCmd, headCmd);
     }
 
     /**
      * Returns the rewards flow
      */
     public DLMacroActionEnvironment onReward(DoubleConsumer callback) {
-        this.onReward = onReward != null ? onReward : callback;
+        this.onReward = onReward != null ? onReward.andThen(callback) : callback;
         return this;
     }
 
     @Override
-    public Single<List<Point2D>> pathToNearestMarker() {
-        return Single.fromSupplier(this::computePathToNearestMarker)
-                .subscribeOn(Schedulers.computation());
-    }
-
-    @Override
-    public Single<List<Point2D>> pathToNearestUnknownArea() {
-        return Single.fromSupplier(this::computePathToNearestUnknownArea)
-                .subscribeOn(Schedulers.computation());
-    }
-
-    @Override
     public double reward(EnvState state0, EnvAction actions, EnvState state1) {
-        return rewardFunc != null ? rewardFunc.applyAsDouble(state0, actions, state1) : 0;
-    }
-
-    /**
-     * Returns the path to target
-     *
-     * @param pathFinder the pathfinder
-     */
-    protected List<Point2D> searchPath(RRTPathFinder pathFinder) {
-        if (pathFinder == null) {
-            logger.atDebug().log("No path finder");
-            return List.of();
-        }
-        pathFinder.init();
-        long searchTimeout = System.currentTimeMillis() + config.maxSearchTime();
-        // Look for the maximum time interval
-        for (int i = 0; i < config.maxIterations()
-                && !pathFinder.isCompleted()
-                && pathFinder.rrt().goals().size() < config.minGoals()
-                && System.currentTimeMillis() <= searchTimeout; i++) {
-            pathFinder.grow();
-        }
-        if (!pathFinder.isFound()) {
-            logger.atDebug().log("No path found");
-            return List.of();
-        }
-        List<Point2D> path = pathFinder.path().stream()
-                .skip(1) // skip the start point
-                .toList();
-        logger.atDebug().log("Path found");
-        return path;
+        return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
     @Override

@@ -5,7 +5,8 @@ robot: conf/robots/simRobotSmallNoObstacles.yml
 #robot: conf/robots/mqttRobot.yml
 controller: conf/controllers/controller.yml
 modeller: conf/modellers/modeller.yml
-environment: conf/environments/env-test1.yml
+environment: conf/environments/env2.yml
+#environment: conf/environments/env-test1.yml
 rewardFunction: conf/objectives/findLabel.yml
 agent: conf/agents/resnet18Agent2.yml
 savingInterval: 14400000

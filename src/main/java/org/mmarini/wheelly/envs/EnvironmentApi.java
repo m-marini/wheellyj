@@ -36,48 +36,66 @@ import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
-import java.io.IOException;
 
 /**
- * Manages the interaction between robot controller and TD agent
+ * Manages the interaction bridge between the underlying robot controller and the TD learning agent.
+ * <p>
+ * This interface unifies operational telemetry streaming, macro-action dispatching, inference mapping,
+ * and multi-input signal specification definitions into a centralized execution lifecycle container
+ * for autonomous robotic behaviors.
+ * </p>
  */
 public interface EnvironmentApi extends EnvironmentConnector, InferenceConnector, WithSignalsSpec {
 
     /**
-     * Returns the robot environment from configuration
+     * Parses and instantiates a concrete {@code EnvironmentApi} implementation from a JSON document configuration block.
+     * <p>
+     * This utility utilises reflection mapping to inject the active physical or simulated controller api dependency
+     * directly into the newly generated environment context block.
+     * </p>
      *
-     * @param config     the JSON document
-     * @param locator    the configuration locator
-     * @param controller the controller
+     * @param config     the root JSON node containing the environment property tree schema
+     * @param locator    the contextual locator pattern targeting the relative configuration scope
+     * @param controller the active {@link RobotControllerApi} mapping the hardware layer
+     * @return a fully initialised {@code EnvironmentApi} instance
      */
     static EnvironmentApi fromConfig(JsonNode config, Locator locator, RobotControllerApi controller) {
         return Utils.createObject(config, locator, new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
 
     /**
-     * Returns the robot environment from configuration
+     * Parses and instantiates a concrete {@code EnvironmentApi} implementation from a physical configuration file.
+     * <p>
+     * This utility reads structural parameters from the designated file path, injecting the provided
+     * controller api dependency into the target constructor layout.
+     * </p>
      *
-     * @param file       the configuration file
-     * @param controller the controller
-     * @throws IOException in case of error
+     * @param file       the physical configuration file instance (e.g., YAML or JSON source)
+     * @param controller the active {@link RobotControllerApi} mapping the hardware layer
+     * @return a fully initialised {@code EnvironmentApi} instance
+     * @throws Throwable if any instantiation, validation, or reflection processing errors occur
      */
     static EnvironmentApi fromFile(File file, RobotControllerApi controller) throws Throwable {
         return Utils.createObject(file, new Object[]{controller}, new Class[]{RobotControllerApi.class});
     }
 
     /**
-     * @param file the configuration file
-     * @throws IOException in case of error
+     * Parses and instantiates a concrete {@code EnvironmentApi} implementation from a physical configuration file
+     * utilizing a default or parameterless constructor configuration sequence.
+     *
+     * @param file the physical configuration file instance (e.g., YAML or JSON source)
+     * @return a fully initialised {@code EnvironmentApi} instance
+     * @throws Throwable if any instantiation, validation, or reflection processing errors occur
      */
     static EnvironmentApi fromFile(File file) throws Throwable {
         return Utils.createObject(file);
     }
 
-
     /**
-     * Sets the reward function
+     * Registers or overrides the dynamic reward function responsible for calculating performance scalars
+     * within the reinforcement learning execution loop.
      *
-     * @param rewardFunc the reward function
+     * @param rewardFunc the targeted {@link RewardFunction} component to attach to this environment context
      */
     void setRewardFunc(RewardFunction rewardFunc);
 }

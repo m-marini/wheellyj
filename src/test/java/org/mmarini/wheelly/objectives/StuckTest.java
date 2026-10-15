@@ -81,7 +81,7 @@ class StuckTest {
                 "sensorRange: 20"));
         RewardFunction f = Stuck.create(root, Locator.root());
         BasicEnvState env = createEnvironment(sensorDir, distance);
-        double result = f.applyAsDouble(null, null, env);
+        double result = f.reward(null, null, env);
         assertThat(result, closeTo(expected, 1e-3));
     }
 
@@ -113,7 +113,7 @@ class StuckTest {
         RewardFunction f = Stuck.stuck(x1, x2, x3, x4, directionRange);
         BasicEnvState state = createEnvironment(sensorDir, distance);
 
-        double result = f.applyAsDouble(state, null, state);
+        double result = f.reward(state, null, state);
 
         assertThat(result, closeTo(expected, 1e-3));
     }

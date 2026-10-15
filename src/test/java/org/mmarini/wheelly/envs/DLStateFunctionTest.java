@@ -38,6 +38,7 @@ import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.apis.*;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 
 import java.awt.geom.Point2D;
 import java.util.List;
@@ -120,8 +121,10 @@ class DLStateFunctionTest {
         assertThat(signals, hasKey("canMoveStates"));
         assertThat(signals.get("canMoveStates"), isA(ArraySignal.class));
         ArraySignal signal = (ArraySignal) signals.get("canMoveStates");
-        assertThat(signal.toINDArray(), matrixCloseTo(new long[]{2, 1}, EPSILON,
-                expectedCode, expectedCode));
+        INDArray expected = Nd4j.zeros(2, 6);
+        expected.putScalar(0, expectedCode, 1);
+        expected.putScalar(1, expectedCode, 1);
+        assertThat(signal.toINDArray(), matrixCloseTo(expected, 1e-3));
     }
 
     @ParameterizedTest(name = "[{index}] robot@{1},{2} R{0} cell@{3},{4}")
@@ -147,8 +150,8 @@ class DLStateFunctionTest {
         INDArray signal = signals.get("map").toINDArray();
         assertArrayEquals(new long[]{2, DLStateFunction.NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
-        Complex cellDir = Complex.direction(robotLocation, cellLocation);
-        Complex cellDirRobotRelative = cellDir.sub(Complex.fromDeg(directionDeg));
+        Angle cellDir = Angle.direction(robotLocation, cellLocation);
+        Angle cellDirRobotRelative = cellDir.sub(Angle.fromDeg(directionDeg));
         Point2D mapCellLocation = cellDirRobotRelative.at(new Point2D.Double(), cellLocation.distance(robotLocation));
         GridMap gridMap = model.gridMap();
         GridTopology topology = gridMap.topology();
@@ -214,8 +217,8 @@ class DLStateFunctionTest {
         INDArray signal = signals.get("map").toINDArray();
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
-        Complex cellDir = Complex.direction(robotLocation, cellLocation);
-        Complex cellDirRobotRelative = cellDir.sub(Complex.fromDeg(directionDeg));
+        Angle cellDir = Angle.direction(robotLocation, cellLocation);
+        Angle cellDirRobotRelative = cellDir.sub(Angle.fromDeg(directionDeg));
         Point2D mapCellLocation = cellDirRobotRelative.at(new Point2D.Double(), cellLocation.distance(robotLocation));
         GridMap gridMap = model.gridMap();
         GridTopology topology = gridMap.topology();
@@ -281,8 +284,8 @@ class DLStateFunctionTest {
         INDArray signal = signals.get("map").toINDArray();
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
-        Complex cellDir = Complex.direction(robotLocation, cellLocation);
-        Complex cellDirRobotRelative = cellDir.sub(Complex.fromDeg(directionDeg));
+        Angle cellDir = Angle.direction(robotLocation, cellLocation);
+        Angle cellDirRobotRelative = cellDir.sub(Angle.fromDeg(directionDeg));
         Point2D mapCellLocation = cellDirRobotRelative.at(new Point2D.Double(), cellLocation.distance(robotLocation));
         GridMap gridMap = model.gridMap();
         GridTopology topology = gridMap.topology();
@@ -349,8 +352,8 @@ class DLStateFunctionTest {
         INDArray signal = signals.get("map").toINDArray();
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
-        Complex cellDir = Complex.direction(robotLocation, cellLocation);
-        Complex cellDirRobotRelative = cellDir.sub(Complex.fromDeg(directionDeg));
+        Angle cellDir = Angle.direction(robotLocation, cellLocation);
+        Angle cellDirRobotRelative = cellDir.sub(Angle.fromDeg(directionDeg));
         Point2D mapCellLocation = cellDirRobotRelative.at(new Point2D.Double(), cellLocation.distance(robotLocation));
         GridMap gridMap = model.gridMap();
         GridTopology topology = gridMap.topology();

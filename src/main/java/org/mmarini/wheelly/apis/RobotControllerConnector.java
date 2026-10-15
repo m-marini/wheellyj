@@ -36,12 +36,9 @@ import java.util.function.Consumer;
  * The robot controller connector api
  */
 public interface RobotControllerConnector {
-    /**
-     * Executes the command
-     *
-     * @param command the command
-     */
-    void execute(RobotCommands command);
+    void headStatus(HeadStatus headStatus);
+
+    void motionStatus(MotionStatus headStatus);
 
     /**
      * Registers the consumer of inference event

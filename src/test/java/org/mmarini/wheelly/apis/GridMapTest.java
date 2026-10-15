@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -84,20 +84,20 @@ public class GridMapTest {
         return jsonFileArguments("/org/mmarini/wheelly/apis/GridMapTest/findCreateDataset.yml")
                 .addPoint("center")
                 .add("direction", node ->
-                        Complex.fromDeg(node.asInt()))
+                        Angle.fromDeg(node.asInt()))
                 .addMap("radar", GridMapTest::createRadarMap)
                 .addPoint("expCenter")
                 .add("expDirection", node ->
-                        Complex.fromDeg(node.asInt()))
+                        Angle.fromDeg(node.asInt()))
                 .addMap("expMap", GridMapTest::createMapCells)
                 .parse();
     }
 
     @ParameterizedTest(name = "[{index}] at({0}) R{1}")
     @MethodSource("findCreateDataset")
-    void create(Point2D center, Complex direction,
+    void create(Point2D center, Angle direction,
                 RadarMap radar,
-                Point2D expCenter, Complex expDirection,
+                Point2D expCenter, Angle expDirection,
                 boolean[] expCells) {
         GridMap map = GridMap.create(radar, center, direction, MAP_SIZE);
         assertNotNull(map);
@@ -129,7 +129,7 @@ public class GridMapTest {
                 .updateCellAt(0, 0, cell -> cell.addEchogenic(100, 0));
 
         Point2D centre = new Point2D.Double(robotX, robotY);
-        Complex direction = Complex.fromDeg(robotDeg);
+        Angle direction = Angle.fromDeg(robotDeg);
 
         // When ...
         GridMap map = GridMap.create(radarMap, centre, direction, GRID_MAP_SIZE);

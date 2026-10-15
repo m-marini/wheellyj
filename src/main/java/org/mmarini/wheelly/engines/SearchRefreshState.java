@@ -48,7 +48,7 @@ import java.util.function.Function;
  * Exits are:
  * <ul>
  *  <li><code>completed</code> at selection of path</li>
- *  <li><code>notFound</code> if no labeled point</li>
+ *  <li><code>notFound</code> if no labelled point</li>
  * </ul>
  * Return vales:
  * <ul>

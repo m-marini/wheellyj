@@ -1,3 +1,31 @@
+/*
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
 package org.mmarini.wheelly.apis;
 
 import java.awt.geom.Point2D;
@@ -59,7 +87,7 @@ public interface AreaExpression {
      * @param direction the direction
      * @param width     the width
      */
-    static AreaExpression angle(Point2D a, Complex direction, Complex width) {
+    static AreaExpression angle(Point2D a, Angle direction, Angle width) {
         return and(rightHalfPlane(a, direction.sub(width)),
                 rightHalfPlane(a, direction.add(width).opposite()));
     }
@@ -72,12 +100,12 @@ public interface AreaExpression {
      * @param fov       the field of view
      * @param size      the size of lateral bend (m)
      */
-    static AreaExpression angle(Point2D center, Complex direction, Complex fov, double size) {
-        Complex halfFov = fov.divAngle(2);
-        Complex rightDir = direction.sub(halfFov);
-        Point2D rightPoint = rightDir.add(Complex.DEG270).at(center, size);
-        Complex leftDir = direction.add(halfFov);
-        Point2D leftPoint = leftDir.add(Complex.DEG90).at(center, size);
+    static AreaExpression angle(Point2D center, Angle direction, Angle fov, double size) {
+        Angle halfFov = fov.div(2);
+        Angle rightDir = direction.sub(halfFov);
+        Point2D rightPoint = rightDir.add(Angle.DEG270).at(center, size);
+        Angle leftDir = direction.add(halfFov);
+        Point2D leftPoint = leftDir.add(Angle.DEG90).at(center, size);
         return and(rightHalfPlane(rightPoint, rightDir),
                 rightHalfPlane(leftPoint, leftDir.opposite()));
     }
@@ -256,9 +284,9 @@ public interface AreaExpression {
      * @param minDistance the minimum distance (m)
      * @param maxDistance the maximum distance (m)
      */
-    static AreaExpression radialSensorArea(Point2D from, Complex direction, Complex fov, double minDistance, double maxDistance) {
+    static AreaExpression radialSensorArea(Point2D from, Angle direction, Angle fov, double minDistance, double maxDistance) {
         return AreaExpression.and(
-                AreaExpression.angle(from, direction, fov.divAngle(2)),
+                AreaExpression.angle(from, direction, fov.div(2)),
                 AreaExpression.circle(from, maxDistance),
                 AreaExpression.not(
                         AreaExpression.circle(from, minDistance)));
@@ -274,10 +302,10 @@ public interface AreaExpression {
      * @param innerRadius the radius of sensitive inner area (m)
      * @param outerRadius the radius of sensitive outer area (m)
      */
-    static AreaExpression radialSensorArea(Point2D from, Complex direction, Complex fov, double size, double innerRadius, double outerRadius) {
+    static AreaExpression radialSensorArea(Point2D from, Angle direction, Angle fov, double size, double innerRadius, double outerRadius) {
         return AreaExpression.and(
                 AreaExpression.angle(from, direction, fov, size),
-                AreaExpression.rightHalfPlane(from, direction.add(Complex.DEG270)),
+                AreaExpression.rightHalfPlane(from, direction.add(Angle.DEG270)),
                 AreaExpression.circle(from, outerRadius),
                 AreaExpression.not(
                         AreaExpression.circle(from, innerRadius)));
@@ -291,15 +319,15 @@ public interface AreaExpression {
      * @param halfWidth the half width (m)
      */
     static AreaExpression rectangle(Point2D a, Point2D b, double halfWidth) {
-        Complex direction = Complex.direction(a, b);
-        Complex left = direction.add(Complex.DEG270);
+        Angle direction = Angle.direction(a, b);
+        Angle left = direction.add(Angle.DEG270);
         Point2D leftPoint = new Point2D.Double(
-                a.getX() + left.x() * halfWidth,
-                a.getY() + left.y() * halfWidth
+                a.getX() + left.sin() * halfWidth,
+                a.getY() + left.cos() * halfWidth
         );
         Point2D rightPoint = new Point2D.Double(
-                a.getX() - left.x() * halfWidth,
-                a.getY() - left.y() * halfWidth
+                a.getX() - left.sin() * halfWidth,
+                a.getY() - left.cos() * halfWidth
         );
         return and(
                 rightHalfPlane(leftPoint, direction),
@@ -314,7 +342,7 @@ public interface AreaExpression {
      * @param point     the point
      * @param direction the direction
      */
-    static AreaExpression.Leaf rightHalfPlane(Point2D point, Complex direction) {
+    static AreaExpression.Leaf rightHalfPlane(Point2D point, Angle direction) {
         QVect matrix = QVect.line(point, direction);
         return ineq(matrix);
     }

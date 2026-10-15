@@ -71,22 +71,22 @@ public enum MoveActionId {
     /**
      * Rotates the robot's primary facade or sensor array to orient towards the nearest detected obstacle.
      */
-    TURN_FACE_NEAREST_OBSTACLE_ACTION,
+    TURN_FACE_AT_OBSTACLE_ACTION,
 
     /**
      * Rotates the robot's rear chassis to directly face away from the closest detected obstacle.
      */
-    TURN_REAR_NEAREST_OBSTACLE_ACTION,
+    TURN_REAR_AT_OBSTACLE_ACTION,
 
     /**
      * Aligns the robot's orientation to face the nearest active environmental marker.
      */
-    TURN_FACE_NEAREST_MARKER_ACTION,
+    TURN_FACE_AT_MARKER_ACTION,
 
     /**
      * Aligns the robot's rear section to face the nearest active environmental marker.
      */
-    TURN_REAR_NEAREST_MARKER_ACTION,
+    TURN_REAR_AT_MARKER_ACTION,
 
     /**
      * Initiates a leftward sweeping rotation to perform active scanning operations.
@@ -106,11 +106,16 @@ public enum MoveActionId {
     /**
      * Actively pursues and monitors the proximity relative to the nearest identified marker.
      */
-    TRACK_NEAREST_MARKER,
+    TRACK_MARKER,
+
+    /**
+     * Actively pursues and monitors the proximity relative to the nearest identified marker.
+     */
+    TRACK_OBSTACLE,
 
     /**
      * Coordinates exploration strategies to navigate towards the nearest unmapped or unknown geographic area.
      * This behaviour typically relies on RRT pathfinding or grid-based analysis.
      */
-    EXPLORE_NEAREST_UNKNOWN_AREA
+    EXPLORE_UNKNOWN_AREA
 }

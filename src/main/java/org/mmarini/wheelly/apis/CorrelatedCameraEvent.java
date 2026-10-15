@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -63,7 +63,7 @@ public record CorrelatedCameraEvent(CameraEvent camerEvent, WheellyLidarMessage 
     /**
      * Returns the head direction relative the robot at the lidar message
      */
-    public Complex headDirection() {
+    public Angle headDirection() {
         return lidar.headDirection();
     }
 
@@ -77,7 +77,7 @@ public record CorrelatedCameraEvent(CameraEvent camerEvent, WheellyLidarMessage 
     /**
      * Returns the lidar azimuth (direction relative to environment)
      */
-    public Complex lidarYaw() {
+    public Angle lidarYaw() {
         return lidar.robotYaw().add(lidar.headDirection());
     }
 
@@ -91,7 +91,7 @@ public record CorrelatedCameraEvent(CameraEvent camerEvent, WheellyLidarMessage 
     /**
      * Returns the marker yaw (direction relative to environment)
      */
-    public Complex markerYaw() {
+    public Angle markerYaw() {
         return lidarYaw().add(camerEvent().direction());
     }
 
@@ -105,7 +105,7 @@ public record CorrelatedCameraEvent(CameraEvent camerEvent, WheellyLidarMessage 
     /**
      * Returns the robot direction relative the environment
      */
-    public Complex robotDirection() {
+    public Angle robotDirection() {
         return lidar.robotYaw();
     }
 

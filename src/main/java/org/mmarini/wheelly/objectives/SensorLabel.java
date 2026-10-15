@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.Angle;
 import org.mmarini.wheelly.apis.LabelMarker;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
@@ -63,7 +63,7 @@ public interface SensorLabel {
         double minDistance = locator.path("minDistance").getNode(root).asDouble();
         double maxDistance = locator.path("maxDistance").getNode(root).asDouble();
         double velocityThreshold = locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
-        Complex sensorRange = Complex.fromDeg(locator.path("sensorRange").getNode(root).asInt(DEFAULT_SENSOR_RANGE));
+        Angle sensorRange = Angle.fromDeg(locator.path("sensorRange").getNode(root).asInt(DEFAULT_SENSOR_RANGE));
         double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
         return label(minDistance, maxDistance, velocityThreshold, sensorRange, reward);
     }
@@ -79,7 +79,7 @@ public interface SensorLabel {
      */
     static RewardFunction label(double minDistance, double maxDistance,
                                 double velocityThreshold,
-                                Complex sensorRange,
+                                Angle sensorRange,
                                 double reward) {
         return (s0, a, s1) -> {
             // the environment supports radar map
@@ -96,7 +96,7 @@ public interface SensorLabel {
                     && abs(robotStatus.leftPps()) < velocityThreshold
                     && abs(robotStatus.rightPps()) < velocityThreshold
                     // and any sector in sensor direction range with a labelled target in distance range
-                    && robotStatus.headDirection().isClose0(sensorRange)
+                    && robotStatus.headDirection().isFront(sensorRange)
                     // and marker not null
                     && marker.isPresent()
             ) {

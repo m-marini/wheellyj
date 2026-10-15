@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,8 +31,13 @@ package org.mmarini.wheelly.apis;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.closeTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mmarini.Matchers.pointCloseTo;
+import static org.mmarini.wheelly.apis.RobotSpec.pulses2Location;
+import static org.mmarini.wheelly.apis.Utils.MM;
 
 class WheellyLidarMessageTest {
 
@@ -40,30 +45,51 @@ class WheellyLidarMessageTest {
 
     @ParameterizedTest
     @CsvSource({
-            "'4321,0,0,0,0,0,0', 0, 0, 0, 0, 0, 0",
+            "'4321,0,0,0,0,0,0,0,0,0,0', 0, 0, 0, 0, 0, 0, 0, 0, 0,0",
 
-            "'4321,0,0,0,0,90,0', 0, 0, 0, 0, 0, 90",
-            "'4321,0,0,0,0,-90,0', 0, 0, 0, 0, 0, -90",
+            "'4321,100,0,0,0,0,0,0,0,0,0',  100,0, 0,0, 0, 0, 0, 0, 0,0",
+            "'4321,0,200,0,0,0,0,0,0,0,0',  0,200, 0,0, 0, 0, 0, 0, 0,0",
 
-            "'4321,0,0,10,20,0,0', 0, 0, 0, 10, 20, 0",
-            "'4321,0,0,-10,-20,0,0', 0, 0, 0, -10, -20, 0",
+            "'4321,0,0,10.5,20.5,0,0,0,0,0,0',   0,0, 10.5,20.5,   0, 0, 0, 0, 0,0",
+            "'4321,0,0,-10.5,-20.5,0,0,0,0,0,0', 0,0, -10.5,-20.5, 0, 0, 0, 0, 0,0",
 
-            "'4321,100,200,0,0,0,0', 0, 100, 200, 0, 0, 0",
+            "'4321,0,0,0,0,135,0,0,0,0,0',  0,0, 0,0, 135,  0, 0, 0, 0,0",
+            "'4321,0,0,0,0,-135,0,0,0,0,0', 0,0, 0,0, -135, 0, 0, 0, 0,0",
 
-            "'4321,0,0,0,0,0,90', 90, 0, 0, 0, 0, 0",
-            "'4321,0,0,0,0,0,-90', -90, 0, 0, 0, 0, 0",
+            "'4321,0,0,0,0,0,45,0,0,0,0',  0,0, 0,0, 0, 45, 0, 0, 0,0",
+            "'4321,0,0,0,0,0,-45,0,0,0,0', 0,0, 0,0, 0, -45, 0, 0, 0,0",
+
+            "'4321,0,0,0,0,0,0,45,0,0,0',  0,0, 0,0, 0, 0, 45, 0, 0,0",
+            "'4321,0,0,0,0,0,0,-45,0,0,0', 0,0, 0,0, 0, 0, -45, 0, 0,0",
+
+            "'4321,0,0,0,0,0,0,0,1,0,0',   0,0, 0,0, 0, 0, 0, 1, 0,0",
+
+            "'4321,0,0,0,0,0,0,0,0,123.4,-234.5',   0,0, 0,0, 0, 0, 0, 0, 123.4,-234.5",
+            "'4321,0,0,0,0,0,0,0,0,-123.4,234.5',   0,0, 0,0, 0, 0, 0, 0, -123.4,234.5",
     })
-    void testParse(String arg, short sensorDeg, int frontDistance, int rearDistance, double x, double y, int yaw) {
+    void testParse(String arg, int frontDistance, int rearDistance, double x, double y, int yaw,
+                   int headDeg, int headTargetDeg, int state, double xTarget, double yTarget) {
         // [sampleTime] [headDirectionDeg] [distance (mm)] [rearDistance (mm)] [xLocation] [yLocation] [yaw]
         WheellyLidarMessage m = WheellyLidarMessage.parse(SIM_TIME, arg);
 
         assertNotNull(m);
         assertEquals(SIM_TIME, m.time());
-        assertEquals(sensorDeg, m.headDirectionDeg());
+        assertEquals(headDeg, m.headDirectionDeg());
         assertEquals(frontDistance, m.frontDistance());
         assertEquals(rearDistance, m.rearDistance());
         assertEquals(x, m.xPulses());
         assertEquals(y, m.yPulses());
         assertEquals(yaw, m.robotYawDeg());
+        assertEquals(headDeg, m.headDirectionDeg());
+        assertEquals(headTargetDeg, m.headTargetDeg());
+        assertEquals(state, m.trackingState().ordinal());
+        assertThat(m.xTarget(), closeTo(xTarget, MM));
+        assertThat(m.yTarget(), closeTo(yTarget, MM));
+
+        assertEquals(headDeg, m.headDirection().toIntDeg());
+        assertEquals(yaw, m.robotYaw().toIntDeg());
+        assertEquals(headTargetDeg, m.headTarget().toIntDeg());
+        assertThat(m.robotLocation(), pointCloseTo(pulses2Location(x, y), MM));
+        assertThat(m.target(), pointCloseTo(pulses2Location(xTarget, yTarget), MM));
     }
 }

@@ -70,7 +70,7 @@ class RobotSpecTest {
                             int robotDirDeg, int sensorDirDeg,
                             double expX, double expY) {
         Point2D.Double robotLocation = new Point2D.Double(xRobot, yRobot);
-        Point2D location = spec.cameraLocation(robotLocation, Complex.fromDeg(robotDirDeg), Complex.fromDeg(sensorDirDeg));
+        Point2D location = spec.cameraLocation(robotLocation, Angle.fromDeg(robotDirDeg), Angle.fromDeg(sensorDirDeg));
         assertThat(location, pointCloseTo(expX, expY, MM1));
     }
 
@@ -114,7 +114,7 @@ class RobotSpecTest {
                                 int robotDirDeg, int sensorDirDeg,
                                 double expX, double expY) {
         Point2D.Double robotLocation = new Point2D.Double(xRobot, yRobot);
-        Point2D location = spec.frontLidarLocation(robotLocation, Complex.fromDeg(robotDirDeg), Complex.fromDeg(sensorDirDeg));
+        Point2D location = spec.frontLidarLocation(robotLocation, Angle.fromDeg(robotDirDeg), Angle.fromDeg(sensorDirDeg));
         assertThat(location, pointCloseTo(expX, expY, MM1));
     }
 
@@ -135,7 +135,7 @@ class RobotSpecTest {
                           int robotDirDeg,
                           double expX, double expY) {
         Point2D.Double robotLocation = new Point2D.Double(xRobot, yRobot);
-        Point2D location = spec.headLocation(robotLocation, Complex.fromDeg(robotDirDeg));
+        Point2D location = spec.headLocation(robotLocation, Angle.fromDeg(robotDirDeg));
         assertThat(location, pointCloseTo(expX, expY, MM1));
     }
 
@@ -161,7 +161,7 @@ class RobotSpecTest {
                                int robotDirDeg, int sensorDirDeg,
                                double expX, double expY) {
         Point2D.Double robotLocation = new Point2D.Double(xRobot, yRobot);
-        Point2D location = spec.rearLidarLocation(robotLocation, Complex.fromDeg(robotDirDeg), Complex.fromDeg(sensorDirDeg));
+        Point2D location = spec.rearLidarLocation(robotLocation, Angle.fromDeg(robotDirDeg), Angle.fromDeg(sensorDirDeg));
         assertThat(location, pointCloseTo(expX, expY, MM1));
     }
 }

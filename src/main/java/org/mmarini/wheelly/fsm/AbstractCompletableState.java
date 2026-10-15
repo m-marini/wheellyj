@@ -29,21 +29,20 @@
 package org.mmarini.wheelly.fsm;
 
 
-import org.mmarini.wheelly.apis.RobotCommands;
-
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 /**
  * An abstract base class for FSM states that require a time-based commitment
  * and can explicitly signal the completion of their tactical objective.
  * <p>
- * This class combines the temporal tracking constraints inherited from {@link AbstractCommitmentState}
- * with a completion feedback loop. It supports fluid transitions by allowing a custom
- * callback function to define which terminal {@link RobotCommands} should be executed
- * upon transition finalisation.
+ * This class combines temporal tracking constraints with a completion feedback loop.
+ * It supports fluid transitions by allowing a custom callback function to define
+ * which terminal environment commands should be executed upon transition finalisation.
  * </p>
+ *
+ * @param <T> the type of the environment or context managed by the state machine
  */
-public abstract class AbstractCompletableState extends AbstractCommitmentState implements EnvFSMCompletableState {
+public abstract class AbstractCompletableState<T> implements EnvFSMCompletableState<T> {
 
     /**
      * Flags whether the distinct tactical goal of this state has been achieved.
@@ -51,35 +50,38 @@ public abstract class AbstractCompletableState extends AbstractCommitmentState i
     private boolean completed;
 
     /**
-     * The callback function evaluated to supply final robot commands when the state completes.
+     * The callback function evaluated to supply final environment context modifications when the state completes.
      */
-    private Function<EnvFSMContext, RobotCommands> onCompletion;
+    private BiFunction<EnvFSMContext, T, T> onCompletion;
 
     /**
-     * Constructs an {@code AbstractCompletableState} with a specific commitment duration window.
-     *
-     * @param commitmentDuration the length of time in milliseconds that the state must remain active
+     * Constructs an {@code AbstractCompletableState} and initialises its internal
+     * structural components.
      */
-    protected AbstractCompletableState(long commitmentDuration) {
-        super(commitmentDuration);
+    protected AbstractCompletableState() {
     }
 
     /**
-     * Transition helper that marks this state as completed and evaluates the registered
-     * completion callback function.
+     * Finalises the execution lifecycle of the state and evaluates the registered completion callback.
      * <p>
-     * If no explicit completion function is supplied, this method defaults to issuing a
-     * {@link RobotCommands#halt()} command to safely stop the hardware.
+     * This method transitions the internal completion status flag to true and applies the custom
+     * behaviour logic if configured. If the state is already marked as completed, it immediately
+     * returns the provided default fallback value.
      * </p>
      *
-     * @param context the {@link EnvFSMContext} tracking the shared operational data
-     * @return the {@link RobotCommands} triggered by the completion event
+     * @param context      the execution context tracking the active state machine data
+     * @param defaultValue the baseline environment value to fallback on or modify
+     * @return the processed environment context outcome resulting from the completion lifecycle
      */
-    protected RobotCommands complete(EnvFSMContext context) {
-        completed = true;
-        return onCompletion != null
-                ? onCompletion.apply(context)
-                : RobotCommands.halt();
+    protected T complete(EnvFSMContext context, T defaultValue) {
+        if (completed) {
+            return defaultValue;
+        } else {
+            completed = true;
+            return onCompletion == null
+                    ? defaultValue
+                    : onCompletion.apply(context, defaultValue);
+        }
     }
 
     /**
@@ -101,24 +103,25 @@ public abstract class AbstractCompletableState extends AbstractCommitmentState i
      */
     @Override
     public void init(EnvFSMContext context) {
-        super.init(context);
         completed = false;
     }
 
     /**
-     * Configures a custom callback function to be executed when this state finishes its lifecycle.
+     * Configures a custom callback function to be executed when this state finishes its lifecycle,
+     * chaining it sequentially after any previously registered callback.
      * <p>
-     * This fluid API method allows behaviours to chain terminal action planning, making it easier
-     * to optimise high-level decision routing.
+     * This fluid API method allows behaviours to chain terminal action planning incrementally,
+     * making it easier to customise, sequence, and optimise high-level decision routing.
      * </p>
      *
-     * @param <T>      the specific concrete type extending {@code AbstractCompletableState}
-     * @param callback the functional mapper producing {@link RobotCommands} from the final context
+     * @param <R>      the specific concrete type extending {@code AbstractCompletableState}
+     * @param callback the functional mapper producing environment actions to be executed upon completion
      * @return this state instance cast to its concrete type for method chaining
      */
-    @SuppressWarnings("unchecked")
-    public <T extends AbstractCompletableState> T onCompletion(Function<EnvFSMContext, RobotCommands> callback) {
-        this.onCompletion = callback;
-        return (T) this;
+    @Override
+    public <R extends AbstractCompletableState<T>> R onCompletion(BiFunction<EnvFSMContext, T, T> callback) {
+        this.onCompletion = onCompletion == null ? callback
+                : (ctx, def) -> callback.apply(ctx, onCompletion.apply(ctx, def));
+        return (R) this;
     }
 }

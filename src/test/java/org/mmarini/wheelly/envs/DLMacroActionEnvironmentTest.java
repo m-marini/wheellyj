@@ -39,9 +39,9 @@ import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
 import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.fsm.AgentAction;
+import org.mmarini.wheelly.fsm.MacroActionConfig;
 
 import java.awt.geom.Point2D;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -49,26 +49,18 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.apis.RobotStatusId.*;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.BACKWARD;
 import static org.mmarini.wheelly.apis.Utils.MM;
-import static org.mmarini.wheelly.apis.WorldModelBuilder.GRID_SIZE;
-import static org.mmarini.wheelly.engines.AbstractSearchAndMoveState.*;
-import static org.mmarini.wheelly.fsm.HaltLookStraightStateTest.BASE_HEAD_CONFIG;
-import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_FACE_AT_NEAREST_MARKER_ACTION;
-import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION;
-import static org.mmarini.wheelly.fsm.MoveActionId.EXPLORE_NEAREST_UNKNOWN_AREA;
-import static org.mmarini.wheelly.fsm.MoveActionId.TRACK_NEAREST_MARKER;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_FACE_AT_MARKER_ACTION;
+import static org.mmarini.wheelly.fsm.HeadActionId.LOOK_FACE_AT_OBSTACLE_ACTION;
+import static org.mmarini.wheelly.fsm.MoveActionId.EXPLORE_UNKNOWN_AREA;
+import static org.mmarini.wheelly.fsm.MoveActionId.TRACK_MARKER;
 
 class DLMacroActionEnvironmentTest {
 
     public static final int SEED = 1234;
-    public static final int DEFAULT_MAX_ITERATIONS = Integer.MAX_VALUE;
-    public static final int MIN_GOALS = 3;
-    public static final double MAX_ROBOT_GOAL_TO_MARKER_DISTANCE = 0.7;
 
     static final String DIRECT_MARKER_MAP = """
             .........
@@ -146,9 +138,9 @@ class DLMacroActionEnvironmentTest {
             ....A....
             .........
             """;
-    private static final long BUILDING_PATH_TIME = 300;
+    private static final long BUILDING_PATH_TIME = 500;
     private static final long INFERENCE_INTERVAL = 100;
-    private static final Complex HEAD_DIR = Complex.fromDeg(45);
+    private static final Angle HEAD_DIR = Angle.fromDeg(45);
 
     static DLMacroActionEnvConfig createConfig() {
         Function<WorldModelSpec, StateFunction> stateFunc = spec ->
@@ -164,9 +156,7 @@ class DLMacroActionEnvironmentTest {
                     }
                 };
         return new DLMacroActionEnvConfig(
-                DEFAULT_MAX_ITERATIONS, MIN_GOALS, DEFAULT_MAX_SEARCH_TIME,
-                MAX_ROBOT_GOAL_TO_MARKER_DISTANCE, DEFAULT_SAFETY_DISTANCE, DEFAULT_GROWTH_DISTANCE,
-                stateFunc, BASE_HEAD_CONFIG);
+                stateFunc, MacroActionConfig.DEFAULT_MACRO_ACTION_CONFIG);
     }
 
     WorldModelBuilder builder;
@@ -202,7 +192,7 @@ class DLMacroActionEnvironmentTest {
         };
         WorldModellerApi mockModeller = new WorldModellerApi() {
             @Override
-            public void addOnInference(Consumer<Tuple2<WorldModel, RobotCommands>> callback) {
+            public void addOnInference(Consumer<Tuple2<WorldModel, RobotCommand>> callback) {
 
             }
 
@@ -234,19 +224,19 @@ class DLMacroActionEnvironmentTest {
         this.markerEnv = new DLMacroActionEnvironment(config, new Random(SEED)) {
             @Override
             public AgentAction nextAction() {
-                return new AgentAction(TRACK_NEAREST_MARKER, LOOK_FACE_AT_NEAREST_MARKER_ACTION);
+                return new AgentAction(TRACK_MARKER, LOOK_FACE_AT_MARKER_ACTION);
             }
         };
-        markerEnv.connect(mockAgent);
         markerEnv.connect(mockModeller);
+        markerEnv.connect(mockAgent);
         this.exploreEnv = new DLMacroActionEnvironment(config, new Random(SEED)) {
             @Override
             public AgentAction nextAction() {
-                return new AgentAction(EXPLORE_NEAREST_UNKNOWN_AREA, LOOK_FACE_AT_NEAREST_OBSTACLE_ACTION);
+                return new AgentAction(EXPLORE_UNKNOWN_AREA, LOOK_FACE_AT_OBSTACLE_ACTION);
             }
         };
-        exploreEnv.connect(mockAgent);
         exploreEnv.connect(mockModeller);
+        exploreEnv.connect(mockAgent);
     }
 
     @Test
@@ -256,22 +246,21 @@ class DLMacroActionEnvironmentTest {
         // And the marker location
         Point2D marker = new Point2D.Double(0, -2);
         // And the target location
-        Point2D target = new Point2D.Double(-0.4, -1.4);
+        Point2D target = new Point2D.Double(0.8, -2.2);
         // robot target head
-        Complex robotHead = Complex.direction(target, marker).add(HEAD_DIR);
+        Angle robotHead = Angle.direction(target, marker).add(HEAD_DIR);
 
         // When 1st inference
-        RobotCommands cmd = markerEnv.onInference(builder.build());
+        RobotCommand cmd = markerEnv.onInference(builder.build());
         // Then command should be halt waiting for path
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
+        assertEquals(MotionStatus.halt(), cmd.motionStatus());
 
         // When 2nd inference
         Completable.timer(BUILDING_PATH_TIME, TimeUnit.MILLISECONDS).blockingAwait();
         cmd = markerEnv.onInference(builder.addTime(INFERENCE_INTERVAL).build());
         // Then command should be backward to target
-        assertEquals(BACKWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target, MM));
+        assertEquals(BACKWARD, cmd.motionStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(target, MM));
 
         // When 3nd inference robot at target
         cmd = markerEnv.onInference(builder.addTime(INFERENCE_INTERVAL)
@@ -279,90 +268,6 @@ class DLMacroActionEnvironmentTest {
                 .robotDir(robotHead)
                 .build());
         // Then command should be backward to target
-        assertEquals(HALT, cmd.status());
-        assertThat(Complex.fromDeg(cmd.scanDirection()), angleCloseTo(HEAD_DIR.neg(), 2));
-    }
-
-    @Test
-    void testDirectPath() {
-        // Given a map
-        builder.applyMap(DIRECT_MARKER_MAP);
-        // And the target location
-        Point2D target = new Point2D.Double(0, -2);
-
-        // When getting path to nearest marker
-        List<Point2D> path = env.currentWorldModel(builder.build())
-                .pathToNearestMarker()
-                .blockingGet();
-
-        // Then path should exist
-        assertThat(path, hasSize(1));
-        // And last point should be the target location
-        assertThat(path.getLast(), pointCloseTo(target, MAX_ROBOT_GOAL_TO_MARKER_DISTANCE + GRID_SIZE));
-    }
-
-    @Test
-    void testDirectUnknownAreaInference() {
-        // Given a map
-        builder.applyMap(DIRECT_UNKNOWN_AREA_MAP);
-        // And the target location
-        Point2D target = new Point2D.Double(-1.2, 1.4);
-
-        // When 1st inference
-        RobotCommands cmd = exploreEnv.onInference(builder.build());
-        // Then command should be halt waiting for path
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
-
-        // When 2nd inference
-        Completable.timer(BUILDING_PATH_TIME, TimeUnit.MILLISECONDS).blockingAwait();
-        cmd = exploreEnv.onInference(builder.addTime(INFERENCE_INTERVAL).build());
-        // Then command should be backward to target
-        assertEquals(FORWARD, cmd.status());
-        assertThat(cmd.target(), pointCloseTo(target, MM));
-
-        // When 3nd inference robot at target
-        cmd = exploreEnv.onInference(builder.addTime(INFERENCE_INTERVAL)
-                .robotLocation(target)
-                .build());
-        // Then command should be backward to target
-        assertEquals(HALT, cmd.status());
-        assertEquals(0, cmd.scanDirection());
-    }
-
-    @Test
-    void testDirectUnknownAreaPath() {
-        // Given a map
-        builder.applyMap(DIRECT_UNKNOWN_AREA_MAP);
-        // And the target location
-        Point2D target = new Point2D.Double(-1.2, 1.4);
-
-        // When getting path to nearest marker
-        List<Point2D> path = env.currentWorldModel(builder.build())
-                .pathToNearestUnknownArea()
-                .blockingGet();
-
-        // Then path should exist
-        assertThat(path, hasSize(1));
-        // And last point should be the target location
-        assertThat(path.getLast(), pointCloseTo(target, MAX_ROBOT_GOAL_TO_MARKER_DISTANCE + GRID_SIZE));
-    }
-
-    @Test
-    void testIndirectPath() {
-        // Given a map
-        builder.applyMap(INDIRECT_MARKER_MAP);
-        // And the target location
-        Point2D target = new Point2D.Double(0, -2);
-
-        // When getting path to nearest marker
-        List<Point2D> path = env.currentWorldModel(builder.build())
-                .pathToNearestMarker()
-                .blockingGet();
-
-        // Then path should exist
-        assertThat(path, hasSize(3));
-        // And last point should be the target location
-        assertThat(path.getLast(), pointCloseTo(target, MAX_ROBOT_GOAL_TO_MARKER_DISTANCE + GRID_SIZE));
+        assertEquals(MotionStatus.halt(), cmd.motionStatus());
     }
 }

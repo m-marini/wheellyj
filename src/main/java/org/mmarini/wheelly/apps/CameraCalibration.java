@@ -36,6 +36,7 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+import org.mmarini.NotImplementedException;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apis.*;
@@ -219,7 +220,11 @@ public class CameraCalibration {
      */
     private void halt() {
         currentState = null;
+        throw new NotImplementedException();
+        /* TODO
         controller.execute(RobotCommands.halt());
+
+         */
     }
 
     /**
@@ -342,11 +347,15 @@ public class CameraCalibration {
      */
     private void positioning(RobotStatus status) {
         WheellyLidarMessage lidar = status.lidarMessage();
+        // TODO
+        /*
         if (lidar.headDirectionDeg() != direction) {
             controller.execute(RobotCommands.halt(direction));
         } else {
             sample().accept(status);
         }
+
+         */
     }
 
     private void processSamples() {
@@ -379,10 +388,10 @@ public class CameraCalibration {
         double dir1 = minRight.sensorDir.toRad();
         // Interpolates
         double alpha0Rad = dir0 - x0 * (dir1 - dir0) / (x1 - x0);
-        Complex alpha0 = Complex.fromRad(alpha0Rad);
+        Angle alpha0 = Angle.fromRad(alpha0Rad);
         double alphawLeftRad = 2 * atan2(minLeft.width * tan(minLeft.sensorDir.sub(alpha0).tan()), 2 * minLeft.xLabel);
         double alphawRightRad = 2 * atan2(maxRight.width * tan(maxRight.sensorDir.sub(alpha0).tan()), 2 * maxRight.xLabel);
-        Complex alphaw = Complex.fromRad((alphawRightRad + alphawLeftRad) / 2);
+        Angle alphaw = Angle.fromRad((alphawRightRad + alphawLeftRad) / 2);
         cameraViewAngle.setValue(alphaw.toIntDeg());
         logger.atInfo().log("Results alpha0={} alphaw={}", alpha0, alphaw);
     }
@@ -428,7 +437,7 @@ public class CameraCalibration {
         if (!RobotSpec.UNKNOWN_QR_CODE.equals(cameraEvent.qrCode())
                 && t0 > samplingStart) {
             // Valid sample
-            Complex sensorDir = lidar.headDirection();
+            Angle sensorDir = lidar.headDirection();
             Point2D[] points = cameraEvent.points();
             double xCamera = 0;
             for (Point2D point : points) {
@@ -444,6 +453,6 @@ public class CameraCalibration {
         }
     }
 
-    record Sample(double xLabel, int width, Complex sensorDir) {
+    record Sample(double xLabel, int width, Angle sensorDir) {
     }
 }

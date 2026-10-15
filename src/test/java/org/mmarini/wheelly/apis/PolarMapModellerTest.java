@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022-2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -79,26 +79,26 @@ class PolarMapModellerTest {
         radarMap = radarMap.updateCellAt(obsX, obsY, sect -> sect.addEchogenic(timestamp, DECAY));
 
         // When create a polar map from the centre directed to mapDir limited by GRID_SIZE and 3 m
-        PolarMap polarMap = modeler.create(radarMap, center, Complex.fromDeg(mapDir), MAX_DISTANCE);
+        PolarMap polarMap = modeler.create(radarMap, center, Angle.fromDeg(mapDir), MAX_DISTANCE);
 
         /*
          Then polar map at 0 DEG should be hindered as obsAt0
          */
-        assertEquals(obsAt0, polarMap.directionSector(Complex.DEG0).hindered());
-        assertEquals(obsAt90, polarMap.directionSector(Complex.DEG90).hindered());
-        assertEquals(obsAt180, polarMap.directionSector(Complex.DEG180).hindered());
-        assertEquals(obsAt270, polarMap.directionSector(Complex.DEG270).hindered());
+        assertEquals(obsAt0, polarMap.directionSector(Angle.DEG0).hindered());
+        assertEquals(obsAt90, polarMap.directionSector(Angle.DEG90).hindered());
+        assertEquals(obsAt180, polarMap.directionSector(Angle.DEG180).hindered());
+        assertEquals(obsAt270, polarMap.directionSector(Angle.DEG270).hindered());
         if (obsAt0) {
-            assertThat(polarMap.directionSector(Complex.DEG0).distance(center), closeTo(distanceAt0, EPSILON));
+            assertThat(polarMap.directionSector(Angle.DEG0).distance(center), closeTo(distanceAt0, EPSILON));
         }
         if (obsAt90) {
-            assertThat(polarMap.directionSector(Complex.DEG90).distance(center), closeTo(distanceAt90, EPSILON));
+            assertThat(polarMap.directionSector(Angle.DEG90).distance(center), closeTo(distanceAt90, EPSILON));
         }
         if (obsAt180) {
-            assertThat(polarMap.directionSector(Complex.DEG180).distance(center), closeTo(distanceAt180, EPSILON));
+            assertThat(polarMap.directionSector(Angle.DEG180).distance(center), closeTo(distanceAt180, EPSILON));
         }
         if (obsAt270) {
-            assertThat(polarMap.directionSector(Complex.DEG270).distance(center), closeTo(distanceAt270, EPSILON));
+            assertThat(polarMap.directionSector(Angle.DEG270).distance(center), closeTo(distanceAt270, EPSILON));
         }
     }
 
@@ -120,7 +120,7 @@ class PolarMapModellerTest {
         PolarMapModeller modeler = new PolarMapModeller(24, 0.4);
 
         // When update the polar map at 0.2, 0.2 directed to 90 DEG with the radar map
-        PolarMap polarMap = modeler.create(radarMap, new Point2D.Double(0.2, 0.2), Complex.DEG90, MAX_DISTANCE);
+        PolarMap polarMap = modeler.create(radarMap, new Point2D.Double(0.2, 0.2), Angle.DEG90, MAX_DISTANCE);
 
         // Then the polar map should be centered at 0.2, 0.2
         assertEquals(new Point2D.Double(0.2, 0.2), polarMap.center());
@@ -129,7 +129,7 @@ class PolarMapModellerTest {
         assertEquals(90, polarMap.direction().toIntDeg());
 
         // And the sector at 0 DEG should be hindered
-        CircularSector sector = polarMap.directionSector(Complex.DEG270);
+        CircularSector sector = polarMap.directionSector(Angle.DEG270);
         assertTrue(sector.known());
         assertTrue(sector.hindered());
         // The sector point location should be close to 0.2,1.5
@@ -161,14 +161,14 @@ class PolarMapModellerTest {
         radarMap = radarMap.updateCellAt(0.2, 1.6, s -> s.addEchogenic(timestamp, DECAY));
         assertTrue(radarMap.cell(0.2, 1.6).filter(MapCell::echogenic).isPresent());
 
-        PolarMap polarMap = modeler.create(radarMap, new Point2D.Double(0.2, 0.2), Complex.DEG90, MAX_DISTANCE);
+        PolarMap polarMap = modeler.create(radarMap, new Point2D.Double(0.2, 0.2), Angle.DEG90, MAX_DISTANCE);
 
         Point2D center = polarMap.center();
 
         assertEquals(new Point2D.Double(0.2, 0.2), polarMap.center());
         assertEquals(90, polarMap.direction().toIntDeg());
 
-        CircularSector sector = polarMap.directionSector(Complex.DEG270);
+        CircularSector sector = polarMap.directionSector(Angle.DEG270);
         assertTrue(sector.hindered());
         assertThat(sector.distance(center), closeTo(1.3, 1e-3));
         assertThat(new Point2D.Double(0.2, 1.5).distance(sector.location()),
@@ -200,7 +200,7 @@ class PolarMapModellerTest {
 
         // When update the polar map at 0.2, 0.2 directed to 90 DEG with the radar map
         PolarMap polarMap = modeler.create(radarMap,
-                new Point2D.Double(0.2, 0.2), Complex.DEG90, MAX_DISTANCE);
+                new Point2D.Double(0.2, 0.2), Angle.DEG90, MAX_DISTANCE);
 
         // Then the polar map should be centered at 0.2, 0.2
         assertThat(polarMap.center(), pointCloseTo(0.2, 0.2, 1e-3));

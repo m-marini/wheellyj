@@ -34,19 +34,33 @@ import org.mmarini.rl.envs.SignalSpec;
 import java.util.Map;
 
 /**
- * Generates the signal from world model
+ * Defines the contract for transforming raw environmental snapshots into multi-input
+ * feature vectors tailored for deep neural network processing.
+ * <p>
+ * Implementations of this interface orchestrate the feature extraction pipeline, fragmenting
+ * telemetry data encapsulated within environment states into independent, specialised
+ * sub-signal tensors for reinforcement learning observations.
+ * </p>
  */
 public interface StateFunction {
 
     /**
-     * Returns the state signals for the given world states
+     * Extracts and processes the structural feature signals from a batch sequence
+     * of environment state snapshots.
      *
-     * @param states the world states
+     * @param states a varargs array of current execution {@link EnvState} profiles to decompose
+     * @return an unmodifiable {@link Map} pairing signal identifier keys to their extracted raw {@link Signal} vectors
      */
     Map<String, Signal> signals(EnvState... states);
 
     /**
-     * Returns the signal specification
+     * Exposes the full multi-input signal specification layout dictionary defining structural properties.
+     * <p>
+     * This schema definition enforces strict compatibility boundaries, specifying tensor shapes,
+     * channel boundaries, and data types required across the active neural policy layer.
+     * </p>
+     *
+     * @return a {@link Map} pairing signal identifier keys to their respective {@link SignalSpec} constraints
      */
     Map<String, SignalSpec> spec();
 }

@@ -29,20 +29,20 @@
 package org.mmarini.wheelly.fsm;
 
 
-import org.mmarini.wheelly.apis.RobotCommands;
-
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 /**
  * An abstract base class for FSM states that require a time-based commitment
  * and must react specifically to physical contact events.
  * <p>
  * This class extends {@link AbstractCompletableState} by providing dedicated lifecycle hooks
- * for physical interaction tracking. It enables fluid configuration of terminal action
+ * for physical interaction tracking. It enables fluid configuration of alternative tactical action
  * planning via a custom callback function that triggers immediately upon contact detection.
  * </p>
+ *
+ * @param <T> the type of the environment or context managed by the state machine
  */
-public abstract class AbstractContactEventState extends AbstractCompletableState {
+public abstract class AbstractContactEventState<T> extends AbstractCompletableState<T> {
 
     /**
      * Flags whether a physical contact event has been triggered during this state's lifecycle.
@@ -50,17 +50,15 @@ public abstract class AbstractContactEventState extends AbstractCompletableState
     private boolean contacted;
 
     /**
-     * The callback function evaluated to supply reactive robot commands when contact is detected.
+     * The callback function evaluated to supply reactive environment transitions when contact is detected.
      */
-    private Function<EnvFSMContext, RobotCommands> onContact;
+    private BiFunction<EnvFSMContext, T, T> onContact;
 
     /**
-     * Constructs an {@code AbstractContactEventState} with a specific commitment duration window.
-     *
-     * @param commitmentDuration the length of time in milliseconds that the state must remain active
+     * Constructs an {@code AbstractContactEventState} and initialises its internal
+     * structural components.
      */
-    protected AbstractContactEventState(long commitmentDuration) {
-        super(commitmentDuration);
+    protected AbstractContactEventState() {
     }
 
     /**
@@ -86,37 +84,45 @@ public abstract class AbstractContactEventState extends AbstractCompletableState
     }
 
     /**
-     * Configures a custom callback function to be executed when a contact event is triggered.
+     * Configures a custom callback function to be executed when a contact event is triggered,
+     * chaining it sequentially after any previously registered contact callback.
      * <p>
      * This fluid API method allows behaviours to chain emergency or alternative tactical routines,
      * making it easier to optimise safety-critical action routing.
      * </p>
      *
-     * @param <T>      the specific concrete type extending {@code AbstractContactEventState}
-     * @param callback the functional mapper producing {@link RobotCommands} from the triggered context
+     * @param <R>      the specific concrete type extending {@code AbstractContactEventState}
+     * @param callback the functional mapper producing environment actions from the triggered context
      * @return this state instance cast to its concrete type for method chaining
      */
-    @SuppressWarnings("unchecked")
-    public <T extends AbstractContactEventState> T onContact(Function<EnvFSMContext, RobotCommands> callback) {
-        this.onContact = callback;
-        return (T) this;
+    public <R extends AbstractContactEventState<T>> R onContact(BiFunction<EnvFSMContext, T, T> callback) {
+        this.onContact = onContact == null
+                ? callback
+                : (ctx, def) ->
+                callback.apply(ctx, onContact.apply(ctx, def));
+        return (R) this;
     }
 
     /**
      * Transition helper that marks this state as contacted and evaluates the registered
      * contact callback function.
      * <p>
-     * If no explicit contact function is supplied, this method defaults to issuing a
-     * {@link RobotCommands#halt()} command to safely stop the hardware.
+     * This method finalises the state reaction to the contact event. If the state is already
+     * marked as contacted, it immediately returns the provided default fallback value.
      * </p>
      *
-     * @param context the {@link EnvFSMContext} tracking the shared operational data
-     * @return the {@link RobotCommands} triggered by the contact event
+     * @param context      the {@link EnvFSMContext} tracking the shared operational data
+     * @param defaultValue the baseline environment value to fallback on or modify
+     * @return the processed environment context outcome resulting from the contact event lifecycle
      */
-    protected RobotCommands triggerContact(EnvFSMContext context) {
-        contacted = true;
-        return onContact != null
-                ? onContact.apply(context)
-                : RobotCommands.halt();
+    protected T triggerContact(EnvFSMContext context, T defaultValue) {
+        if (contacted) {
+            return defaultValue;
+        } else {
+            contacted = true;
+            return onContact == null
+                    ? defaultValue
+                    : onContact.apply(context, defaultValue);
+        }
     }
 }

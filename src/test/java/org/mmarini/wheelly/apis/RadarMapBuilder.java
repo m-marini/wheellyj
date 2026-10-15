@@ -60,20 +60,20 @@ public class RadarMapBuilder {
     /**
      * Returns the list of location and labels from the given text map
      *
-     * @param topology the grid topology
+     * @param gridSize the grid size (m)
      * @param mapText  the map text
      */
-    public static Stream<Tuple2<Point2D, String>> parseMap(GridTopology topology, String mapText) {
+    public static Stream<Tuple2<Point2D, String>> parseMap(double gridSize, String mapText) {
         List<Tuple2<Point, String>> result = parseMap(mapText);
         int maxX = result.stream().mapToInt(t -> t._1.x).max().orElse(0);
         int maxY = result.stream().mapToInt(t -> t._1.y).max().orElse(0);
         Point2D p0 = new Point2D.Double(
-                -topology.gridSize() * maxX / 2,
-                -topology.gridSize() * maxY / 2);
+                -gridSize * maxX / 2,
+                -gridSize * maxY / 2);
         return result.stream()
                 .map(Tuple2.map1(p ->
                         org.mmarini.Utils.add(p0,
-                                mul(p, topology.gridSize()))));
+                                mul(p, gridSize))));
     }
 
     /**
@@ -101,7 +101,7 @@ public class RadarMapBuilder {
      * @param mapText  the map text
      */
     public static Stream<Tuple2<Integer, String>> parseMapByIndices(GridTopology topology, String mapText) {
-        return parseMap(topology, mapText)
+        return parseMap(topology.gridSize(), mapText)
                 .map(t ->
                         t.setV1(topology.indexOf(t._1)))
                 .filter(t -> t._1 >= 0);

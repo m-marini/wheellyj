@@ -168,10 +168,10 @@ public class DLStateFunction implements StateFunction {
             RobotStatus robotStatus = model.getRobotStatus();
             Point2D robotLocation = robotStatus.location();
             map = model.gridMap();
-            Complex mapDir = map.direction();
+            Angle mapDir = map.direction();
 
 
-            Complex sensorMapRelativeDir = robotStatus.headAbsDirection().sub(mapDir);
+            Angle sensorMapRelativeDir = robotStatus.headAbsDirection().sub(mapDir);
             sensor.putScalar(indices, (float) sensorMapRelativeDir.toIntDeg());
 
             /*
@@ -220,7 +220,7 @@ public class DLStateFunction implements StateFunction {
                 LabelMarker marker = markerMap.get(label);
                 if (marker != null) {
                     Point2D location = marker.location();
-                    Complex cellMapDir = Complex.direction(robotLocation, location).sub(mapDir);
+                    Angle cellMapDir = Angle.direction(robotLocation, location).sub(mapDir);
                     Point2D cellMapLocation = cellMapDir.at(new Point2D.Double(), location.distance(robotLocation));
                     idx = map.topology().indexOf(cellMapLocation);
                     if (idx >= 0) {

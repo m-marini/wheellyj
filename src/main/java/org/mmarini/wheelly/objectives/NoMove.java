@@ -30,7 +30,7 @@ package org.mmarini.wheelly.objectives;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.Angle;
 import org.mmarini.wheelly.apis.RobotStatus;
 import org.mmarini.wheelly.apis.WheellyJsonSchemas;
 import org.mmarini.wheelly.envs.RewardFunction;
@@ -56,7 +56,7 @@ public interface NoMove {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         float velocityThreshold = (float) locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
         double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
-        Complex sensorRange = Complex.fromDeg(locator.path("sensorRange").getNode(root).asDouble());
+        Angle sensorRange = Angle.fromDeg(locator.path("sensorRange").getNode(root).asDouble());
         return noMove(velocityThreshold, sensorRange, reward);
     }
 
@@ -67,12 +67,12 @@ public interface NoMove {
      * @param sensorRange       the range of sensor direction
      * @param reward            the reward
      */
-    static RewardFunction noMove(float velocityThreshold, Complex sensorRange, double reward) {
+    static RewardFunction noMove(float velocityThreshold, Angle sensorRange, double reward) {
         return (s0, a, s1) -> {
             RobotStatus status = s1.worldModel().robotStatus();
             if (abs(status.leftPps()) < velocityThreshold
                     && abs(status.rightPps()) < velocityThreshold
-                    && status.headDirection().isClose0(sensorRange)) {
+                    && status.headDirection().isFront(sensorRange)) {
                 return reward;
             }
             return 0;

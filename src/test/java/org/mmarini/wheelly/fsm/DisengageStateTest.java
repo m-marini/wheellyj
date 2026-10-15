@@ -33,21 +33,22 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.Angle;
+import org.mmarini.wheelly.apis.MotionStatus;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.apis.RobotStatusId.*;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.*;
 import static org.mmarini.wheelly.apis.Utils.MM;
 
 class DisengageStateTest {
@@ -55,7 +56,7 @@ class DisengageStateTest {
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
     public static final double SAFETY_DISTANCE = 0.5;
-    private static final double MOVE_DISTANCE = 0.3;
+    static final double MOVE_DISTANCE = 0.3;
 
     static Stream<Arguments> dataRobot() {
         return RandomArgumentsGenerator.create(SEED)
@@ -73,10 +74,10 @@ class DisengageStateTest {
     void setUp() {
         this.builder = new WorldModelBuilder();
         this.onCompletionContexts = new ArrayList<>();
-        this.state = new DisengageState(COMMITMENT_TIME, SAFETY_DISTANCE)
-                .onCompletion(ctx1 -> {
+        this.state = new DisengageState(SAFETY_DISTANCE)
+                .onCompletion((ctx1, def) -> {
                     onCompletionContexts.add(ctx1);
-                    return RobotCommands.halt();
+                    return def;
                 });
     }
 
@@ -85,7 +86,7 @@ class DisengageStateTest {
     void testBlocked(double x, double y, int robotDeg) {
         // Given a robot
         Point2D robotLocation = new Point2D.Double(x, y);
-        Complex robotDir = Complex.fromDeg(robotDeg);
+        Angle robotDir = Angle.fromDeg(robotDeg);
         double targetRange = builder.robotLocation(robotLocation)
                 .robotDir(robotDeg)
                 .canMoveForward(false)
@@ -121,10 +122,10 @@ class DisengageStateTest {
 
         // When execute state
         state.init(ctx[0]);
-        RobotCommands[] cmd = Arrays.stream(ctx)
+        MotionStatus[] cmd = Arrays.stream(ctx)
                 .skip(1)
                 .map(state::tick)
-                .toArray(RobotCommands[]::new);
+                .toArray(MotionStatus[]::new);
 
         //-------- rear contact
         // Then the command should be backward to target position
@@ -160,7 +161,7 @@ class DisengageStateTest {
     void testFrontContact(double x, double y, int robotDeg) {
         // Given a robot
         Point2D robotLocation = new Point2D.Double(x, y);
-        Complex robotDir = Complex.fromDeg(robotDeg);
+        Angle robotDir = Angle.fromDeg(robotDeg);
         double targetRange = builder.robotLocation(robotLocation)
                 .robotDir(robotDeg)
                 .canMoveForward(false)
@@ -170,63 +171,78 @@ class DisengageStateTest {
                 .targetRange();
         Point2D target1 = robotDir.opposite().at(robotLocation, targetRange + SAFETY_DISTANCE);
         Point2D target2 = robotDir.opposite().at(robotLocation, targetRange + SAFETY_DISTANCE + MOVE_DISTANCE);
-        MockFSMContext[] ctx = MockFSMContext.builder()
-                // front contact
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
+                // 0 - init
                 .add(builder)
-                // front contact
+                // 1 - front contact
                 .add(builder)
-                // after half commitment
-                .add(builder.addTime(COMMITMENT_TIME / 2))
-                // after commitment
-                .add(builder.addTime(COMMITMENT_TIME)
+                // 2 - contact released
+                .add(builder.addTime(1)
                         // move backward MOVE_DISTANCE
                         .backward(MOVE_DISTANCE)
                         .canMoveForward(true))
-                // move backward not at safe distance
-                .add(builder.addTime(COMMITMENT_TIME)
+                // 3 - before safety point
+                .add(builder.addTime(1)
                         .backward(SAFETY_DISTANCE - MM))
-                // move backward at safe distance
+                // 4 - move backward at safe distance
                 .add(builder.addTime(COMMITMENT_TIME)
                         .backward(2 * MM))
-                // After completion
+                // 5 - after completion
                 .add(builder.addTime(COMMITMENT_TIME))
-                .buildArray();
+                .build()
+                .iterator();
 
-        // When execute state
-        state.init(ctx[0]);
-        RobotCommands[] cmd = Arrays.stream(ctx)
-                .skip(1)
-                .map(state::tick)
-                .toArray(RobotCommands[]::new);
+        // When 0 - init
+        MockFSMContext ctx = iter.next();
+        state.init(ctx);
 
-        //-------- front contact
-        // Then the command should be backward to target position
-        assertEquals(BACKWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target1, MM));
+        // When 1 - front contact
+        ctx = iter.next();
+        MotionStatus cmd = state.tick(ctx);
+        // Then the command should be backward to disengaging position
+        assertEquals(BACKWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(target1, MM));
+        // And no completion
+        assertFalse(state.completed());
+        assertThat(onCompletionContexts, empty());
 
-        //-------- after half commitment
-        // Then the command should be backward to target position
-        assertEquals(BACKWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target1, MM));
+        // When 2 - contact released
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then the command should be backward to safe point
+        assertEquals(BACKWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(target2, MM));
+        // And no completion
+        assertFalse(state.completed());
+        assertThat(onCompletionContexts, empty());
 
-        //-------- move backward MOVE_DISTANCE and no contact
-        // Then the command should be backward to target position
-        assertEquals(BACKWARD, cmd[2].status());
-        assertThat(cmd[2].target(), pointCloseTo(target2, MM));
+        // When 3 - before safety point
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then the command should be backward to safe position
+        assertEquals(BACKWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(target2, MM));
+        // And no completion
+        assertFalse(state.completed());
+        assertThat(onCompletionContexts, empty());
 
-        //-------- move backward MOVE_DISTANCE and no contact
-        // Then the command should be backward to target position
-        assertEquals(BACKWARD, cmd[3].status());
-        assertThat(cmd[3].target(), pointCloseTo(target2, MM));
+        // When 4 - move backward at safe distance
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then the command should halt
+        assertEquals(MotionStatus.halt(), cmd);
+        // And completion
+        assertTrue(state.completed());
+        assertThat(onCompletionContexts, contains(ctx));
 
-        //-------- move backward at safe distance
-        // Then the command should be backward to target position
-        assertEquals(HALT, cmd[4].status());
-
-        //-------- after completion
-        // Then the command should be backward to target position
-        assertEquals(HALT, cmd[5].status());
-        assertThat(onCompletionContexts, contains(ctx[5], ctx[6]));
+        // When 5 - after completion
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then the command should halt
+        assertEquals(MotionStatus.halt(), cmd);
+        // And completion
+        assertTrue(state.completed());
+        assertThat(onCompletionContexts, hasSize(1));
     }
 
     @ParameterizedTest
@@ -234,7 +250,7 @@ class DisengageStateTest {
     void testRearContact(double x, double y, int robotDeg) {
         // Given a robot
         Point2D robotLocation = new Point2D.Double(x, y);
-        Complex robotDir = Complex.fromDeg(robotDeg);
+        Angle robotDir = Angle.fromDeg(robotDeg);
         double targetRange = builder.robotLocation(robotLocation)
                 .robotDir(robotDeg)
                 .canMoveBackward(false)
@@ -244,63 +260,77 @@ class DisengageStateTest {
                 .targetRange();
         Point2D target1 = robotDir.at(robotLocation, targetRange + SAFETY_DISTANCE);
         Point2D target2 = robotDir.at(robotLocation, targetRange + SAFETY_DISTANCE + MOVE_DISTANCE);
-        MockFSMContext[] ctx = MockFSMContext.builder()
-                // rear contact
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
+                // 0 - init
                 .add(builder)
-                // rear contact
+                // 1 - rear contact
                 .add(builder)
-                // after half commitment
-                .add(builder.addTime(COMMITMENT_TIME / 2))
-                // after commitment
-                .add(builder.addTime(COMMITMENT_TIME)
+                // 2 - contact released
+                .add(builder.addTime(1)
                         // move forward MOVE_DISTANCE
                         .forward(MOVE_DISTANCE)
                         .canMoveBackward(true))
-                // move forward not at safe distance
-                .add(builder.addTime(COMMITMENT_TIME)
+                // 3 - not at safe distance
+                .add(builder.addTime(1)
                         .forward(SAFETY_DISTANCE - MM))
-                // move forward at safe distance
-                .add(builder.addTime(COMMITMENT_TIME)
+                // 4 - at safe distance
+                .add(builder.addTime(1)
                         .forward(2 * MM))
-                // After completion
-                .add(builder.addTime(COMMITMENT_TIME))
-                .buildArray();
+                // 5 - after completion
+                .add(builder.addTime(1))
+                .build()
+                .iterator();
 
-        // When execute state
-        state.init(ctx[0]);
-        RobotCommands[] cmd = Arrays.stream(ctx)
-                .skip(1)
-                .map(state::tick)
-                .toArray(RobotCommands[]::new);
+        // When 0 - init
+        MockFSMContext ctx = iter.next();
+        state.init(ctx);
 
-        //-------- rear contact
+        // When 1 - rear contact
+        ctx = iter.next();
+        MotionStatus cmd = state.tick(ctx);
         // Then the command should be backward to target position
-        assertEquals(FORWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target1, MM));
+        assertEquals(FORWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(target1, MM));
+        // And no completion
+        assertFalse(state.completed());
+        assertThat(onCompletionContexts, empty());
 
-        //-------- after half commitment
+        // When 2 - contact released
+        ctx = iter.next();
+        cmd = state.tick(ctx);
         // Then the command should be backward to target position
-        assertEquals(FORWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target1, MM));
+        assertEquals(FORWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(target2, MM));
+        // And no completion
+        assertFalse(state.completed());
+        assertThat(onCompletionContexts, empty());
 
-        //-------- move backward MOVE_DISTANCE and no contact
+        // When 3 - not at safe distance
+        ctx = iter.next();
+        cmd = state.tick(ctx);
         // Then the command should be backward to target position
-        assertEquals(FORWARD, cmd[2].status());
-        assertThat(cmd[2].target(), pointCloseTo(target2, MM));
+        assertEquals(FORWARD, cmd.status());
+        assertThat(cmd.target(), pointCloseTo(target2, MM));
+        // And no completion
+        assertFalse(state.completed());
+        assertThat(onCompletionContexts, empty());
 
-        //-------- move backward MOVE_DISTANCE and no contact
-        // Then the command should be backward to target position
-        assertEquals(FORWARD, cmd[3].status());
-        assertThat(cmd[3].target(), pointCloseTo(target2, MM));
+        // When 4 - at safe distance
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then the command should halt
+        assertEquals(MotionStatus.halt(), cmd);
+        // And completion
+        assertTrue(state.completed());
+        assertThat(onCompletionContexts, contains(ctx));
 
-        //-------- move backward at safe distance
-        // Then the command should be backward to target position
-        assertEquals(HALT, cmd[4].status());
-
-        //-------- after completion
-        // Then the command should be backward to target position
-        assertEquals(HALT, cmd[5].status());
-
-        assertThat(onCompletionContexts, contains(ctx[5], ctx[6]));
+        // When 5 - after completion
+        ctx = iter.next();
+        cmd = state.tick(ctx);
+        // Then the command should halt
+        assertEquals(MotionStatus.halt(), cmd);
+        // And completion
+        assertTrue(state.completed());
+        assertThat(onCompletionContexts, hasSize(1));
     }
 }

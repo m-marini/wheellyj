@@ -58,11 +58,11 @@ import static java.util.Objects.requireNonNull;
  * @param sendInterval       the send status interval (ms)
  * @param scanInterval       the scan interval (ms)
  */
-public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contactRadius,
-                        Complex cameraFOV, Point2D headLocation, double frontLidarDistance,
+public record RobotSpec(double maxRadarDistance, Angle lidarFOV, double contactRadius,
+                        Angle cameraFOV, Point2D headLocation, double frontLidarDistance,
                         double rearLidarDistance, double cameraDistance,
-                        Complex headFOV, double targetRange, Complex directionRange,
-                        Complex maxRotRange,
+                        Angle headFOV, double targetRange, Angle directionRange,
+                        Angle maxRotRange,
                         int maxRotPps,
                         int maxSpeed,
                         double decelerateDistance,
@@ -138,7 +138,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param robotLocation the robot location
      * @param robotDir      the robot direction
      */
-    public static AffineTransform applyRobotView(AffineTransform trans, Point2D robotLocation, Complex robotDir) {
+    public static AffineTransform applyRobotView(AffineTransform trans, Point2D robotLocation, Angle robotDir) {
         trans.translate(robotLocation.getX(), robotLocation.getY());
         trans.rotate(-robotDir.toRad());
         return trans;
@@ -169,10 +169,10 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
     public static RobotSpec create(double maxRadarDistance, int lidarFOVDeg, double contactRadius, int cameraFOVDeg,
                                    double headX, double headY, double frontLidarDistance, double rearLidarDistance,
                                    double cameraDistance, int headFOVDeg, double targetRange, int directionRangeDeg, int maxRotRange, int maxRotPps, int maxSpeed, double decelerateDistance, long sendInterval, long scanInterval) {
-        return new RobotSpec(maxRadarDistance, Complex.fromDeg(lidarFOVDeg), contactRadius, Complex.fromDeg(cameraFOVDeg),
+        return new RobotSpec(maxRadarDistance, Angle.fromDeg(lidarFOVDeg), contactRadius, Angle.fromDeg(cameraFOVDeg),
                 new Point2D.Double(headX, headY), frontLidarDistance, rearLidarDistance, cameraDistance,
-                Complex.fromDeg(headFOVDeg), targetRange, Complex.fromDeg(directionRangeDeg),
-                Complex.fromDeg(maxRotRange), maxRotPps, maxSpeed, decelerateDistance, sendInterval, scanInterval);
+                Angle.fromDeg(headFOVDeg), targetRange, Angle.fromDeg(directionRangeDeg),
+                Angle.fromDeg(maxRotRange), maxRotPps, maxSpeed, decelerateDistance, sendInterval, scanInterval);
     }
 
     /**
@@ -274,7 +274,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param sendInterval       the send status interval (ms)
      * @param scanInterval       the scan interval (ms)
      */
-    public RobotSpec(double maxRadarDistance, Complex lidarFOV, double contactRadius, Complex cameraFOV, Point2D headLocation, double frontLidarDistance, double rearLidarDistance, double cameraDistance, Complex headFOV, double targetRange, Complex directionRange, Complex maxRotRange, int maxRotPps, int maxSpeed, double decelerateDistance, long sendInterval, long scanInterval) {
+    public RobotSpec(double maxRadarDistance, Angle lidarFOV, double contactRadius, Angle cameraFOV, Point2D headLocation, double frontLidarDistance, double rearLidarDistance, double cameraDistance, Angle headFOV, double targetRange, Angle directionRange, Angle maxRotRange, int maxRotPps, int maxSpeed, double decelerateDistance, long sendInterval, long scanInterval) {
         this.maxRadarDistance = maxRadarDistance;
         this.lidarFOV = requireNonNull(lidarFOV);
         this.contactRadius = contactRadius;
@@ -302,7 +302,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param robotDir      the robot direction
      * @param sensorDir     the relative sensor direction
      */
-    public AffineTransform applyCameraView(AffineTransform trans, Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+    public AffineTransform applyCameraView(AffineTransform trans, Point2D robotLocation, Angle robotDir, Angle sensorDir) {
         AffineTransform trans1 = applyRobotView(trans, robotLocation, robotDir);
         trans1.translate(headLocation.getX(), headLocation.getY());
         trans1.rotate(-sensorDir.toRad());
@@ -318,7 +318,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param robotDir      the robot direction
      * @param sensorDir     the relative sensor direction
      */
-    public AffineTransform applyFrontLidarView(AffineTransform trans, Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+    public AffineTransform applyFrontLidarView(AffineTransform trans, Point2D robotLocation, Angle robotDir, Angle sensorDir) {
         AffineTransform trans1 = applyHeadView(trans, robotLocation, robotDir);
         trans1.rotate(-sensorDir.toRad());
         trans1.translate(0, frontLidarDistance);
@@ -332,7 +332,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param robotLocation the robot location
      * @param robotDir      the robot direction
      */
-    private AffineTransform applyHeadView(AffineTransform trans, Point2D robotLocation, Complex robotDir) {
+    private AffineTransform applyHeadView(AffineTransform trans, Point2D robotLocation, Angle robotDir) {
         AffineTransform trans1 = applyRobotView(trans, robotLocation, robotDir);
         trans1.translate(headLocation.getX(), headLocation.getY());
         return trans1;
@@ -346,7 +346,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param robotDir      the robot direction
      * @param sensorDir     the relative sensor direction
      */
-    public AffineTransform applyRearLidarView(AffineTransform trans, Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+    public AffineTransform applyRearLidarView(AffineTransform trans, Point2D robotLocation, Angle robotDir, Angle sensorDir) {
         AffineTransform trans1 = applyHeadView(trans, robotLocation, robotDir);
         trans1.rotate(PI - sensorDir.toRad());
         trans1.translate(0, rearLidarDistance);
@@ -360,7 +360,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param robotDir      the robot direction
      * @param sensorDir     the relative sensor direction
      */
-    public Point2D cameraLocation(Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+    public Point2D cameraLocation(Point2D robotLocation, Angle robotDir, Angle sensorDir) {
         return applyCameraView(new AffineTransform(), robotLocation, robotDir, sensorDir)
                 .transform(new Point2D.Double(), null);
     }
@@ -372,7 +372,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param robotDir      the robot direction
      * @param sensorDir     the relative sensor direction
      */
-    public Point2D frontLidarLocation(Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+    public Point2D frontLidarLocation(Point2D robotLocation, Angle robotDir, Angle sensorDir) {
         return applyFrontLidarView(new AffineTransform(), robotLocation, robotDir, sensorDir).transform(new Point2D.Double(), null);
     }
 
@@ -382,7 +382,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param robotLocation the robot location
      * @param robotDir      the robot direction
      */
-    public Point2D headLocation(Point2D robotLocation, Complex robotDir) {
+    public Point2D headLocation(Point2D robotLocation, Angle robotDir) {
         return applyHeadView(new AffineTransform(), robotLocation, robotDir).transform(new Point2D.Double(), null);
     }
 
@@ -392,7 +392,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param location  the proxy sensor location
      * @param direction the proxy sensor direction
      */
-    public AreaExpression proxySensorArea(Point2D location, Complex direction) {
+    public AreaExpression proxySensorArea(Point2D location, Angle direction) {
         return AreaExpression.radialSensorArea(
                 location, direction, lidarFOV,
                 RobotSpec.ROBOT_RADIUS, maxRadarDistance
@@ -406,7 +406,7 @@ public record RobotSpec(double maxRadarDistance, Complex lidarFOV, double contac
      * @param robotDir      the robot direction
      * @param sensorDir     the relative sensor direction
      */
-    public Point2D rearLidarLocation(Point2D robotLocation, Complex robotDir, Complex sensorDir) {
+    public Point2D rearLidarLocation(Point2D robotLocation, Angle robotDir, Angle sensorDir) {
         return applyRearLidarView(new AffineTransform(), robotLocation, robotDir, sensorDir).transform(new Point2D.Double(), null);
     }
 }

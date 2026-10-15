@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -50,7 +50,7 @@ public record CameraEvent(
         String qrCode,
         int width, int height,
         Point2D[] points,
-        Complex direction) {
+        Angle direction) {
     public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(\\S+),(\\d+),(\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*)$");
     public static final CameraEvent DEFAULT_EVENT = unknown(0);
     private static final int NUM_PARAMS = 13;
@@ -81,7 +81,7 @@ public record CameraEvent(
             points[i] = new Point2D.Double(x, y);
             xTot += x;
         }
-        Complex direction = Complex.fromPoint(((xTot - width * 2) / 4) * widthRatio, width);
+        Angle direction = Angle.fromPoint(((xTot - width * 2) / 4) * widthRatio, width);
         return new CameraEvent(time - timeOffset, qrcode, width, height, points, direction);
     }
 
@@ -109,7 +109,7 @@ public record CameraEvent(
             points[i] = new Point2D.Double(x, y);
             xTot += x;
         }
-        Complex direction = Complex.fromPoint(((xTot - width * 2) / 4) * widthRatio, width);
+        Angle direction = Angle.fromPoint(((xTot - width * 2) / 4) * widthRatio, width);
         return new CameraEvent(time, qrcode, width, height, points, direction);
     }
 
@@ -117,6 +117,6 @@ public record CameraEvent(
      * Returns the unknown qrCode event
      */
     public static CameraEvent unknown(long timestamp) {
-        return new CameraEvent(timestamp, RobotSpec.UNKNOWN_QR_CODE, 0, 0, null, Complex.DEG0);
+        return new CameraEvent(timestamp, RobotSpec.UNKNOWN_QR_CODE, 0, 0, null, Angle.DEG0);
     }
 }

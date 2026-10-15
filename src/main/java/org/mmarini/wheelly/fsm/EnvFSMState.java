@@ -28,8 +28,6 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.RobotCommands;
-
 /**
  * Represents an abstract state within the Finite State Machine (FSM)
  * that governs the behaviour of the Wheelly robot in the environment.
@@ -39,19 +37,19 @@ import org.mmarini.wheelly.apis.RobotCommands;
  * must be issued to the motors and perception modules at each clock cycle.
  * </p>
  */
-public interface EnvFSMState {
+public interface EnvFSMState<T> {
 
     /**
      * Executes a single processing cycle (tick) for the current state of the FSM.
      * <p>
      * This method analyses the sensory information and internal state stored within the
      * provided context, handles the necessary logical transitions, and returns the set
-     * of commands to be sent to the robot hardware for the current execution step.
+     * of commands or state changes to be applied to the environment for the current execution step.
      * </p>
      *
      * @param context the operational context of the FSM containing telemetry, contact
      *                sensor states (lifecycle features), and environmental data
-     * @return the {@link RobotCommands} to be executed concurrently for the robot base and head
+     * @return the execution outcome or action command of type {@code T} to be processed for this cycle
      */
-    RobotCommands tick(EnvFSMContext context);
+    T tick(EnvFSMContext context);
 }

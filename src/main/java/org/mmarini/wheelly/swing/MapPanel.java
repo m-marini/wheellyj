@@ -200,7 +200,7 @@ public class MapPanel extends LayeredCanvas {
      * @param sensorDir        the sensor direction
      * @param maxRadarDistance the max radar distance (m)
      */
-    public void robot(Point2D location, Complex direction, Complex sensorDir, double maxRadarDistance) {
+    public void robot(Point2D location, Angle direction, Angle sensorDir, double maxRadarDistance) {
         List<BaseShape> shapes = new ArrayList<>();
         if (location != null) {
             if (direction != null) {

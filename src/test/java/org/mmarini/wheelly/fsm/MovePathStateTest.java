@@ -37,14 +37,13 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.Angle;
+import org.mmarini.wheelly.apis.MotionStatus;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -52,20 +51,18 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.apis.RobotStatusId.FORWARD;
-import static org.mmarini.wheelly.apis.RobotStatusId.HALT;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.*;
 import static org.mmarini.wheelly.apis.Utils.MM;
 
-class AsyncMovePathStateTest {
+class MovePathStateTest {
     public static final int COMMITMENT_TIME = 1000;
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
     public static final double DISTANCE0 = 1.;
-    public static final Complex DIR_DEG_0 = Complex.fromDeg(45);
-    public static final Complex DIR_DEG_1 = Complex.fromDeg(-45);
+    public static final Angle DIR_DEG_0 = Angle.fromDeg(45);
+    public static final Angle DIR_DEG_1 = Angle.fromDeg(-135);
     public static final int BUILDING_TIME = 10;
     public static final int CONTINGENCY_TIME = 20;
     private static final double DISTANCE1 = 1.5;
@@ -79,7 +76,7 @@ class AsyncMovePathStateTest {
     }
 
     WorldModelBuilder builder;
-    AsyncMovePathState state;
+    MovePathState state;
     List<EnvFSMContext> onCompletionContexts;
     List<EnvFSMContext> onContactContexts;
 
@@ -88,14 +85,14 @@ class AsyncMovePathStateTest {
         this.builder = new WorldModelBuilder();
         this.onCompletionContexts = new ArrayList<>();
         this.onContactContexts = new ArrayList<>();
-        this.state = new AsyncMovePathState(COMMITMENT_TIME)
-                .onContact(ctx1 -> {
+        this.state = new MovePathState()
+                .onContact((ctx1, def) -> {
                     onContactContexts.add(ctx1);
-                    return RobotCommands.halt();
+                    return def;
                 })
-                .onCompletion(ctx1 -> {
+                .onCompletion((ctx1, def) -> {
                     onCompletionContexts.add(ctx1);
-                    return RobotCommands.halt();
+                    return def;
                 })
         ;
     }
@@ -115,11 +112,11 @@ class AsyncMovePathStateTest {
                 .subscribeOn(Schedulers.io())
                 .delay(BUILDING_TIME, TimeUnit.MILLISECONDS);
         // and heading to first target
-        Complex heading0 = Complex.fromDeg(robotDeg).add(DIR_DEG_0);
+        Angle heading0 = Angle.fromDeg(robotDeg).add(DIR_DEG_0);
         // And heading to second target
-        Complex heading1 = heading0.add(DIR_DEG_1);
+        Angle heading1 = heading0.add(DIR_DEG_1);
         // And contexts
-        List<MockFSMContext> ctxs = MockFSMContext.builder()
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
                 // Init
                 .add(builder.robotLocation(robotLocation)
                         .robotDir(robotDeg))
@@ -135,17 +132,17 @@ class AsyncMovePathStateTest {
                         .forward(DISTANCE1))
                 // after complete
                 .add(builder)
-                .build();
+                .build()
+                .iterator();
 
         //--------
         // When init
-        Iterator<MockFSMContext> iter = ctxs.iterator();
         MockFSMContext ctx = iter.next();
         state.init(ctx, pathSingle);
 
         // When 1st tick no path
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        MotionStatus cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
         assertEquals(HALT, cmd.status());
         assertFalse(state.completed());
@@ -162,7 +159,7 @@ class AsyncMovePathStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 2nd tick should return forward to target1
-        assertEquals(FORWARD, cmd.status());
+        assertEquals(BACKWARD, cmd.status());
         assertThat(cmd.target(), pointCloseTo(path.getLast(), MM));
 
         // When move to 2nd point
@@ -179,7 +176,7 @@ class AsyncMovePathStateTest {
         assertEquals(HALT, cmd.status());
 
         // Than completion should have been invoked twice
-        assertThat(onCompletionContexts, hasItem(ctx));
+        assertThat(onCompletionContexts, hasSize(1));
         assertThat(onContactContexts, empty());
     }
 
@@ -204,9 +201,9 @@ class AsyncMovePathStateTest {
                 .subscribeOn(Schedulers.io())
                 .delay(BUILDING_TIME, TimeUnit.MILLISECONDS);
         // and heading to first target
-        Complex heading0 = Complex.fromDeg(robotDeg).add(DIR_DEG_0);
+        Angle heading0 = Angle.fromDeg(robotDeg).add(DIR_DEG_0);
         // And heading to second target
-        Complex heading1 = heading0.add(DIR_DEG_1);
+        Angle heading1 = heading0.add(DIR_DEG_1);
         // And contexts
         List<MockFSMContext> ctxs = MockFSMContext.builder()
                 // 0 - Init
@@ -240,7 +237,7 @@ class AsyncMovePathStateTest {
 
         // When 2 - 1st tick no path
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        MotionStatus cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
         assertEquals(HALT, cmd.status());
         assertFalse(state.completed());
@@ -257,7 +254,7 @@ class AsyncMovePathStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 2nd tick should return forward to target1
-        assertEquals(FORWARD, cmd.status());
+        assertEquals(BACKWARD, cmd.status());
         assertThat(cmd.target(), pointCloseTo(path.getLast(), MM));
 
         // When 5 - move to 2nd point
@@ -274,7 +271,7 @@ class AsyncMovePathStateTest {
         assertEquals(HALT, cmd.status());
 
         // Than completion should have been invoked twice
-        assertThat(onCompletionContexts, hasItem(ctx));
+        assertThat(onCompletionContexts, hasSize(1));
         assertThat(onContactContexts, empty());
     }
 
@@ -306,18 +303,18 @@ class AsyncMovePathStateTest {
         // When 1st tick after path
         Completable.timer(10, TimeUnit.MILLISECONDS).blockingAwait();
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        MotionStatus cmd = state.tick(ctx);
         // Than 1st tick should return HALT
-        assertEquals(HALT, cmd.status());
+        assertEquals(MotionStatus.halt(), cmd);
         assertThat(onCompletionContexts, contains(ctx));
 
         // When tick after completion
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than should return HALT
-        assertEquals(HALT, cmd.status());
+        assertEquals(MotionStatus.halt(), cmd);
 
-        assertThat(onCompletionContexts, hasItem(ctx));
+        assertThat(onCompletionContexts, hasSize(1));
         assertThat(onContactContexts, empty());
     }
 
@@ -332,11 +329,10 @@ class AsyncMovePathStateTest {
                 .turn(DIR_DEG_0).move(DISTANCE0).add()
                 .turn(DIR_DEG_1).move(DISTANCE1).add()
                 .build();
-        Single<List<Point2D>> pathSingle = Single.just(path).subscribeOn(Schedulers.io());
         // and heading to first target
-        Complex heading0 = Complex.fromDeg(robotDeg).add(DIR_DEG_0);
+        Angle heading0 = Angle.fromDeg(robotDeg).add(DIR_DEG_0);
         // And heading to second target
-        Complex heading1 = heading0.add(DIR_DEG_1);
+        Angle heading1 = heading0.add(DIR_DEG_1);
         // And contexts
         List<MockFSMContext> ctxs = MockFSMContext.builder()
                 // Init
@@ -362,7 +358,7 @@ class AsyncMovePathStateTest {
 
         // When 1st tick
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        MotionStatus cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
         assertEquals(FORWARD, cmd.status());
         assertThat(cmd.target(), pointCloseTo(path.getFirst(), MM));
@@ -371,7 +367,7 @@ class AsyncMovePathStateTest {
         ctx = iter.next();
         cmd = state.tick(ctx);
         // Than 2nd tick should return forward to target1
-        assertEquals(FORWARD, cmd.status());
+        assertEquals(BACKWARD, cmd.status());
         assertThat(cmd.target(), pointCloseTo(path.getLast(), MM));
 
         // When move to 2nd point
@@ -388,7 +384,7 @@ class AsyncMovePathStateTest {
         assertEquals(HALT, cmd.status());
 
         // Than completion should have been invoked twice
-        assertThat(onCompletionContexts, hasItem(ctx));
+        assertThat(onCompletionContexts, hasSize(1));
         assertThat(onContactContexts, empty());
     }
 
@@ -399,13 +395,13 @@ class AsyncMovePathStateTest {
         // Given o robot location
         Point2D robotLocation = new Point2D.Double(x, y);
         // And path points
-        Complex heading0 = Complex.fromDeg(robotDeg).add(DIR_DEG_0);
+        Angle heading0 = Angle.fromDeg(robotDeg).add(DIR_DEG_0);
         Point2D target0 = heading0.at(robotLocation, DISTANCE0);
-        Complex heading1 = DIR_DEG_1.add(heading0);
+        Angle heading1 = DIR_DEG_1.add(heading0);
         Point2D target1 = heading1.at(target0, DISTANCE1);
         List<Point2D> path = List.of(target0, target1);
         // And context
-        MockFSMContext[] ctx = MockFSMContext.builder()
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
                 // Init
                 .add(builder.robotLocation(robotLocation)
                         .robotDir(robotDeg))
@@ -413,43 +409,59 @@ class AsyncMovePathStateTest {
                 .add(builder)
                 // move to 1st point
                 .add(builder.robotDir(heading0.toIntDeg())
-                        .addTime(COMMITMENT_TIME)
+                        .addTime(1)
                         .forward(DISTANCE0))
                 // move to 2nd point
                 .add(builder.robotDir(heading1.toIntDeg())
-                        .addTime(COMMITMENT_TIME)
+                        .addTime(1)
                         .forward(DISTANCE1 - 0.5)
                         .canMoveForward(false))
                 // after complete
-                .add(builder.addTime(COMMITMENT_TIME))
-                .buildArray();
+                .add(builder.addTime(1))
+                .build()
+                .iterator();
 
         //--------
         // When init
-        state.init(ctx[0], Single.just(path));
-        // And ticks
-        RobotCommands[] cmd = Arrays.stream(ctx)
-                .skip(1)
-                .map(state::tick)
-                .toArray(RobotCommands[]::new);
+        MockFSMContext ctx = iter.next();
+        state.init(ctx, Single.just(path));
 
+        // When 1 - 1st tick should return forward to target0
+        ctx = iter.next();
+        MotionStatus cmd = state.tick(ctx);
         // Than 1st tick should return forward to target0
-        assertEquals(FORWARD, cmd[0].status());
-        assertThat(cmd[0].target(), pointCloseTo(target0, MM));
+        assertEquals(MotionStatus.forward(target0), cmd);
 
+        // When 2 - 2nd tick should return forward to target1
+        ctx = iter.next();
+        cmd = state.tick(ctx);
         // Than 2nd tick should return forward to target1
-        assertEquals(FORWARD, cmd[1].status());
-        assertThat(cmd[1].target(), pointCloseTo(target1, MM));
+        assertEquals(MotionStatus.backward(target1), cmd);
 
+        // When 3 - 3rd tick should return halt
+        ctx = iter.next();
+        cmd = state.tick(ctx);
         // Than 3rd tick should return halt
-        assertEquals(HALT, cmd[2].status());
+        assertEquals(MotionStatus.halt(), cmd);
+        // Contacts
+        assertTrue(state.contacted());
+        assertThat(onContactContexts, contains(ctx));
+        // And completed
+        assertTrue(state.completed());
+        assertThat(onCompletionContexts, contains(ctx));
 
+        // When 4 - after completion
+        ctx = iter.next();
+        cmd = state.tick(ctx);
         // Than 3rd tick should return halt
-        assertEquals(HALT, cmd[3].status());
+        assertEquals(MotionStatus.halt(), cmd);
+        // Contacts
+        assertTrue(state.contacted());
+        assertThat(onContactContexts, hasSize(1));
+        // And completed
+        assertTrue(state.completed());
+        assertThat(onCompletionContexts, hasSize(1));
 
-        // Than contacts should have been invoked twice
-        assertThat(onContactContexts, contains(ctx[3], ctx[4]));
-        assertThat(onCompletionContexts, empty());
     }
 
     @ParameterizedTest
@@ -459,8 +471,9 @@ class AsyncMovePathStateTest {
         // Given o robot location
         Point2D robotLocation = new Point2D.Double(x, y);
         // And empty path
-        Single<List<Point2D>> singlePath = Single.<List<Point2D>>error(new IOException("Simulated error"))
+        Single<List<Point2D>> pathSupplier = Single.<List<Point2D>>error(new IOException("Simulated error"))
                 .subscribeOn(Schedulers.io());
+
         // And context
         List<MockFSMContext> ctxs = MockFSMContext.builder()
                 // Init
@@ -475,12 +488,12 @@ class AsyncMovePathStateTest {
         // When init
         Iterator<MockFSMContext> iter = ctxs.iterator();
         MockFSMContext ctx = iter.next();
-        state.init(ctx, singlePath);
+        state.init(ctx, pathSupplier);
 
         // When 1st tick after path
         Completable.timer(10, TimeUnit.MILLISECONDS).blockingAwait();
         ctx = iter.next();
-        RobotCommands cmd = state.tick(ctx);
+        MotionStatus cmd = state.tick(ctx);
         // Than 1st tick should return HALT
         assertEquals(HALT, cmd.status());
         assertThat(onCompletionContexts, contains(ctx));
@@ -491,7 +504,7 @@ class AsyncMovePathStateTest {
         // Than should return HALT
         assertEquals(HALT, cmd.status());
 
-        assertThat(onCompletionContexts, hasItem(ctx));
+        assertThat(onCompletionContexts, hasSize(1));
         assertThat(onContactContexts, empty());
     }
 }

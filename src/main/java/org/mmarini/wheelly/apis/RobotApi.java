@@ -39,95 +39,118 @@ import java.io.Closeable;
 import java.io.File;
 
 /**
- * API Interface for robot
+ * API interface for controlling and managing the robot behaviour.
+ * Provides crucial methods for connection handling, movement control,
+ * sensor exploration, and status monitoring.
  */
 public interface RobotApi extends Closeable, WithErrorFlowable,
         WithWheellyMessageCallback, WithCameraCallback {
 
     /**
-     * Returns the robot api from configuration
+     * Initialises and returns a robot API instance from a JSON configuration document.
      *
-     * @param config  the json document
-     * @param locator the configuration locator
+     * @param config  the JSON configuration document
+     * @param locator the configuration locator utilised to resolve specific paths
+     * @return the initialised {@link RobotApi} instance
      */
     static RobotApi fromConfig(JsonNode config, Locator locator) {
         return Utils.createObject(config, locator, new Object[0], new Class[0]);
     }
 
     /**
-     * Returns the robot api from configuration
+     * Initialises and returns a robot API instance from a specified configuration file.
      *
      * @param file the configuration file
+     * @return the initialised {@link RobotApi} instance
+     * @throws Throwable if any error occurs whilst reading the file or instantiating the object
      */
     static RobotApi fromFile(File file) throws Throwable {
         return Utils.createObject(file, new Object[0], new Class[0]);
     }
 
     /**
-     * Moves robot to the given position returning true on success
-     *
-     * @param location the location (DEG)
-     */
-    Single<Boolean> backward(Point2D location);
-
-    /**
-     * Connects the robot
+     * Establishes a connection with the robot.
      */
     void connect();
 
     /**
-     * Moves robot to the given position returning true on success
+     * Halts the robot immediately.
      *
-     * @param location the location (DEG)
-     */
-    Single<Boolean> forward(Point2D location);
-
-    /**
-     * Halts the robot returning true on success
+     * @return a {@link Single} emitting {@code true} if the robot successfully halted, {@code false} otherwise
      */
     Single<Boolean> halt();
 
     /**
-     * Returns true if the robot is halted
+     * Checks whether the robot is currently halted.
+     *
+     * @return {@code true} if the robot is halted, {@code false} otherwise
      */
     boolean isHalt();
 
     /**
-     * Returns the robot line status
+     * Moves the robot to the specified coordinates whilst managing forward or backward orientation.
+     *
+     * @param frontMove {@code true} to move forward, {@code false} to move backward
+     * @param location  the target location coordinates (expressed in degrees)
+     * @return a {@link Single} emitting {@code true} if the move command was successful, {@code false} otherwise
+     */
+    Single<Boolean> move(boolean frontMove, Point2D location);
+
+    /**
+     * Returns a continuous stream monitoring the robot line status.
+     *
+     * @return a {@link Flowable} emitting real-time updates of {@link RobotStatusApi}
      */
     Flowable<RobotStatusApi> readRobotStatus();
 
     /**
-     * Reconnect the robot
+     * Reconnects to the robot, resetting the current connection state.
      */
     void reconnect();
 
     /**
-     * Returns the robot specification
+     * Returns the technical specifications and data parameters of the robot.
+     *
+     * @return the {@link RobotSpec} instance containing robot specifications
      */
     RobotSpec robotSpec();
 
     /**
-     * Returns the robot localTime
+     * Returns the current internal local time of the robot.
+     *
+     * @return the robot local time in milliseconds
      */
     long robotTime();
 
     /**
-     * Moves the sensor to the given direction returning true on success
+     * Rotates the robot to the given absolute direction.
      *
-     * @param direction the direction (DEG)
+     * @param dir the target direction angle in degrees (DEG)
+     * @return a {@link Single} emitting {@code true} if the rotation command was successful, {@code false} otherwise
+     */
+    Single<Boolean> rotate(int dir);
+
+    /**
+     * Moves the sensor to the specified direction to scan the surrounding environment.
+     *
+     * @param direction the target sensor direction angle in degrees (DEG)
+     * @return a {@link Single} emitting {@code true} if the scan command was successful, {@code false} otherwise
      */
     Single<Boolean> scan(int direction);
 
     /**
-     * Returns the simulation power
+     * Returns the execution speed or power factor of the simulated environment.
+     *
+     * @return the simulation speed multiplier as a double
      */
     double simulationSpeed();
 
     /**
-     * Rotate robot to the given direction returning true on success
+     * Tracks a specific target point using the robot sensor alignment.
      *
-     * @param dir the direction (DEG)
+     * @param frontTrack {@code true} to track from the front, {@code false} to track from the rear
+     * @param target     the target coordinates to track
+     * @return a {@link Single} emitting {@code true} if the tracking command was successful, {@code false} otherwise
      */
-    Single<Boolean> rotate(int dir);
+    Single<Boolean> track(boolean frontTrack, Point2D target);
 }

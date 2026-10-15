@@ -34,332 +34,170 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.Angle;
+import org.mmarini.wheelly.apis.HeadStatus;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
-import static org.mmarini.wheelly.apis.Utils.MM;
+import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_TARGET_RANGE;
 
 class LookAtTargetStateTest {
-    public static final int COMMITMENT_TIME = 1000;
-    public static final double MIN_TARGET_DISTANCE = 0.4;
-    public static final Complex DEG10 = Complex.fromDeg(10);
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
 
-    public static Stream<Arguments> dataLookAtFrontTargetInRange() {
+    public static Stream<Arguments> dataLookAtTarget() {
         return RandomArgumentsGenerator.create(SEED)
                 .uniform(-3.0, 3.0, 10)
                 .uniform(-3.0, 3.0, 10)
-                .uniform(-179, 180)
-                .uniform(-60, 60)
-                .exponential(MIN_TARGET_DISTANCE + 100 * MM, 1.0, 10)
-                .build(NUM_RANDOM_TEST_CASES);
-    }
-
-    public static Stream<Arguments> dataLookAtFrontTargetOutOfRange() {
-        return RandomArgumentsGenerator.create(SEED)
-                .uniform(-3.0, 3.0, 10)
-                .uniform(-3.0, 3.0, 10)
-                .uniform(-179, 180)
-                .uniform(-60, 60)
-                .uniform(0, MIN_TARGET_DISTANCE - MM)
-                .build(NUM_RANDOM_TEST_CASES);
-    }
-
-    public static Stream<Arguments> dataLookAtRearTargetInRange() {
-        return RandomArgumentsGenerator.create(SEED)
-                .uniform(-3.0, 3.0, 10)
-                .uniform(-3.0, 3.0, 10)
-                .uniform(-179, 180)
-                .uniform(180 - 60, 180 + 60)
-                .exponential(MIN_TARGET_DISTANCE + 100 * MM, 1.0, 10)
-                .build(NUM_RANDOM_TEST_CASES);
-    }
-
-    public static Stream<Arguments> dataLookAtRearTargetOutOfRange() {
-        return RandomArgumentsGenerator.create(SEED)
-                .uniform(-3.0, 3.0, 10)
-                .uniform(-3.0, 3.0, 10)
-                .uniform(-179, 180)
-                .uniform(180 - 60, 180 + 60)
-                .uniform(0, MIN_TARGET_DISTANCE - MM)
+                .uniform(-180, 179)
+                .uniform(-65, 65)
+                .exponential(DEFAULT_TARGET_RANGE, 1.0, 10)
                 .build(NUM_RANDOM_TEST_CASES);
     }
 
     WorldModelBuilder builder;
     LookAtTargetState state;
+    List<EnvFSMContext> onCompletions;
 
     @BeforeEach
     void setUp() {
         this.builder = new WorldModelBuilder();
-        this.state = new LookAtTargetState(COMMITMENT_TIME, MIN_TARGET_DISTANCE);
+        this.onCompletions = new ArrayList<>();
+        this.state = new LookAtTargetState(1)
+                .onCompletion((ctx, def) -> {
+                    onCompletions.add(ctx);
+                    return def;
+                });
     }
 
     @ParameterizedTest
     @CsvSource({"0,0,0, 45,1"})
-    @MethodSource("dataLookAtFrontTargetInRange")
-    void testLookAtFrontTargetInRange(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
+    @MethodSource("dataLookAtTarget")
+    void testLookAtFrontTarget(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
         // Given ...
         Point2D.Double robotLocation = new Point2D.Double(x, y);
         builder.robotLocation(robotLocation)
                 .robotDir(robotDeg);
 
-        Complex robotHead0 = Complex.fromDeg(robotDeg);
+        Angle robotHead0 = Angle.fromDeg(robotDeg);
         Point2D headLoc0 = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotHead0);
-        Complex targetHead0 = robotHead0.add(Complex.fromDeg(targetDeg));
+        Angle targetHead0 = robotHead0.add(Angle.fromDeg(targetDeg));
         Point2D target = targetHead0.at(headLoc0, targetDistance);
 
-        Complex robotHead1 = targetHead0.add(DEG10);
-        Point2D headLoc1 = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotHead1);
-        Complex targetHead1 = Complex.direction(headLoc1, target);
-        Complex headDir1 = targetHead1.sub(robotHead1);
-
-        MockFSMContext[] ctxs = MockFSMContext.builder()
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
+                // 0 - init
                 .add(builder)
+                // 1 - 1st tick
                 .add(builder)
-                .add(builder.addTime(COMMITMENT_TIME))
-                // rotate to 45 deg from target
-                .add(builder.addTime(COMMITMENT_TIME)
-                        .robotDir(robotHead1.toIntDeg()))
-                // rotate to target
-                .add(builder.addTime(COMMITMENT_TIME)
-                        .robotDir(targetHead0.toIntDeg()))
-                // rotate out of head fov
-                .add(builder.addTime(COMMITMENT_TIME)
-                        .robotDir(targetHead0.add(Complex.DEG90).toIntDeg()))
-                .buildArray();
+                // 2 - head in direction and lidar message
+                .add(builder.headAngle(targetDeg)
+                        .addTime(1)
+                        .updateLidarTime())
+                // 3 - after completion
+                .add(builder.addTime(1)
+                        .updateLidarTime())
+                .build()
+                .iterator();
 
-        // When initialise
-        int idx = 0;
-        MockFSMContext ctx = ctxs[idx++];
+        // When 0 - init
+        MockFSMContext ctx = iter.next();
         state.init(ctx, target, true);
 
-        // When executing the action for the first time
-        ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        // When 1 - 1st tick
+        ctx = iter.next();
+        HeadStatus cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(targetDeg, cmd.scanDirection());
-        // And not expired
-        assertFalse(state.expired(ctx));
+        assertEquals(HeadStatus.trackFrontFace(target), cmd);
+        // And state not completed
+        assertFalse(state.completed());
+        assertThat(onCompletions, empty());
 
-        // When executing after commitment
-        ctx = ctxs[idx++];
+        // When 2 - head in direction and lidar message
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(targetDeg, cmd.scanDirection());
-        // And expired
-        assertTrue(state.expired(ctx));
+        assertEquals(HeadStatus.trackFrontFace(target), cmd);
+        // And state not completed
+        assertTrue(state.completed());
+        assertThat(onCompletions, contains(ctx));
 
-        // When rotate to 45 deg from target
-        ctx = ctxs[idx++];
+        // When 3 - after completion
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(headDir1.toIntDeg(), cmd.scanDirection());
-        // And expired
-        assertTrue(state.expired(ctx));
-
-        // When executing rotation to target
-        ctx = ctxs[idx++];
-        cmd = state.tick(ctx);
-        // Then command should scan the expected direction
-        assertThat(Complex.fromDeg(cmd.scanDirection()), angleCloseTo(0, 3));
-        // And expired
-        assertTrue(state.expired(ctx));
-
-        // When rotate out of head fov
-        ctx = ctxs[idx++];
-        cmd = state.tick(ctx);
-        // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
-        // And expired
-        assertTrue(state.expired(ctx));
+        assertEquals(HeadStatus.trackFrontFace(target), cmd);
+        // And state not completed
+        assertTrue(state.completed());
+        assertThat(onCompletions, hasSize(1));
     }
 
     @ParameterizedTest
-    @CsvSource({"0,0,0, 45,0"})
-    @MethodSource("dataLookAtFrontTargetOutOfRange")
-    void testLookAtFrontTargetOutOfRange(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
+    @CsvSource({"0,0,0, 45,1"})
+    @MethodSource("dataLookAtTarget")
+    void testLookAtRearTarget(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
         // Given ...
         Point2D.Double robotLocation = new Point2D.Double(x, y);
         builder.robotLocation(robotLocation)
                 .robotDir(robotDeg);
 
-        Complex robotHead0 = Complex.fromDeg(robotDeg);
+        Angle robotHead0 = Angle.fromDeg(robotDeg);
         Point2D headLoc0 = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotHead0);
-        Complex targetHead0 = robotHead0.add(Complex.fromDeg(targetDeg));
+        Angle targetHead0 = robotHead0.add(Angle.fromDeg(targetDeg));
         Point2D target = targetHead0.at(headLoc0, targetDistance);
 
-        MockFSMContext[] ctxs = MockFSMContext.builder()
+        Iterator<MockFSMContext> iter = MockFSMContext.builder()
+                // 0 - init
                 .add(builder)
+                // 1 - 1st tick
                 .add(builder)
-                .add(builder.addTime(COMMITMENT_TIME))
-                .buildArray();
+                // 2 - head in direction and lidar message
+                .add(builder.headAngle(targetDeg)
+                        .addTime(1)
+                        .updateLidarTime())
+                // 3 - after completion
+                .add(builder.addTime(1)
+                        .updateLidarTime())
+                .build()
+                .iterator();
 
-        // When initialise
-        int idx = 0;
-        MockFSMContext ctx = ctxs[idx++];
+        // When 0 - init
+        MockFSMContext ctx = iter.next();
         state.init(ctx, target, true);
 
-        // When executing the action for the first time
-        ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
+        // When 1 - 1st tick
+        ctx = iter.next();
+        HeadStatus cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
-        // And not expired
-        assertFalse(state.expired(ctx));
+        assertEquals(HeadStatus.trackFrontFace(target), cmd);
+        // And state not completed
+        assertFalse(state.completed());
+        assertThat(onCompletions, empty());
 
-        // When executing after commitment
-        ctx = ctxs[idx++];
+        // When 2 - head in direction and lidar message
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
-        // And expired
-        assertTrue(state.expired(ctx));
+        assertEquals(HeadStatus.trackFrontFace(target), cmd);
+        // And state not completed
+        assertTrue(state.completed());
+        assertThat(onCompletions, contains(ctx));
 
-    }
-
-    /**
-     *
-     * @param x              the robot abscissa (m)
-     * @param y              the robot ordinate (m)
-     * @param robotDeg       the robot direction (DEG)
-     * @param targetDeg      target direction relative the robot direction = opposite head direction relative the robot (DEG)
-     * @param targetDistance target distance relative the head location (m)
-     */
-    @ParameterizedTest
-    @CsvSource({"0,0,0, 135,1"})
-    @MethodSource("dataLookAtRearTargetInRange")
-    void testLookAtRearTargetInRange(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
-        // Given the initial robot location and direction
-        Point2D.Double robotLocation = new Point2D.Double(x, y);
-        builder.robotLocation(robotLocation).robotDir(robotDeg);
-        Complex robotHead0 = Complex.fromDeg(robotDeg);
-        // And  the initial head location
-        Point2D headLoc0 = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotHead0);
-        // And the initial target world heading
-        Complex headDir = Complex.fromDeg(targetDeg);
-        Complex targetHead0 = robotHead0.add(headDir);
-
-        // And the target location
-        Point2D target = targetHead0.at(headLoc0, targetDistance);
-        // And the robot heading turn opposite from target + 10 DEG
-        Complex robotHead1 = targetHead0.opposite().add(DEG10);
-        // And the heading location after rotation
-        Point2D headLoc1 = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotHead1);
-        // And the target world heading after rotation
-        Complex targetHead1 = Complex.direction(headLoc1, target);
-        // And the head rotation relative the robot
-        Complex headDir1 = targetHead1.sub(robotHead1).opposite();
-
-        MockFSMContext[] ctxs = MockFSMContext.builder()
-                .add(builder)
-                .add(builder)
-                .add(builder.addTime(COMMITMENT_TIME))
-                // rotate to 45 deg from target
-                .add(builder.addTime(COMMITMENT_TIME)
-                        .robotDir(robotHead1.toIntDeg()))
-                // rotate to target
-                .add(builder.addTime(COMMITMENT_TIME)
-                        .robotDir(targetHead0.opposite().toIntDeg()))
-                // rotate out of head fov
-                .add(builder.addTime(COMMITMENT_TIME)
-                        .robotDir(targetHead0.opposite().add(Complex.DEG90).toIntDeg()))
-                .buildArray();
-
-        // When initialise
-        int idx = 0;
-        MockFSMContext ctx = ctxs[idx++];
-        state.init(ctx, target, false);
-
-        // When executing the action for the first time
-        ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
-        // Then command should scan the expected direction
-        assertEquals(headDir.opposite().toIntDeg(), cmd.scanDirection());
-        // And not expired
-        assertFalse(state.expired(ctx));
-
-        // When executing after commitment
-        ctx = ctxs[idx++];
+        // When 3 - after completion
+        ctx = iter.next();
         cmd = state.tick(ctx);
         // Then command should scan the expected direction
-        assertEquals(headDir.opposite().toIntDeg(), cmd.scanDirection());
-        // And expired
-        assertTrue(state.expired(ctx));
-
-        // When rotate to 45 deg from target
-        ctx = ctxs[idx++];
-        cmd = state.tick(ctx);
-        // Then command should scan the expected direction
-        assertEquals(headDir1.toIntDeg(), cmd.scanDirection());
-        // And expired
-        assertTrue(state.expired(ctx));
-
-        // When executing rotation to target
-        ctx = ctxs[idx++];
-        cmd = state.tick(ctx);
-        // Then command should scan the expected direction
-        assertThat(Complex.fromDeg(cmd.scanDirection()), angleCloseTo(0, 3));
-        // And expired
-        assertTrue(state.expired(ctx));
-
-        // When rotate out of head fov
-        ctx = ctxs[idx++];
-        cmd = state.tick(ctx);
-        // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
-        // And expired
-        assertTrue(state.expired(ctx));
-    }
-
-    @ParameterizedTest
-    @CsvSource({"0,0,0, -135,0"})
-    @MethodSource("dataLookAtRearTargetOutOfRange")
-    void testLookAtRearTargetOutOfRange(double x, double y, int robotDeg, int targetDeg, double targetDistance) {
-        // Given ...
-        Point2D.Double robotLocation = new Point2D.Double(x, y);
-        builder.robotLocation(robotLocation)
-                .robotDir(robotDeg);
-
-        Complex robotHead0 = Complex.fromDeg(robotDeg);
-        Point2D headLoc0 = DEFAULT_ROBOT_SPEC.headLocation(robotLocation, robotHead0);
-        Complex targetHead0 = robotHead0.add(Complex.fromDeg(targetDeg));
-        Point2D target = targetHead0.at(headLoc0, targetDistance);
-
-        MockFSMContext[] ctxs = MockFSMContext.builder()
-                .add(builder)
-                .add(builder)
-                .add(builder.addTime(COMMITMENT_TIME))
-                .buildArray();
-
-        // When initialise
-        int idx = 0;
-        MockFSMContext ctx = ctxs[idx++];
-        state.init(ctx, target, false);
-
-        // When executing the action for the first time
-        ctx = ctxs[idx++];
-        RobotCommands cmd = state.tick(ctx);
-        // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
-        // And not expired
-        assertFalse(state.expired(ctx));
-
-        // When executing after commitment
-        ctx = ctxs[idx++];
-        cmd = state.tick(ctx);
-        // Then command should scan the expected direction
-        assertEquals(0, cmd.scanDirection());
-        // And expired
-        assertTrue(state.expired(ctx));
-
+        assertEquals(HeadStatus.trackFrontFace(target), cmd);
+        // And state not completed
+        assertTrue(state.completed());
+        assertThat(onCompletions, hasSize(1));
     }
 }

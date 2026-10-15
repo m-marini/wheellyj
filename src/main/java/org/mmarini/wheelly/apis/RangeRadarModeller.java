@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -124,7 +124,7 @@ public record RangeRadarModeller(GridTopology topology,
         // Search for bound points of cell (nearest and farthest) related to the given signal
         Tuple2<Point2D, Point2D> interval = Geometry.squareArcInterval(cell.location(), topology.gridSize(), sensorLocation,
                 signal.direction(),
-                robotSpec.lidarFOV().divAngle(2));
+                robotSpec.lidarFOV().div(2));
         if (interval == null) {
             // No cell intersection
             return cell;

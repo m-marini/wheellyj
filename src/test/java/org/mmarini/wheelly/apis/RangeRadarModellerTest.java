@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -140,7 +140,7 @@ class RangeRadarModellerTest {
     void testUpdate1Test() {
         RadarMap map = modeller.empty();
         Point2D sensor = new Point2D.Double();
-        Complex direction = Complex.DEG0;
+        Angle direction = Angle.DEG0;
         double distance = 0.8;
         long timestamp = System.currentTimeMillis();
         SensorSignal signal = new SensorSignal(sensor, direction, distance, timestamp);
@@ -237,7 +237,7 @@ class RangeRadarModellerTest {
         // And a sensor signal
         Point2D sensLocation = new Point2D.Double();
         SensorSignal signal = new SensorSignal(sensLocation,
-                Complex.fromDeg(sensDir), distance, t1
+                Angle.fromDeg(sensDir), distance, t1
         );
 
         // When update cell

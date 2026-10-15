@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.ToDoubleFunction3;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -40,20 +39,32 @@ import java.util.List;
 import static java.lang.String.format;
 
 /**
- * Computes the reward base on initial state, action signals and resulting state
+ * Defines the contract for computing performance scalar feedback rewards within the
+ * reinforcement learning environment loop.
+ * <p>
+ * This functional interface processes state transitions by evaluating an action sequence
+ * dispatched between an initial environment profile and the resulting post-execution state,
+ * modelling objective functions and learning behaviours.
+ * </p>
  */
-public interface RewardFunction extends ToDoubleFunction3<EnvState, EnvAction, EnvState> {
+public interface RewardFunction {
 
     /**
-     * Returns the composed objective from the objective list
+     * Integrates and structures a collection of independent reward components into a single
+     * composite priority sequence function.
+     * <p>
+     * The evaluation chain short-circuits, returning the scalar reward value of the first
+     * nested function within the list that yields a non-zero result.
+     * </p>
      *
-     * @param objectives the list of goals
+     * @param objectives the {@link List} of specific {@code RewardFunction} goals to be evaluated
+     * @return a composite {@code RewardFunction} instance wrapping the sequential routing loop
      */
     private static RewardFunction composeObjective(List<RewardFunction> objectives) {
         return (state0, action, state1) -> {
             double value = 0;
             for (RewardFunction objective : objectives) {
-                value = objective.applyAsDouble(state0, action, state1);
+                value = objective.reward(state0, action, state1);
                 if (value != 0) {
                     break;
                 }
@@ -63,9 +74,16 @@ public interface RewardFunction extends ToDoubleFunction3<EnvState, EnvAction, E
     }
 
     /**
-     * Returns the composed objective the objective list in the configuration file
+     * Parses and instantiates a composite priority reward function from a physical configuration file.
+     * <p>
+     * This utility reads a sequential list of objective function blocks defined within a JSON
+     * array layout and dynamically maps them utilising reflection initialisation.
+     * </p>
      *
-     * @param file the configuration file
+     * @param file the physical configuration file instance (e.g., JSON or YAML source definition)
+     * @return a fully initialised composite {@code RewardFunction} instance
+     * @throws IOException              if data reading is disrupted or file access fails
+     * @throws IllegalArgumentException if the configuration document root node is not an array structure
      */
     static RewardFunction fromFile(File file) throws IOException {
         JsonNode root = org.mmarini.yaml.Utils.fromFile(file);
@@ -80,4 +98,14 @@ public interface RewardFunction extends ToDoubleFunction3<EnvState, EnvAction, E
                 .toList();
         return composeObjective(objectives);
     }
+
+    /**
+     * Computes the performance scalar reward yielded by executing a specific behavioural action.
+     *
+     * @param state  the initial pre-execution {@link EnvState} profile snapshot
+     * @param action the chosen {@link EnvAction} dispatched to the platform subsystems
+     * @param state1 the resulting post-execution {@link EnvState} profile snapshot
+     * @return the computed performance scalar reward value utilised for policy optimisation updates
+     */
+    double reward(EnvState state, EnvAction action, EnvState state1);
 }

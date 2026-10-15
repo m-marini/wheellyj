@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.engines;
 
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.RobotCommand;
 
 import static java.util.Objects.requireNonNull;
 
@@ -36,9 +36,9 @@ import static java.util.Objects.requireNonNull;
  * Defines the exit code and the commands of a state result
  *
  * @param exitCode the exit code
- * @param commands the commands (null if not available)
+ * @param command  the commands (null if not available)
  */
-public record StateResult(String exitCode, RobotCommands commands) {
+public record StateResult(String exitCode, RobotCommand command) {
     public static String TIMEOUT_EXIT = "timeout";
     public static String FRONT_BLOCKED_EXIT = "frontBlocked";
     public static String REAR_BLOCKED_EXIT = "rearBlocked";
@@ -50,14 +50,14 @@ public record StateResult(String exitCode, RobotCommands commands) {
     public static String TARGET_ID = "target";
     public static String PATH_ID = "path";
 
-    public static StateResult BLOCKED_HALT_RESULT = new StateResult(BLOCKED_EXIT, RobotCommands.halt());
-    public static StateResult COMPLETED_HALT_RESULT = new StateResult(COMPLETED_EXIT, RobotCommands.halt());
-    public static StateResult TIMEOUT_HALT_RESULT = new StateResult(TIMEOUT_EXIT, RobotCommands.halt());
-    public static StateResult FRONT_BLOCKED_HALT_RESULT = new StateResult(FRONT_BLOCKED_EXIT, RobotCommands.halt());
-    public static StateResult REAR_BLOCKED_HALT_RESULT = new StateResult(REAR_BLOCKED_EXIT, RobotCommands.halt());
-    public static StateResult NONE_HALT_RESULT = new StateResult(NONE_EXIT, RobotCommands.halt());
-    public static StateResult NOT_FOUND_HALT_RESULT = new StateResult(NOT_FOUND_EXIT, RobotCommands.halt());
-    public static StateResult FOUND_HALT_RESULT = new StateResult(FOUND_EXIT, RobotCommands.halt());
+    public static StateResult BLOCKED_HALT_RESULT = new StateResult(BLOCKED_EXIT, RobotCommand.halt());
+    public static StateResult COMPLETED_HALT_RESULT = new StateResult(COMPLETED_EXIT, RobotCommand.halt());
+    public static StateResult TIMEOUT_HALT_RESULT = new StateResult(TIMEOUT_EXIT, RobotCommand.halt());
+    public static StateResult FRONT_BLOCKED_HALT_RESULT = new StateResult(FRONT_BLOCKED_EXIT, RobotCommand.halt());
+    public static StateResult REAR_BLOCKED_HALT_RESULT = new StateResult(REAR_BLOCKED_EXIT, RobotCommand.halt());
+    public static StateResult NONE_HALT_RESULT = new StateResult(NONE_EXIT, RobotCommand.halt());
+    public static StateResult NOT_FOUND_HALT_RESULT = new StateResult(NOT_FOUND_EXIT, RobotCommand.halt());
+    public static StateResult FOUND_HALT_RESULT = new StateResult(FOUND_EXIT, RobotCommand.halt());
 
     /**
      * Returns the completed halt result
@@ -119,10 +119,10 @@ public record StateResult(String exitCode, RobotCommands commands) {
      * Creates the state result
      *
      * @param exitCode the exit code
-     * @param commands the commands
+     * @param command  the commands
      */
-    public StateResult(String exitCode, RobotCommands commands) {
-        this.exitCode = requireNonNull(exitCode);
-        this.commands = requireNonNull(commands);
+    public StateResult {
+        requireNonNull(exitCode);
+        requireNonNull(command);
     }
 }

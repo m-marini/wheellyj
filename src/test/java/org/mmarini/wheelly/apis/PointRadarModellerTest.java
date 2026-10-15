@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -116,7 +116,7 @@ class PointRadarModellerTest {
         RadarMap map = modeller.empty();
         // And a sensor signal at 0,0 directed to 0 DEG with hasObstacle ping at 0.8 m
         Point2D sensor = new Point2D.Double();
-        Complex direction = Complex.DEG0;
+        Angle direction = Angle.DEG0;
         double distance = 0.8;
         long timestamp = System.currentTimeMillis();
         SensorSignal signal = new SensorSignal(sensor, direction, distance, timestamp);

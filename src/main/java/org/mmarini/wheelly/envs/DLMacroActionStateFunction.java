@@ -31,6 +31,7 @@ package org.mmarini.wheelly.envs;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.rl.envs.*;
 import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.fsm.HeadActionId;
 import org.mmarini.wheelly.fsm.MoveActionId;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.buffer.DataType;
@@ -192,6 +193,11 @@ public class DLMacroActionStateFunction implements StateFunction {
 
     /**
      * Processes and formats optical telemetry into an ND4J tensor representing the camera signal vector.
+     * <p>
+     * This method iterates through the batch of environment states, extracting target coordinates
+     * and computing relative directional features for each active marker tag to feed the optical
+     * neural layer network.
+     * </p>
      *
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to optical features
@@ -219,14 +225,22 @@ public class DLMacroActionStateFunction implements StateFunction {
     }
 
     /**
-     * Assembles the multi-region concurrent FSM active action contexts into a tensor signal.
+     * Processes and formats the concurrent finite state machine action flags into a binary
+     * encoding ND4J tensor.
+     * <p>
+     * This method transforms the active high-level locomotion and sensor head macro-actions
+     * from a batch of macro-environment states into a multi-hot categorical vector. It maps
+     * the ordinal positions of both {@link MoveActionId} and {@link HeadActionId} into
+     * a continuous row block to provide discrete contextual indicators for the deep network.
+     * </p>
      *
      * @param states an array of current execution environment states
-     * @return a 2D float {@link INDArray} matrix encoding active locomotion and perception primitives
+     * @return a 2D float {@link INDArray} matrix mapping state batches to active FSM action flags
+     * @throws IllegalArgumentException if any state element within the batch is not an instance of {@link MacroEnvState}
      */
     private INDArray fsmSignal(EnvState[] states) {
         int n = states.length;
-        INDArray signals = Nd4j.zeros(n, 22).castTo(DataType.FLOAT);
+        INDArray signals = Nd4j.zeros(n, MoveActionId.values().length + HeadActionId.values().length).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
             if (states[i] instanceof MacroEnvState state) {
 
@@ -242,20 +256,17 @@ public class DLMacroActionStateFunction implements StateFunction {
         return signals;
     }
 
-
     /**
-     * Extracts and normalises sensor head metrics across environment state batches
-     * to compile the independent head features tensor.
+     * Processes and formats the autonomous scanning head telemetry into an ND4J tensor.
      * <p>
-     * This method builds a 2D float tensor mapping each batch slice to 7 continuous
-     * egocentric features: the head's current angular direction (Sine/Cosine), the relative
-     * Cartesian coordinates of the target tracked point (X/Y), the target relative rotation
-     * of the head (Sine/Cosine), and the binary active tracking operational status flag.
+     * This method extracts the angular orientation of the sensor head, converting it into
+     * continuous trigonometric features (sine and cosine components) to avoid phase discontinuities.
+     * It structures a 7-dimensional feature space per batch entry, reserving slots for the actual
+     * head direction, target objective coordinates, targeted alignment vectors, and tracking status flags.
      * </p>
      *
-     * @param states an array of sequential {@link EnvState} objects containing world models
-     * @return a 2D float {@link INDArray} matrix of shape {@code [batch_size, 7]}
-     * matching the {@code head} multi-input signal specification
+     * @param states an array of current execution environment states
+     * @return a 2D float {@link INDArray} matrix mapping state batches to sensor head features
      */
     private INDArray headSignal(EnvState[] states) {
         int n = states.length;
@@ -290,19 +301,17 @@ public class DLMacroActionStateFunction implements StateFunction {
     }
 
     /**
-     * Compiles grid occupancy frames, tactile obstructions, radar echoes, and relative
-     * marker coordinates into a multi-channel multidimensional grid tensor.
+     * Processes and structures the multichannel grid map data into a 4D ND4J tensor.
      * <p>
-     * For each environmental frame in the batch, this method iterates through the map sectors
-     * and assigns binary activations across structural channels based on cell properties
-     * (empty, contact, echogenic, or unknown). Additionally, it computes the egocentric
-     * transformed locations of recognized markers relative to the robot's pose, mapping
-     * their spatial coordinates directly into dedicated target matrix channels.
+     * This method maps the discrete spatial attributes of the radar grid across a multi-layered
+     * channel architecture. The base layer channels represent categorical cell states (unknown, empty,
+     * contact, and echogenic echoes). Subsequent channels are dynamically appended to encode the
+     * egocentric, relative spatial positions of tracking markers, transforming their world coordinates
+     * relative to the robot's heading and map topology.
      * </p>
      *
-     * @param states a varargs sequence of current environment frames to process
-     * @return a 4D float {@link INDArray} matching the convolutional input layout
-     * with shape {@code [batch_size, num_channels, width, height]}
+     * @param states a varargs array of current execution environment states
+     * @return a 4D float {@link INDArray} matrix with dimensions {@code [batchSize, channels, width, height]}
      */
     INDArray mapSignals(EnvState... states) {
         int n = states.length;
@@ -319,7 +328,7 @@ public class DLMacroActionStateFunction implements StateFunction {
             RobotStatus robotStatus = model.getRobotStatus();
             Point2D robotLocation = robotStatus.location();
             map = model.gridMap();
-            Complex mapDir = map.direction();
+            Angle mapDir = map.direction();
 
             // Create marker state signals
             Map<String, LabelMarker> markerMap = model.markers();
@@ -345,7 +354,7 @@ public class DLMacroActionStateFunction implements StateFunction {
                 LabelMarker marker = markerMap.get(label);
                 if (marker != null) {
                     Point2D location = marker.location();
-                    Complex cellMapDir = Complex.direction(robotLocation, location).sub(mapDir);
+                    Angle cellMapDir = Angle.direction(robotLocation, location).sub(mapDir);
                     Point2D cellMapLocation = cellMapDir.at(new Point2D.Double(), location.distance(robotLocation));
                     idx = map.topology().indexOf(cellMapLocation);
                     if (idx >= 0) {
@@ -360,17 +369,16 @@ public class DLMacroActionStateFunction implements StateFunction {
     }
 
     /**
-     * Extracts and normalises environmental proximity metrics, tactile feedback,
-     * and movement hindrances across state batches to build the safety features tensor.
+     * Processes and formats proximity telemetry, contact sensor data, and obstacle flags into an ND4J tensor.
      * <p>
-     * This method compiles a 2D float tensor matching the {@code proxy} specification,
-     * mapping each batch slice to 6 dedicated signals: scaled distance to front and rear
-     * obstructions, binary front and rear tactile bumper contacts, and active forward
-     * and backward movement hindrance indicators.
+     * This method builds a 6-dimensional feature vector per batch entry. It normalises raw front and rear
+     * range-finder data based on the maximum hardware radar distance, caps the resulting values at a maximum
+     * threshold of {@code 1}, and couples them with binary indicators for physical bumper events and directional
+     * locomotion clearances.
      * </p>
      *
-     * @param states an array of sequential {@link EnvState} objects containing world models
-     * @return a 2D float {@link INDArray} matrix of shape {@code [batch_size, 6]}
+     * @param states an array of current execution environment states
+     * @return a 2D float {@link INDArray} matrix mapping state batches to proximity and contact features
      */
     private INDArray proxySignal(EnvState[] states) {
         int n = states.length;
@@ -398,17 +406,17 @@ public class DLMacroActionStateFunction implements StateFunction {
     }
 
     /**
-     * Extracts and normalises robot kinematics, local map grid alignments, and navigational
-     * movement targets across batches to build the primary robot base feature tensor.
+     * Processes and formats the robot chassis kinematics and spatial odometry features into an ND4J tensor.
      * <p>
-     * This method assembles a 2D float tensor matching the {@code robot} specification.
-     * It maps each batch slice to 11 dedicated signals: scaled linear and angular speeds, egocentric
-     * map grid orientation (Sine/Cosine), binary halt status, active translation and rotation intent
-     * flags, relative Cartesian target coordinates (X/Y), and relative target steering error (Sine/Cosine).
+     * This method builds an 11-dimensional feature space per batch entry. It normalises linear and
+     * rotational velocities based on differential wheel pulse telemetry (PPS) relative to the maximum
+     * hardware capability, and factors in the current halt state indicators. To prevent phase boundaries
+     * discontinuities, the relative mapping heading is decomposed into its continuous sine and cosine trigonometric
+     * components, leaving placeholder configurations for motion goals and tracking targets.
      * </p>
      *
-     * @param states a varargs sequence of current environment frames to process
-     * @return a 2D float {@link INDArray} matrix of shape {@code [batch_size, 11]}
+     * @param states a varargs array of current execution environment states
+     * @return a 2D float {@link INDArray} matrix mapping state batches to chassis kinematic features
      */
     private INDArray robotSignal(EnvState... states) {
         int n = states.length;
@@ -423,7 +431,7 @@ public class DLMacroActionStateFunction implements StateFunction {
             double linSpeed = (leftSpeed + rightSpeed) / 2 / spec.maxSpeed();
             double rotSpeed = (leftSpeed - rightSpeed) / 2 / spec.maxSpeed();
 
-            Complex mapDir = map.direction().sub(robot.direction());
+            Angle mapDir = map.direction().sub(robot.direction());
             double sinMap = mapDir.sin();
             double cosMap = mapDir.cos();
 
@@ -458,18 +466,18 @@ public class DLMacroActionStateFunction implements StateFunction {
     }
 
     /**
-     * Compiles and bundles all processed multi-input sub-signals into the final structured
-     * state dictionary matching the environment specification.
+     * Extracts and aggregates the complete multi-input feature dictionary from a batch
+     * of environment states.
      * <p>
-     * This method evaluates the environment frames using specialized extraction routines
-     * and wraps each resulting tensor matrix into an {@link ArraySignal}. It isolates features
-     * into dedicated dictionary streams: {@code robot}, {@code proxy}, {@code head},
-     * {@code camera}, {@code fsm}, and {@code map}, which are then returned as a single
-     * cohesive input map ready for network inference.
+     * This method orchestrates the full state feature extraction pipeline, processing raw
+     * telemetry into independent ND4J-backed {@link ArraySignal} instances. It centralises
+     * chassis kinematics, proximity metrics, sensor head tracking vectors, optical marker features,
+     * concurrent FSM indicators, and multi-channel grid maps into an unmodifiable map layout
+     * matching the environment's state specification.
      * </p>
      *
-     * @param states a varargs sequence of current environment frames to evaluate
-     * @return a {@link Map} pairing signal key identifiers to their compiled {@link Signal} representations
+     * @param states a varargs array of current execution environment states to be processed
+     * @return a {@link Map} pairing signal identifier keys to their respective encapsulated {@link Signal} vectors
      */
     @Override
     public Map<String, Signal> signals(EnvState... states) {
@@ -483,11 +491,14 @@ public class DLMacroActionStateFunction implements StateFunction {
     }
 
     /**
-     * Returns the comprehensive multi-input signal specification layout dictionary
-     * defining the expected shapes and data types for the state features.
+     * Gets the full multi-input signal specification layout dictionary.
+     * <p>
+     * This method exposes the immutable structural definitions, shape boundaries, and data types
+     * for each independent sub-signal tensor required by the state function pipeline, ensuring
+     * strict compatibility with the reinforcement learning environment configuration.
+     * </p>
      *
-     * @return a {@link Map} pairing signal key identifiers to their corresponding
-     * {@link SignalSpec} configurations
+     * @return a {@link Map} pairing signal identifier keys to their respective {@link SignalSpec} structures
      */
     @Override
     public Map<String, SignalSpec> spec() {

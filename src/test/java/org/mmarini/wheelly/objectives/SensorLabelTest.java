@@ -32,7 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.Angle;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 import org.mmarini.wheelly.envs.BasicEnvState;
 import org.mmarini.wheelly.envs.RewardFunction;
@@ -53,7 +53,7 @@ class SensorLabelTest {
                 .frontDistance(distance)
                 .robotSpeed(leftPps, rightPps);
         if (!"?".equals(qrCode)) {
-            Point2D markerLocation = Complex.fromDeg(headDeg).at(new Point2D.Double(), distance);
+            Point2D markerLocation = Angle.fromDeg(headDeg).at(new Point2D.Double(), distance);
             builder = builder.addMarker(qrCode, markerLocation);
         }
         return new BasicEnvState(builder.build());
@@ -98,7 +98,7 @@ class SensorLabelTest {
                 distance, qrCode);
         RewardFunction f = SensorLabel.create(root, Locator.root());
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expectedReward, 1e-4));
     }

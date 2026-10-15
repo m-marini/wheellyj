@@ -28,61 +28,45 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.Angle;
+import org.mmarini.wheelly.apis.HeadStatus;
 import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.geom.Point2D;
 
-import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.HeadStatus.HeadStatusId.FRONT_TRACK;
 
 /**
- * Represents a concrete FSM state where the robot tracks and looks at a specific target point.
+ * Manages the robot sensor subsystem while tracking a specific spatial point of interest.
  * <p>
- * This state calculates the directional vector from the robot's head location to the designated
- * target. It allows configuring whether the look profile should be front-facing or rear-facing,
- * resetting the gaze forward if the required angle falls outside a specific tolerance range.
+ * This state coordinates the positioning of the sensor head to maintain a steady gaze
+ * towards a target location, dynamically selecting either a front-facing or rear-facing
+ * tracking profile based on operational constraints.
  * </p>
  */
-public class LookAtTargetState extends AbstractCommitmentState implements EnvFSMCompletableState {
+public class LookAtTargetState extends AbstractCompletableState<HeadStatus> {
+    /**
+     * The minimum required number of valid LiDAR samples to collect per interval.
+     */
+    private final int minNumberOfSamples;
+    /**
+     * The counter tracking valid LiDAR samples acquired during the active step.
+     */
+    private int numberOfSamples;
+    /**
+     * The timestamp of the last processed LiDAR sample to avoid duplicate updates.
+     */
+    private long prevLidarTime;
+    private HeadStatus targetStatus;
 
     /**
-     * The minimum distance from the target (in metres) required to actively track its direction.
-     */
-    private final double minTargetDistance;
-    /**
-     * The spatial co-ordinate point of the target to track.
-     */
-    private Point2D target;
-    /**
-     * Flag indicating whether the front side of the head should face the target.
-     */
-    private boolean frontFacing;
-
-    /**
-     * Constructs a {@code LookAtTargetState} with the specified commitment duration
-     * and the minimum target distance threshold.
+     * Constructs a {@code LookAtTargetState} with the specified minimum number of samples
+     * required for validation.
      *
-     * @param commitmentDuration the length of time in milliseconds that the state must remain active
-     * @param minTargetDistance  the minimum distance from the target to follow its direction (in metres)
+     * @param minNumberOfSamples the minimum number of data samples required to validate the scan
      */
-    public LookAtTargetState(long commitmentDuration, double minTargetDistance) {
-        super(commitmentDuration);
-        this.minTargetDistance = minTargetDistance;
-    }
-
-    /**
-     * Indicates whether the gaze tracking macro-action has successfully completed.
-     * <p>
-     * For continuous sensory observation profiles, this tracking baseline remains active
-     * indefinitely across execution cycles and defaults to returning {@code false}.
-     * </p>
-     *
-     * @return {@code false} as continuous tracking behaviour does not implicitly trigger an end state
-     */
-    @Override
-    public boolean completed() {
-        return false;
+    public LookAtTargetState(int minNumberOfSamples) {
+        this.minNumberOfSamples = minNumberOfSamples;
     }
 
     /**
@@ -98,53 +82,65 @@ public class LookAtTargetState extends AbstractCommitmentState implements EnvFSM
     }
 
     /**
-     * Initialises the state by setting the target co-ordinates, alignment profile, and tracking timeline.
+     * Initialises the gaze tracking sequence focusing on a concrete spatial target.
      * <p>
-     * This method prepares the state parameters for ongoing execution ticks, registering the
-     * objective co-ordinates and configuring the spatial orientation settings.
+     * This method configures the sensor alignment path, determining whether to track
+     * the objective by positioning the sensor head in a front-facing or rear-facing
+     * tracking profile relative to the target co-ordinates.
      * </p>
      *
-     * @param context     the {@link EnvFSMContext} tracking the shared operational data
-     * @param target      the {@link Point2D} co-ordinate of the target, must not be null
-     * @param frontFacing {@code true} if front-facing tracking is required; {@code false} for rear-facing
-     * @throws NullPointerException if the provided target is null
+     * @param context     the context reference containing the ongoing execution environment
+     * @param target      the target co-ordinates to lock the sensor gaze onto
+     * @param frontFacing {@code true} to track via the front-facing sensor profile; {@code false} for rear-facing
      */
     public void init(EnvFSMContext context, Point2D target, boolean frontFacing) {
         super.init(context);
-        this.target = requireNonNull(target);
-        this.frontFacing = frontFacing;
+        this.targetStatus = frontFacing
+                ? HeadStatus.trackFrontFace(target)
+                : HeadStatus.trackRearFace(target);
     }
 
     /**
-     * Executes the internal tracking logic for the current tick, generating a head-orienting command profile.
+     * Executes the tracking logic for the current execution tick, monitoring alignment with the target.
      * <p>
-     * This method computes the absolute direction to the target based on the current head location.
-     * It reverses the direction if rear-looking is active and issues a halt command if the target
-     * is too near or falls outside the head's field of view (FOV).
+     * This method computes the relative angular direction from the sensor head's current location
+     * to the spatial target point. It accounts for front-facing or rear-facing profiles, checks
+     * if the sensor head's physical alignment is close to the calculated target direction, and
+     * accumulates incoming LiDAR samples. Once the sample count matches or exceeds the required
+     * threshold, the state marks itself as completed.
      * </p>
      *
-     * @param context the {@link EnvFSMContext} tracking the shared operational data
-     * @return the {@link RobotCommands} enforcing the calculated head target angle orientation
-     * @throws NullPointerException if the internal target or provided context is null
+     * @param context the environmental context tracking shared operational data
+     * @return the {@link HeadStatus} specifying the active target parameters and tracking profile
      */
     @Override
-    public RobotCommands tick(EnvFSMContext context) {
+    public HeadStatus tick(EnvFSMContext context) {
+        if (completed()) {
+            return targetStatus;
+        }
+        // Compute target direction
         RobotStatus robotStatus = context.worldModel().robotStatus();
-        Point2D headLocation = robotStatus.headLocation();
-        if (headLocation.distance(target) <= minTargetDistance) {
-            // Target too near
-            return RobotCommands.halt();
+        Point2D robotLocation = robotStatus.location();
+        Angle robotDir = robotStatus.direction();
+        Point2D headLocation = robotStatus.robotSpec().headLocation(robotLocation, robotDir);
+        Angle targetDir = Angle.direction(headLocation, targetStatus.target());
+        Angle targetRelDir = targetDir.sub(robotDir);
+        Angle targetHeadDirection = FRONT_TRACK.equals(targetStatus.status())
+                ? targetRelDir
+                : targetRelDir.opposite();
+        Angle sensorDir = robotStatus.headDirection();
+        long lidarTime = robotStatus.lidarMessage().time();
+        // Check if head is directed to targetDirection and the lidar message has arrived
+        if (sensorDir.isCloseTo(targetHeadDirection) && lidarTime > prevLidarTime) {
+            // head directed to target direction and lidar has arrived -> acquire valid measure
+            prevLidarTime = lidarTime;
+            numberOfSamples++;
         }
-        Complex robotDir = robotStatus.direction();
-        Complex headTargetDir = Complex.direction(headLocation, target).sub(robotDir);
-        if (!frontFacing) {
-            // Revert head direction if rear head required
-            headTargetDir = headTargetDir.opposite();
+        // Check for measured completion
+        if (numberOfSamples >= minNumberOfSamples) {
+            // Scan completed
+            return complete(context, targetStatus);
         }
-        if (!headTargetDir.isClose0(robotStatus.robotSpec().headFOV().toRad() / 2)) {
-            // target not in head fov
-            return RobotCommands.halt();
-        }
-        return RobotCommands.halt(headTargetDir.toIntDeg());
+        return targetStatus;
     }
 }

@@ -32,8 +32,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.Angle;
 import org.mmarini.wheelly.apis.WorldModelBuilder;
 import org.mmarini.wheelly.envs.BasicEnvState;
 
@@ -41,6 +40,8 @@ import java.awt.geom.Point2D;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+//import org.mmarini.wheelly.apis.RobotCommands;
 
 class MoveToLabelTest {
 
@@ -85,12 +86,12 @@ class MoveToLabelTest {
     void testReward(double robotX, double robotY, int robotDeg, double markerDistance, int markerDeg, double moveDistance, int moveToTargetDeg, double matchReward) {
         // Given two states
         Point2D.Double robotLocation0 = new Point2D.Double(robotX, robotY);
-        Point2D marker = Complex.fromDeg(markerDeg).at(robotLocation0, markerDistance);
+        Point2D marker = Angle.fromDeg(markerDeg).at(robotLocation0, markerDistance);
         BasicEnvState s0 = createState(robotLocation0, robotDeg, marker);
-        Point2D robotLocation1 = Complex.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
+        Point2D robotLocation1 = Angle.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
         BasicEnvState s1 = createState(robotLocation1, robotDeg, marker);
 
-        double reward = MoveToLabel.moveToLabel(matchReward).applyAsDouble(s0, RobotCommands.halt(), s1);
+        double reward = MoveToLabel.moveToLabel(matchReward).reward(s0, null, s1);
 
         assertEquals(matchReward, reward);
     }
@@ -100,12 +101,12 @@ class MoveToLabelTest {
     void testReward0(double robotX, double robotY, int robotDeg, double markerDistance, int markerDeg, double moveDistance, int moveToTargetDeg) {
         // Given two states
         Point2D.Double robotLocation0 = new Point2D.Double(robotX, robotY);
-        Point2D marker = Complex.fromDeg(markerDeg).at(robotLocation0, markerDistance);
+        Point2D marker = Angle.fromDeg(markerDeg).at(robotLocation0, markerDistance);
         BasicEnvState s0 = createState(robotLocation0, robotDeg, marker);
-        Point2D robotLocation1 = Complex.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
+        Point2D robotLocation1 = Angle.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
         BasicEnvState s1 = createState(robotLocation1, robotDeg, marker);
 
-        double reward = MoveToLabel.moveToLabel(1).applyAsDouble(s0, RobotCommands.halt(), s1);
+        double reward = MoveToLabel.moveToLabel(1).reward(s0, null, s1);
 
         assertEquals(0, reward);
     }

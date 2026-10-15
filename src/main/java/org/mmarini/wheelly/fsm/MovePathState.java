@@ -30,13 +30,14 @@ package org.mmarini.wheelly.fsm;
 
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.Angle;
+import org.mmarini.wheelly.apis.MotionStatus;
+import org.mmarini.wheelly.apis.RobotStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.List;
-
 
 /**
  * Represents a concrete FSM state that handles the asynchronous navigation of the robot
@@ -48,8 +49,8 @@ import java.util.List;
  * and handle collisions during the movement lifecycle.
  * </p>
  */
-public class AsyncMovePathState extends AbstractContactEventState {
-    private static final Logger logger = LoggerFactory.getLogger(AsyncMovePathState.class);
+public class MovePathState extends AbstractContactEventState<MotionStatus> {
+    private static final Logger logger = LoggerFactory.getLogger(MovePathState.class);
     private final MoveState moveState;
     private volatile List<Point2D> path;
     private int currentTargetIdx;
@@ -57,13 +58,12 @@ public class AsyncMovePathState extends AbstractContactEventState {
     private Disposable disposable;
 
     /**
-     * Constructs an {@code AsyncMovePathState} with a specified commitment duration window.
-     *
-     * @param commitmentTime the length of time in milliseconds that the state must remain active
+     * Constructs a {@code MovePathState} and initialises its internal nested movement state,
+     * registering the respective collision and completion callbacks.
      */
-    public AsyncMovePathState(long commitmentTime) {
-        super(commitmentTime);
-        this.moveState = new MoveState(0)
+    public MovePathState() {
+        super();
+        this.moveState = new MoveState()
                 .onContact(this::onContact)
                 .onCompletion(this::onMoveCompletion);
     }
@@ -72,11 +72,11 @@ public class AsyncMovePathState extends AbstractContactEventState {
      * Initialises the state context, resetting the path tracking pointers, disposing of
      * any stale streams, and subscribing to the reactive path computation provider.
      *
-     * @param ctx  the current operational context of the finite state machine
-     * @param path the reactive {@link Single} stream emitting the computed list of co-ordinates
+     * @param ctx          the current operational context of the finite state machine
+     * @param pathSupplier the reactive {@link Single} stream emitting the computed list of co-ordinates
      * @throws NullPointerException if the provided context or path stream is null
      */
-    public void init(EnvFSMContext ctx, Single<List<Point2D>> path) {
+    public void init(EnvFSMContext ctx, Single<List<Point2D>> pathSupplier) {
         super.init(ctx);
         this.currentTargetIdx = 0;
         if (disposable != null) {
@@ -85,7 +85,8 @@ public class AsyncMovePathState extends AbstractContactEventState {
         this.path = null;
         this.error = null;
         this.currentTargetIdx = -1;
-        this.disposable = path.subscribe(this::onPath,
+        this.disposable = pathSupplier.subscribe(
+                this::onPath,
                 this::onError);
     }
 
@@ -98,18 +99,41 @@ public class AsyncMovePathState extends AbstractContactEventState {
      */
     @Override
     public void init(EnvFSMContext context) {
-        throw new IllegalStateException("Initialization without target position is not allowed");
+        throw new IllegalStateException("Initialization without path supplier is not allowed");
+    }
+
+    /**
+     * Configures and initialises the nested movement state towards a specific spatial target.
+     * <p>
+     * This method evaluates the relative direction of the target point compared to the
+     * robot's current heading. If the target falls within a front-facing threshold of 91 degrees,
+     * a forward motion profile is selected; otherwise, a backward movement profile is applied.
+     * </p>
+     *
+     * @param context the current operational context of the finite state machine
+     * @param target  the {@link Point2D} co-ordinates of the target waypoint
+     */
+    private void moveTo(EnvFSMContext context, Point2D target) {
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        Angle targetRelDir = Angle.direction(robotStatus.location(), target)
+                .sub(robotStatus.direction());
+        MotionStatus status = targetRelDir.isFront(91)
+                ? MotionStatus.forward(target)
+                : MotionStatus.backward(target);
+        moveState.init(context, status);
     }
 
     /**
      * Internal callback that intercepts a contact or collision event from the nested
-     * move state and propagates it to this state container.
+     * move state, marks this container state as completed, and propagates the contact event.
      *
-     * @param context the current finite state machine context
-     * @return the reactive {@link RobotCommands} triggered by the contact event
+     * @param context      the current finite state machine context
+     * @param defaultValue the default motion status assigned during the contact threshold
+     * @return the resulting {@link MotionStatus} triggered by the contact event
      */
-    private RobotCommands onContact(EnvFSMContext context) {
-        return triggerContact(context);
+    private MotionStatus onContact(EnvFSMContext context, MotionStatus defaultValue) {
+        defaultValue = complete(context, defaultValue);
+        return triggerContact(context, defaultValue);
     }
 
     /**
@@ -126,21 +150,21 @@ public class AsyncMovePathState extends AbstractContactEventState {
      * Internal callback triggered when the delegated {@link MoveState} successfully reaches
      * the current waypoint target.
      * <p>
-     * If the final point in the path sequence has been touched, the macro-action finishes
-     * and flags completion.
-     * Otherwise, it initialises the next waypoint and processes its tick.
+     * If the final point in the path sequence has been reached, the state completes.
+     * Otherwise, it initialises navigation to the next waypoint in the queue and processes its execution tick.
      * </p>
      *
-     * @param context the current finite state machine context
-     * @return the next set of execution {@link RobotCommands}
+     * @param context      the current finite state machine context
+     * @param defaultValue the motion status at the moment of waypoint completion
+     * @return the subsequent execution {@link MotionStatus}
      */
-    private RobotCommands onMoveCompletion(EnvFSMContext context) {
+    private MotionStatus onMoveCompletion(EnvFSMContext context, MotionStatus defaultValue) {
         if (currentTargetIdx == path.size()) {
             // final target reached
-            return complete(context);
+            return complete(context, defaultValue);
         } else {
             // go to next point
-            moveState.init(context, path.get(currentTargetIdx++));
+            moveTo(context, path.get(currentTargetIdx++));
             return moveState.tick(context);
         }
     }
@@ -158,33 +182,38 @@ public class AsyncMovePathState extends AbstractContactEventState {
     /**
      * Processes a single periodic execution step within this state, coordinating asynchronous
      * stream readiness, path sequencing tracking, and goal termination boundaries.
+     * <p>
+     * This method evaluates safety conditions (such as physical contact events or computation errors)
+     * to immediately halt the platform if triggered. While waiting for the path stream to emit data,
+     * it maintains a safe halt instruction. Once valid co-ordinates are available, it sequentially
+     * steps through each waypoint.
+     * </p>
      *
      * @param context the {@link EnvFSMContext} tracking the shared operational data
-     * @return the {@link RobotCommands} to be dispatched to the robot hardware during this cycle
+     * @return the {@link MotionStatus} to be dispatched to the robot platform during this cycle
      * @throws NullPointerException if the provided context is null
      */
-    @Override
-    public RobotCommands tick(EnvFSMContext context) {
+    public MotionStatus tick(EnvFSMContext context) {
         if (contacted()) {
-            return triggerContact(context);
+            return triggerContact(context, MotionStatus.halt());
         }
         if (completed()) {
-            return complete(context);
+            return complete(context, MotionStatus.halt());
         }
         if (error != null) {
-            return complete(context);
+            return complete(context, MotionStatus.halt());
         }
         List<Point2D> path = this.path;
         if (path == null) {
             // Waiting for path
-            return RobotCommands.halt();
+            return MotionStatus.halt();
         } else if (path.isEmpty()) {
-            return complete(context);
+            return complete(context, MotionStatus.halt());
         } else if (currentTargetIdx >= 0) {
             return moveState.tick(context);
         } else {
             currentTargetIdx = 0;
-            moveState.init(context, path.getFirst());
+            moveTo(context, path.getFirst());
             return moveState.tick(context);
         }
     }

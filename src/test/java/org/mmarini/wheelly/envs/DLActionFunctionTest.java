@@ -36,7 +36,10 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.rl.envs.*;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.apis.Angle;
+import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.apis.WorldModelBuilder;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -53,6 +56,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
+import static org.mmarini.wheelly.apis.HeadStatus.HeadStatusId.FIX_DIRECTION;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.*;
 import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_HEAD_FOV_DEG;
 import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.envs.DLActionFunction.HEAD_ACTION_ID;
@@ -212,7 +217,7 @@ class DLActionFunctionTest {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
         Point2D target = new Point2D.Double(targetX, targetY);
-        RobotCommands cmd = RobotCommands.backward(target);
+        RobotCommand cmd = RobotCommand.backward(target);
         // When ...
         int idx = function.moveIndex(cmd, model);
 
@@ -256,7 +261,7 @@ class DLActionFunctionTest {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
         Point2D target = new Point2D.Double(targetX, targetY);
-        RobotCommands cmd = RobotCommands.backward(target);
+        RobotCommand cmd = RobotCommand.backward(target);
         // When ...
         Map<String, INDArray> masks = function.actionMasks(
                 List.of(model, model),
@@ -272,22 +277,19 @@ class DLActionFunctionTest {
         expected.putScalar(1, expectedIndex, 1);
         assertThat(mask, matrixCloseTo(expected, 1e-3));
 
-        /*
         mask = masks.get(HEAD_ACTION_ID);
         expected = Nd4j.zeros(2, DEFAULT_NUM_HEAD_ROTATIONS);
-        expected.putScalar(0, expectedIndex, 1);
-        expected.putScalar(1, expectedIndex, 1);
+        expected.putScalar(0, 6, 1);
+        expected.putScalar(1, 6, 1);
         assertThat(mask, matrixCloseTo(expected, 1e-3));
-
-         */
     }
 
     @ParameterizedTest(name = "[{index}], Robot @({0},{1}) R{2}, headCmd={3}")
     @MethodSource("dataHeadAngle")
     void testCommandHalt(double robotX, double robotY, int robotDeg, int headCommand) {
         createWorldModel(robotX, robotY, robotDeg);
-        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
-        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        Angle relHeadAngle = Angle.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Angle absHeadAngle = model.gridMap().direction().add(relHeadAngle);
         int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
         expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
         Map<String, Signal> signals = Map.of(
@@ -296,26 +298,28 @@ class DLActionFunctionTest {
         );
 
         // When decode command
-        List<RobotCommands> cmd = function.commands(signals, model, model);
+        List<RobotCommand> cmd = function.commands(signals, model, model);
 
         // Then ...
         assertNotNull(cmd);
         assertThat(cmd, hasSize(2));
-        assertTrue(cmd.getFirst().isHalt());
-        assertTrue(cmd.getLast().isHalt());
-        assertEquals(expectedHead, cmd.getFirst().scanDirection());
-        assertEquals(expectedHead, cmd.getLast().scanDirection());
+        assertEquals(HALT, cmd.getFirst().motionStatus().status());
+        assertEquals(HALT, cmd.getLast().motionStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getLast().headStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getFirst().headStatus().status());
+        assertThat(cmd.getFirst().headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.getLast().headStatus().direction(), angleCloseTo(expectedHead));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
     @MethodSource("dataDecodeCommandRotation")
     void testCommandRotation(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
         createWorldModel(robotX, robotY, robotDeg);
-        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
-        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        Angle relHeadAngle = Angle.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Angle absHeadAngle = model.gridMap().direction().add(relHeadAngle);
         int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
         expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
-        int expectedDir = Complex.fromDeg((double) ((moveCommand - 1) * 360) / DEFAULT_NUM_ROTATIONS)
+        int expectedDir = Angle.fromDeg((double) ((moveCommand - 1) * 360) / DEFAULT_NUM_ROTATIONS)
                 .add(model.gridMap().direction())
                 .toIntDeg();
         Map<String, Signal> signals = Map.of(
@@ -324,25 +328,27 @@ class DLActionFunctionTest {
         );
 
         // When decode command
-        List<RobotCommands> cmd = function.commands(signals, model, model);
+        List<RobotCommand> cmd = function.commands(signals, model, model);
 
         // Then ...
         assertNotNull(cmd);
         assertThat(cmd, hasSize(2));
-        assertTrue(cmd.getFirst().isRotate());
-        assertTrue(cmd.getLast().isRotate());
-        assertEquals(expectedHead, cmd.getFirst().scanDirection());
-        assertEquals(expectedHead, cmd.getLast().scanDirection());
-        assertEquals(expectedDir, cmd.getFirst().rotationDirection());
-        assertEquals(expectedDir, cmd.getLast().rotationDirection());
+        assertEquals(ROTATE, cmd.getFirst().motionStatus().status());
+        assertEquals(ROTATE, cmd.getLast().motionStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getFirst().headStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getLast().headStatus().status());
+        assertThat(cmd.getFirst().headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.getLast().headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.getFirst().motionStatus().targetDir(), angleCloseTo(expectedDir));
+        assertThat(cmd.getLast().motionStatus().targetDir(), angleCloseTo(expectedDir));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
     @MethodSource("dataDecodeCommandBackward")
     void testCommandsBackward(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
         createWorldModel(robotX, robotY, robotDeg);
-        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
-        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        Angle relHeadAngle = Angle.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Angle absHeadAngle = model.gridMap().direction().add(relHeadAngle);
         int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
         expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
         Point2D target = function.target(moveCommand, model.gridMap());
@@ -352,25 +358,27 @@ class DLActionFunctionTest {
         );
 
         // When decode command
-        List<RobotCommands> cmd = function.commands(signals, model, model);
+        List<RobotCommand> cmd = function.commands(signals, model, model);
 
         // Then ...
         assertNotNull(cmd);
         assertThat(cmd, hasSize(2));
-        assertEquals(RobotStatusId.BACKWARD, cmd.getFirst().status());
-        assertEquals(RobotStatusId.BACKWARD, cmd.getLast().status());
-        assertEquals(expectedHead, cmd.getFirst().scanDirection());
-        assertEquals(expectedHead, cmd.getLast().scanDirection());
-        assertThat(cmd.getFirst().target(), pointCloseTo(target, MM));
-        assertThat(cmd.getLast().target(), pointCloseTo(target, MM));
+        assertEquals(BACKWARD, cmd.getFirst().motionStatus().status());
+        assertEquals(BACKWARD, cmd.getLast().motionStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getFirst().headStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getLast().headStatus().status());
+        assertThat(cmd.getFirst().headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.getLast().headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.getFirst().motionStatus().target(), pointCloseTo(target, MM));
+        assertThat(cmd.getLast().motionStatus().target(), pointCloseTo(target, MM));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
     @MethodSource("dataDecodeCommandForward")
     void testCommandsForward(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
         createWorldModel(robotX, robotY, robotDeg);
-        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
-        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        Angle relHeadAngle = Angle.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Angle absHeadAngle = model.gridMap().direction().add(relHeadAngle);
         int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
         expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
         Point2D target = function.target(moveCommand, model.gridMap());
@@ -380,17 +388,19 @@ class DLActionFunctionTest {
         );
 
         // When decode command
-        List<RobotCommands> cmd = function.commands(signals, model, model);
+        List<RobotCommand> cmd = function.commands(signals, model, model);
 
         // Then ...
         assertNotNull(cmd);
         assertThat(cmd, hasSize(2));
-        assertEquals(RobotStatusId.FORWARD, cmd.getFirst().status());
-        assertEquals(RobotStatusId.FORWARD, cmd.getLast().status());
-        assertEquals(expectedHead, cmd.getFirst().scanDirection());
-        assertEquals(expectedHead, cmd.getLast().scanDirection());
-        assertThat(cmd.getFirst().target(), pointCloseTo(target, MM));
-        assertThat(cmd.getLast().target(), pointCloseTo(target, MM));
+        assertEquals(FORWARD, cmd.getFirst().motionStatus().status());
+        assertEquals(FORWARD, cmd.getLast().motionStatus().status());
+        assertThat(cmd.getFirst().motionStatus().target(), pointCloseTo(target, MM));
+        assertThat(cmd.getLast().motionStatus().target(), pointCloseTo(target, MM));
+        assertEquals(FIX_DIRECTION, cmd.getFirst().headStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.getLast().headStatus().status());
+        assertThat(cmd.getFirst().headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.getLast().headStatus().direction(), angleCloseTo(expectedHead));
     }
 
     @ParameterizedTest
@@ -445,78 +455,81 @@ class DLActionFunctionTest {
     @MethodSource("dataDecodeCommandBackward")
     void testDecodeCommandBackward(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
         createWorldModel(robotX, robotY, robotDeg);
-        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
-        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        Angle relHeadAngle = Angle.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Angle absHeadAngle = model.gridMap().direction().add(relHeadAngle);
         int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
         expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
         Point2D target = function.target(moveCommand, model.gridMap());
 
         // When decode command
-        RobotCommands cmd = function.decodeCommand(headCommand, moveCommand, model);
+        RobotCommand cmd = function.decodeCommand(headCommand, moveCommand, model);
 
         // Then ...
         assertNotNull(cmd);
-        assertEquals(RobotStatusId.BACKWARD, cmd.status());
-        assertEquals(expectedHead, cmd.scanDirection());
-        assertThat(cmd.target(), pointCloseTo(target, MM));
+        assertEquals(BACKWARD, cmd.motionStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.headStatus().status());
+        assertThat(cmd.motionStatus().target(), pointCloseTo(target, MM));
+        assertThat(cmd.headStatus().direction(), angleCloseTo(expectedHead));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
     @MethodSource("dataDecodeCommandForward")
     void testDecodeCommandForward(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
         createWorldModel(robotX, robotY, robotDeg);
-        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
-        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        Angle relHeadAngle = Angle.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Angle absHeadAngle = model.gridMap().direction().add(relHeadAngle);
         int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
         expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
         Point2D target = function.target(moveCommand, model.gridMap());
 
         // When decode command
-        RobotCommands cmd = function.decodeCommand(headCommand, moveCommand, model);
+        RobotCommand cmd = function.decodeCommand(headCommand, moveCommand, model);
 
         // Then ...
         assertNotNull(cmd);
-        assertEquals(RobotStatusId.FORWARD, cmd.status());
-        assertEquals(expectedHead, cmd.scanDirection());
-        assertThat(cmd.target(), pointCloseTo(target, MM));
+        assertEquals(FORWARD, cmd.motionStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.headStatus().status());
+        assertThat(cmd.headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.motionStatus().target(), pointCloseTo(target, MM));
     }
 
     @ParameterizedTest(name = "[{index}], Robot @({0},{1}) R{2}, command={3}")
     @MethodSource("dataHeadAngle")
     void testDecodeCommandHalt(double robotX, double robotY, int robotDeg, int headCommand) {
         createWorldModel(robotX, robotY, robotDeg);
-        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
-        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        Angle relHeadAngle = Angle.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Angle absHeadAngle = model.gridMap().direction().add(relHeadAngle);
         int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
         expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
         // When decode command
-        RobotCommands cmd = function.decodeCommand(headCommand, 0, model);
+        RobotCommand cmd = function.decodeCommand(headCommand, 0, model);
         // Then ...
         assertNotNull(cmd);
-        assertTrue(cmd.isHalt());
-        assertEquals(expectedHead, cmd.scanDirection());
+        assertEquals(HALT, cmd.motionStatus().status());
+        assertThat(cmd.headStatus().direction(), angleCloseTo(expectedHead));
     }
 
     @ParameterizedTest(name = "[{index}] Robot @({0},{1}) R{2} headCmd={3} moveCmd={4}")
     @MethodSource("dataDecodeCommandRotation")
     void testDecodeCommandRotation(double robotX, double robotY, int robotDeg, int headCommand, int moveCommand) {
         createWorldModel(robotX, robotY, robotDeg);
-        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
-        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        Angle relHeadAngle = Angle.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Angle absHeadAngle = model.gridMap().direction().add(relHeadAngle);
         int expectedHead = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
         expectedHead = clamp(expectedHead, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
-        int expectedDir = Complex.fromDeg((double) ((moveCommand - 1) * 360) / DEFAULT_NUM_ROTATIONS)
+        int expectedDir = Angle.fromDeg((double) ((moveCommand - 1) * 360) / DEFAULT_NUM_ROTATIONS)
                 .add(model.gridMap().direction())
                 .toIntDeg();
 
         // When decode command
-        RobotCommands cmd = function.decodeCommand(headCommand, moveCommand, model);
+        RobotCommand cmd = function.decodeCommand(headCommand, moveCommand, model);
 
         // Then ...
         assertNotNull(cmd);
-        assertTrue(cmd.isRotate());
-        assertEquals(expectedHead, cmd.scanDirection());
-        assertEquals(expectedDir, cmd.rotationDirection());
+        assertEquals(ROTATE, cmd.motionStatus().status());
+        assertEquals(FIX_DIRECTION, cmd.headStatus().status());
+        assertThat(cmd.headStatus().direction(), angleCloseTo(expectedHead));
+        assertThat(cmd.motionStatus().targetDir(), angleCloseTo(expectedDir));
     }
 
     @Test
@@ -650,7 +663,7 @@ class DLActionFunctionTest {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
         Point2D target = new Point2D.Double(targetX, targetY);
-        RobotCommands cmd = RobotCommands.forward(target);
+        RobotCommand cmd = RobotCommand.forward(target);
         // When ...
         int idx = function.moveIndex(cmd, model);
 
@@ -693,7 +706,8 @@ class DLActionFunctionTest {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
         Point2D target = new Point2D.Double(targetX, targetY);
-        RobotCommands cmd = RobotCommands.forward(target);
+
+        RobotCommand cmd = RobotCommand.forward(target);
         // When ...
         Map<String, INDArray> masks = function.actionMasks(
                 List.of(model, model),
@@ -708,25 +722,6 @@ class DLActionFunctionTest {
         expected.putScalar(0, expectedIndex, 1);
         expected.putScalar(1, expectedIndex, 1);
         assertThat(mask, matrixCloseTo(expected, 1e-3));
-    }
-
-    @ParameterizedTest
-    @MethodSource({
-            "dataNW",
-            "dataNE",
-            "dataE",
-            "dataS",
-            "dataW",
-    })
-    void testHaltIndex(double robotX, double robotY, int robotDeg) {
-        // Given the world model
-        createWorldModel(robotX, robotY, robotDeg);
-        RobotCommands cmd = RobotCommands.halt();
-        // When ...
-        int idx = function.moveIndex(cmd, model);
-
-        // Then ...
-        assertEquals(0, idx);
     }
 
     @ParameterizedTest(name = "[{index}] Robot R{0}, H {1} DEG")
@@ -774,7 +769,7 @@ class DLActionFunctionTest {
     void testHaltActionMasks(int robotDeg, int headDeg, int expectedCommand) {
         // Given the world model
         createWorldModel(0, 0, robotDeg);
-        RobotCommands cmd = RobotCommands.halt(headDeg);
+        RobotCommand cmd = RobotCommand.halt(Angle.fromDeg(headDeg));
 
         // When ...
         Map<String, INDArray> masks = function.actionMasks(
@@ -843,7 +838,7 @@ class DLActionFunctionTest {
     void testHaltActions(int robotDeg, int headDeg, int expectedCommand) {
         // Given the world model
         createWorldModel(0, 0, robotDeg);
-        RobotCommands cmd = RobotCommands.halt(headDeg);
+        RobotCommand cmd = RobotCommand.halt(Angle.fromDeg(headDeg));
 
         // When ...
         Map<String, Signal> actions = function.actions(cmd, model);
@@ -863,6 +858,25 @@ class DLActionFunctionTest {
         assertThat(value.toINDArray(), matrixCloseTo(new long[]{1, 1}, EPSILON, expectedCommand));
     }
 
+    @ParameterizedTest
+    @MethodSource({
+            "dataNW",
+            "dataNE",
+            "dataE",
+            "dataS",
+            "dataW",
+    })
+    void testHaltIndex(double robotX, double robotY, int robotDeg) {
+        // Given the world model
+        createWorldModel(robotX, robotY, robotDeg);
+        RobotCommand cmd = RobotCommand.halt();
+        // When ...
+        int idx = function.moveIndex(cmd, model);
+
+        // Then ...
+        assertEquals(0, idx);
+    }
+
     @ParameterizedTest(name = "[{index}], Robot @({0},{1}) R{2}, command={3}")
     @CsvSource({
             "0,0, 0, 0",
@@ -876,11 +890,11 @@ class DLActionFunctionTest {
     void testHeadAngle(double robotX, double robotY, int robotDeg, int headCommand) {
         createWorldModel(robotX, robotY, robotDeg);
         // Then ...
-        Complex relHeadAngle = Complex.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
-        Complex absHeadAngle = model.gridMap().direction().add(relHeadAngle);
+        Angle relHeadAngle = Angle.fromDeg((double) (headCommand * 180) / (DEFAULT_NUM_HEAD_ROTATIONS - 1) - 90);
+        Angle absHeadAngle = model.gridMap().direction().add(relHeadAngle);
         int expected = absHeadAngle.sub(model.robotStatus().direction()).toIntDeg();
         expected = clamp(expected, -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
-        assertEquals(expected, function.headAngle(headCommand, model));
+        assertThat(function.headAngle(headCommand, model), angleCloseTo(expected));
     }
 
     @ParameterizedTest
@@ -932,7 +946,7 @@ class DLActionFunctionTest {
     })
     void testHeadIndex(int headDeg, int expectedCommand) {
         // When ...
-        int cmd = function.headIndex(Complex.fromDeg(headDeg));
+        int cmd = function.headIndex(Angle.fromDeg(headDeg));
 
         // Then ...
         assertEquals(expectedCommand, cmd);
@@ -984,25 +998,26 @@ class DLActionFunctionTest {
         createWorldModel(0, 0, robotDeg);
 
         // When ...
-        int cmd = function.headIndex(RobotCommands.halt(headDeg), model);
+        Angle headAngle = Angle.fromDeg(headDeg);
+        int cmd = function.headIndex(RobotCommand.halt(headAngle), model);
 
         // Then ...
         assertEquals(expectedCommand, cmd);
 
         // When ...
-        cmd = function.headIndex(RobotCommands.rotate(headDeg, 0), model);
+        cmd = function.headIndex(RobotCommand.rotate(Angle.DEG0, headAngle), model);
 
         // Then ...
         assertEquals(expectedCommand, cmd);
 
         // When ...
-        cmd = function.headIndex(RobotCommands.forward(headDeg, new Point2D.Double()), model);
+        cmd = function.headIndex(RobotCommand.forward(new Point2D.Double(), headAngle), model);
 
         // Then ...
         assertEquals(expectedCommand, cmd);
 
         // When ...
-        cmd = function.headIndex(RobotCommands.backward(headDeg, new Point2D.Double()), model);
+        cmd = function.headIndex(RobotCommand.backward(new Point2D.Double(), headAngle), model);
 
         // Then ...
         assertEquals(expectedCommand, cmd);
@@ -1187,7 +1202,7 @@ class DLActionFunctionTest {
     void testRotateIndex(double robotX, double robotY, int robotDeg, int rotDeg, int expectedIndex) {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
-        RobotCommands cmd = RobotCommands.rotate(rotDeg);
+        RobotCommand cmd = RobotCommand.rotate(Angle.fromDeg(rotDeg));
         // When ...
         int idx = function.moveIndex(cmd, model);
 
@@ -1238,13 +1253,11 @@ class DLActionFunctionTest {
     void testRotateMask(double robotX, double robotY, int robotDeg, int rotDeg, int expectedMoveIndex) {
         // Given the world model
         createWorldModel(robotX, robotY, robotDeg);
-        RobotCommands cmd = RobotCommands.rotate(rotDeg);
+        RobotCommand cmd = RobotCommand.rotate(Angle.fromDeg(rotDeg));
         // When ...
         Map<String, INDArray> masks = function.actionMasks(
                 List.of(model, model),
                 List.of(cmd, cmd));
-
-        // Then ...
 
         // Then ...
         assertNotNull(masks);
@@ -1255,14 +1268,14 @@ class DLActionFunctionTest {
         expected.putScalar(0, expectedMoveIndex, 1);
         expected.putScalar(1, expectedMoveIndex, 1);
         assertThat(mask, matrixCloseTo(expected, 1e-3));
-        /*
+/*
         mask = masks.get(HEAD_ACTION_ID);
         expected = Nd4j.zeros(2, DEFAULT_NUM_HEAD_ROTATIONS);
-        expected.putScalar(0, 9, 1);
-        expected.putScalar(1, 9, 1);
+        expected.putScalar(0, 6, 1);
+        expected.putScalar(1, 6, 1);
         assertThat(mask, matrixCloseTo(expected, 1e-3));
 
-         */
+ */
     }
 
     @ParameterizedTest
@@ -1292,7 +1305,7 @@ class DLActionFunctionTest {
     })
     void testRotationIndex(int dirDeg, int expectedCommand) {
         // When ...
-        int cmd = function.rotationIndex(Complex.fromDeg(dirDeg));
+        int cmd = function.rotationIndex(Angle.fromDeg(dirDeg));
 
         // Then ...
         assertEquals(expectedCommand, cmd);

@@ -31,7 +31,7 @@ package org.mmarini;
 import org.hamcrest.CustomMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.Angle;
 
 import java.awt.geom.Point2D;
 import java.util.Optional;
@@ -39,34 +39,35 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.Matchers.equalTo;
+import static org.mmarini.wheelly.apis.Utils.MM;
 
 public interface Matchers {
 
-    static Matcher<Complex> angleCloseTo(Complex expected, double range) {
-        return angleCloseTo(expected, Complex.fromDeg(range));
+    static Matcher<Angle> angleCloseTo(Angle expected, double range) {
+        return angleCloseTo(expected, Angle.fromDeg(range));
     }
 
-    static Matcher<Complex> angleCloseTo(Complex expected) {
-        return angleCloseTo(expected, Complex.fromDeg(1));
+    static Matcher<Angle> angleCloseTo(Angle expected) {
+        return angleCloseTo(expected, Angle.fromDeg(1));
     }
 
-    static Matcher<Complex> angleCloseTo(int expected) {
-        return angleCloseTo(Complex.fromDeg(expected));
+    static Matcher<Angle> angleCloseTo(int expected) {
+        return angleCloseTo(Angle.fromDeg(expected));
     }
 
-    static Matcher<Complex> angleCloseTo(int expected, int range) {
-        return angleCloseTo(Complex.fromDeg(expected), Complex.fromDeg(range));
+    static Matcher<Angle> angleCloseTo(int expected, int range) {
+        return angleCloseTo(Angle.fromDeg(expected), Angle.fromDeg(range));
     }
 
-    static Matcher<Complex> angleCloseTo(Complex expected, Complex range) {
+    static Matcher<Angle> angleCloseTo(Angle expected, Angle range) {
         requireNonNull(expected);
         return new CustomMatcher<>(format("Angle close to %d DEG within +- %d DEG",
                 expected.toIntDeg(),
                 range.toIntDeg())) {
             @Override
             public void describeMismatch(Object item, Description description) {
-                if (item instanceof Complex complex) {
-                    Complex da = complex.sub(expected).abs();
+                if (item instanceof Angle complex) {
+                    Angle da = complex.sub(expected).abs();
                     description.appendText("angle ")
                             .appendValue(complex.toIntDeg())
                             .appendText(" DEG differs from ")
@@ -83,7 +84,7 @@ public interface Matchers {
 
             @Override
             public boolean matches(Object o) {
-                if (!(o instanceof Complex complex)) return false;
+                if (!(o instanceof Angle complex)) return false;
                 return complex.isCloseTo(expected, range);
             }
         };
@@ -121,6 +122,10 @@ public interface Matchers {
 
     static Matcher<Point2D> pointCloseTo(double x, double y, double epsilon) {
         return pointCloseTo(new Point2D.Double(x, y), epsilon);
+    }
+
+    static Matcher<Point2D> pointCloseTo(Point2D expected) {
+        return pointCloseTo(expected, MM);
     }
 
     static Matcher<Point2D> pointCloseTo(Point2D expected, double epsilon) {

@@ -35,36 +35,48 @@ import org.mmarini.wheelly.apis.WorldModellerConnector;
 import java.util.Map;
 
 /**
- *
+ * Defines the contract for cross-linking the core reinforcement learning ecosystem components.
+ * <p>
+ * This interface bridges the high-level reinforcement learning agent, the environment's internal
+ * execution states, and the continuous spatial mapping and telemetry channels managed by the
+ * underlying world modeller subsystem.
+ * </p>
  */
 public interface EnvironmentConnector {
+
     /**
-     * Connects the word modeller connector
+     * Binds the active world modeller data provider channel to this environment container.
      *
-     * @param connector the connector;
+     * @param connector the {@link WorldModellerConnector} routing continuous radar map updates and sensor streams
      */
     void connect(WorldModellerConnector connector);
 
     /**
-     * Connects the RL agent
+     * Binds the core reinforcement learning decision-making agent to this environment lifecycle loop.
      *
-     * @param agent the RL agent
+     * @param agent the {@link AgentConnector} instance representing the processing learning policy
      */
     void connect(AgentConnector agent);
 
     /**
-     * Returns the reward for the initial state, the chosen action and the final state
+     * Computes the performance scalar reward yielded by executing a specific behavioural action.
+     * <p>
+     * This evaluation samples the transformation transition from an initial state profile to the subsequent
+     * post-execution state profile to extract training feedback vectors.
+     * </p>
      *
-     * @param state0  the initial state
-     * @param actions the chosen actions
-     * @param state1  the final state
+     * @param state0  the initial pre-execution {@link EnvState} profile snapshot
+     * @param actions the chosen {@link EnvAction} dispatched to the platform subsystems
+     * @param state1  the resulting post-execution {@link EnvState} profile snapshot
+     * @return the computed performance scalar reward value utilised for objective function adjustments
      */
     double reward(EnvState state0, EnvAction actions, EnvState state1);
 
     /**
-     * Returns the state for the given world model
+     * Transforms a generic environmental state wrapper into an ND4J-compatible multi-input feature signal map.
      *
-     * @param model the world model
+     * @param model the active {@link EnvState} instance wrapping the current spatial and kinematic telemetry
+     * @return an unmodifiable {@link Map} pairing signal identity keys to their extracted raw {@link Signal} vectors
      */
     Map<String, Signal> state(EnvState model);
 }

@@ -43,7 +43,7 @@ import static java.util.Objects.requireNonNull;
  * @param center    the map center in world coordinate
  * @param direction the map direction in world compass
  */
-public record GridMap(GridTopology topology, MapCell[] cells, Point2D center, Complex direction) {
+public record GridMap(GridTopology topology, MapCell[] cells, Point2D center, Angle direction) {
     /**
      * Returns the grid map for the given radar map, center and direction
      *
@@ -52,13 +52,13 @@ public record GridMap(GridTopology topology, MapCell[] cells, Point2D center, Co
      * @param direction the direction of grid
      * @param mapSize   the number of horizontal and vertical cells of map
      */
-    public static GridMap create(RadarMap map, Point2D center, Complex direction, int mapSize) {
+    public static GridMap create(RadarMap map, Point2D center, Angle direction, int mapSize) {
         GridTopology radarTopology = map.topology();
         Point2D mapCenter = radarTopology.outerSnap(center);
         GridTopology mapTopology = GridTopology.create(new Point2D.Float(), mapSize, mapSize, radarTopology.gridSize());
         int n = mapSize * mapSize;
         MapCell[] cells = new MapCell[n];
-        Complex mapDirection = gridDirection(direction);
+        Angle mapDirection = gridDirection(direction);
         AffineTransform trans = AffineTransform.getTranslateInstance(mapCenter.getX(), mapCenter.getY());
         trans.rotate(-mapDirection.toRad());
         for (int i = 0; i < n; i++) {
@@ -77,10 +77,10 @@ public record GridMap(GridTopology topology, MapCell[] cells, Point2D center, Co
      *
      * @param direction the direction
      */
-    public static Complex gridDirection(Complex direction) {
+    public static Angle gridDirection(Angle direction) {
         double dirRad = direction.toRad() + 2 * PI;
         int dirIdx = ((int) round(dirRad / PI * 2)) % 4;
-        return Complex.fromRad(dirIdx * PI / 2);
+        return Angle.fromRad(dirIdx * PI / 2);
     }
 
     /**
@@ -91,7 +91,7 @@ public record GridMap(GridTopology topology, MapCell[] cells, Point2D center, Co
      * @param center    the map center in world coordinate (m)
      * @param direction the map direction in world compass
      */
-    public GridMap(GridTopology topology, MapCell[] cells, Point2D center, Complex direction) {
+    public GridMap(GridTopology topology, MapCell[] cells, Point2D center, Angle direction) {
         this.topology = requireNonNull(topology);
         this.cells = requireNonNull(cells);
         this.center = requireNonNull(center);
@@ -125,7 +125,7 @@ public record GridMap(GridTopology topology, MapCell[] cells, Point2D center, Co
      *
      * @param direction the direction
      */
-    public GridMap setDirection(Complex direction) {
+    public GridMap setDirection(Angle direction) {
         return direction.equals(this.direction)
                 ? this
                 : new GridMap(topology, cells, center, direction);

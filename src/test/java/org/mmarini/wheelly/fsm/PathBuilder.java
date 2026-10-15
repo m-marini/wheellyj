@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.apis.Angle;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -37,14 +37,14 @@ import java.util.List;
 public class PathBuilder {
 
     public static PathBuilder builder(Point2D location, double robotDeg) {
-        return new PathBuilder(new ArrayList<>(), location, Complex.fromDeg(robotDeg));
+        return new PathBuilder(new ArrayList<>(), location, Angle.fromDeg(robotDeg));
     }
 
     private final List<Point2D> path;
     private Point2D location;
-    private Complex direction;
+    private Angle direction;
 
-    protected PathBuilder(List<Point2D> path, Point2D location, Complex direction) {
+    protected PathBuilder(List<Point2D> path, Point2D location, Angle direction) {
         this.path = path;
         this.location = location;
         this.direction = direction;
@@ -64,12 +64,12 @@ public class PathBuilder {
         return this;
     }
 
-    public PathBuilder turn(Complex deltaDeg) {
+    public PathBuilder turn(Angle deltaDeg) {
         direction = direction.add(deltaDeg);
         return this;
     }
 
     public PathBuilder turn(double deltaDeg) {
-        return turn(Complex.fromDeg(deltaDeg));
+        return turn(Angle.fromDeg(deltaDeg));
     }
 }

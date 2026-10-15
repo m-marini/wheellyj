@@ -259,7 +259,7 @@ class MapBuilderTest {
     @Test
     void testRandomLabels() {
         MapBuilder builder = MapBuilder.empty(7, GRID_SIZE)
-                .add(AreaExpression.rightHalfPlane(new Point2D.Double(), Complex.DEG90), null)
+                .add(AreaExpression.rightHalfPlane(new Point2D.Double(), Angle.DEG90), null)
                 .rand(new Random(SEED), "A", new Point2D.Double(), 0.4, 2);
         List<Obstacle> map = builder.build();
         assertThat(map, hasSize(greaterThan(2)));

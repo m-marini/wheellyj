@@ -34,8 +34,30 @@ import org.mmarini.wheelly.fsm.MoveActionId;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Represents an extended, immutable snapshot of the environment state enclosing the world model
+ * alongside the concurrent high-level finite state machine macro-actions.
+ * <p>
+ * This record aggregates the spatial telemetry of the robot platform with the active identifiers
+ * for locomotion and sensor head behaviors, providing a comprehensive context profile utilized
+ * for state feature vector extraction and behavioral modelling.
+ * </p>
+ *
+ * @param worldModel   the {@link WorldModel} tracking the robot telemetry and radar map data
+ * @param moveActionId the active {@link MoveActionId} tracking the concurrent high-level locomotion macro-action
+ * @param headActionId the active {@link HeadActionId} tracking the concurrent high-level sensor head macro-action
+ */
 public record MacroEnvState(WorldModel worldModel, MoveActionId moveActionId,
                             HeadActionId headActionId) implements EnvState {
+
+    /**
+     * Constructs a {@code MacroEnvState} validating that all parameters are non-null.
+     *
+     * @param worldModel   the {@link WorldModel} tracking the robot telemetry and radar map data
+     * @param moveActionId the active {@link MoveActionId} tracking the concurrent high-level locomotion macro-action
+     * @param headActionId the active {@link HeadActionId} tracking the concurrent high-level sensor head macro-action
+     * @throws NullPointerException if the {@code worldModel}, {@code moveActionId}, or {@code headActionId} is {@code null}
+     */
     public MacroEnvState {
         requireNonNull(worldModel);
         requireNonNull(moveActionId);

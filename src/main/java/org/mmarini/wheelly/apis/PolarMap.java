@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022-2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -48,7 +48,7 @@ import static java.util.Objects.requireNonNull;
  * @param center    the map center in world coordinate
  * @param direction the map direction in world compass
  */
-public record PolarMap(CircularSector[] sectors, Point2D center, Complex direction) {
+public record PolarMap(CircularSector[] sectors, Point2D center, Angle direction) {
     private static final Logger logger = LoggerFactory.getLogger(PolarMap.class);
 
     /**
@@ -57,7 +57,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
      * @param sectorNumbers number of cells
      */
     public static PolarMap create(int sectorNumbers) {
-        return new PolarMap(createUnknownSectors(sectorNumbers), new Point2D.Double(), Complex.DEG0);
+        return new PolarMap(createUnknownSectors(sectorNumbers), new Point2D.Double(), Angle.DEG0);
     }
 
     /**
@@ -79,7 +79,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
      * @param center    the map center in world coordinate
      * @param direction the map direction in world compass
      */
-    public PolarMap(CircularSector[] sectors, Point2D center, Complex direction) {
+    public PolarMap(CircularSector[] sectors, Point2D center, Angle direction) {
         this.sectors = requireNonNull(sectors);
         this.center = requireNonNull(center);
         this.direction = requireNonNull(direction);
@@ -90,7 +90,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
      *
      * @param direction the direction relative the polar map
      */
-    public CircularSector directionSector(Complex direction) {
+    public CircularSector directionSector(Angle direction) {
         return sectors[sectorIndex(direction)];
     }
 
@@ -121,22 +121,22 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
     public Point2D safeCentroid(double maxDistance) {
         List<Point2D> vertices = IntStream.range(0, sectors.length)
                 .mapToObj(i -> {
-                    Complex dir = sectorDirection(i).add(direction);
+                    Angle dir = sectorDirection(i).add(direction);
                     CircularSector sector = sector(i);
                     if (sector.known()) {
                         double distance = sector.distance(center);
                         if (distance == 0 || sector.empty()) {
                             // Handle empty sector
-                            double x = dir.x() * maxDistance + center.getX();
-                            double y = dir.y() * maxDistance + center.getY();
+                            double x = dir.sin() * maxDistance + center.getX();
+                            double y = dir.cos() * maxDistance + center.getY();
                             return new Point2D.Double(x, y);
                         } else {
                             return sector.location();
                         }
                     } else {
                         // Handle unknown sector
-                        double x = dir.x() * maxDistance + center.getX();
-                        double y = dir.y() * maxDistance + center.getY();
+                        double x = dir.sin() * maxDistance + center.getX();
+                        double y = dir.cos() * maxDistance + center.getY();
                         return new Point2D.Double(x, y);
                     }
                 })
@@ -169,8 +169,8 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
      *
      * @param i the sector index
      */
-    public Complex sectorDirection(int i) {
-        return Complex.fromRad(i * sectorAngle());
+    public Angle sectorDirection(int i) {
+        return Angle.fromRad(i * sectorAngle());
     }
 
     /**
@@ -178,7 +178,7 @@ public record PolarMap(CircularSector[] sectors, Point2D center, Complex directi
      *
      * @param direction the direction relative the polar map
      */
-    public int sectorIndex(Complex direction) {
+    public int sectorIndex(Angle direction) {
         int n = sectors.length;
         double rad = direction.toRad();
         double idx2 = rad / sectorAngle() + 0.5;

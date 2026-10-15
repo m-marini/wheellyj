@@ -39,9 +39,9 @@ import static java.lang.Math.PI;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.apis.Complex.*;
+import static org.mmarini.wheelly.apis.Angle.*;
 
-class ComplexTest {
+class AngleTest {
 
     @ParameterizedTest
     @CsvSource({
@@ -53,7 +53,7 @@ class ComplexTest {
             "-45,45",
     })
     void abs(double a, double expected) {
-        Complex complexA = fromDeg(a);
+        Angle complexA = fromDeg(a);
         assertThat(complexA.abs().toDeg(), closeTo(expected, 1e-3));
     }
 
@@ -73,20 +73,20 @@ class ComplexTest {
             "-100,-100, 160"
     })
     void add(double a, double b, double expected) {
-        Complex complexA = fromDeg(a);
-        Complex complexB = fromDeg(b);
-        Complex addAB = complexA.add(complexB);
+        Angle complexA = fromDeg(a);
+        Angle complexB = fromDeg(b);
+        Angle addAB = complexA.add(complexB);
         assertThat(addAB.toDeg(), closeTo(expected, 1e-3));
-        Complex addBa = complexB.add(complexA);
+        Angle addBa = complexB.add(complexA);
         assertThat(addBa.toDeg(), closeTo(expected, 1e-3));
     }
 
     @Test
     void constants() {
-        assertEquals(0, Complex.DEG0.toDeg());
+        assertEquals(0, Angle.DEG0.toDeg());
         assertEquals(90, DEG90.toDeg());
-        assertEquals(-180, Complex.DEG180.toDeg());
-        assertEquals(-90, Complex.DEG270.toDeg());
+        assertEquals(-180, Angle.DEG180.toDeg());
+        assertEquals(-90, Angle.DEG270.toDeg());
     }
 
     @ParameterizedTest
@@ -99,9 +99,9 @@ class ComplexTest {
             "120, 0.866, -0.5"
     })
     void fromDegTest(double deg, double x, double y) {
-        Complex complex = fromDeg(deg);
-        assertThat(complex.x(), closeTo(x, 1e-3));
-        assertThat(complex.y(), closeTo(y, 1e-3));
+        Angle complex = fromDeg(deg);
+        assertThat(complex.sin(), closeTo(x, 1e-3));
+        assertThat(complex.cos(), closeTo(y, 1e-3));
     }
 
     @ParameterizedTest
@@ -115,103 +115,56 @@ class ComplexTest {
             "3,4, 0.6,0.8",
     })
     void fromPoint(double x, double y, double ax, double ay) {
-        Complex complex = Complex.fromPoint(new Point2D.Double(x, y));
-        assertThat(complex.x(), closeTo(ax, 1e-3));
-        assertThat(complex.y(), closeTo(ay, 1e-3));
+        Angle complex = Angle.fromPoint(new Point2D.Double(x, y));
+        assertThat(complex.sin(), closeTo(ax, 1e-3));
+        assertThat(complex.cos(), closeTo(ay, 1e-3));
     }
 
     @Test
     void fromRadTest1() {
-        Complex complex0 = fromRad(0);
-        assertEquals(0D, complex0.x());
-        assertEquals(1D, complex0.y());
+        Angle complex0 = fromRad(0);
+        assertEquals(0D, complex0.sin());
+        assertEquals(1D, complex0.cos());
 
-        Complex complex90 = fromRad(PI / 2);
-        assertEquals(1D, complex90.x());
-        assertEquals(0D, complex90.y());
+        Angle complex90 = fromRad(PI / 2);
+        assertEquals(1D, complex90.sin());
+        assertEquals(0D, complex90.cos());
 
-        Complex complex180 = fromRad(-PI);
-        assertEquals(-0D, complex180.x());
-        assertEquals(-1D, complex180.y());
+        Angle complex180 = fromRad(-PI);
+        assertEquals(-0D, complex180.sin());
+        assertEquals(-1D, complex180.cos());
 
-        Complex complex270 = fromRad(-PI / 2);
-        assertEquals(-1D, complex270.x());
-        assertEquals(-0D, complex270.y());
+        Angle complex270 = fromRad(-PI / 2);
+        assertEquals(-1D, complex270.sin());
+        assertEquals(-0D, complex270.cos());
     }
 
     @ParameterizedTest
     @CsvSource({
             // Strict
-            "0.057295, 1e-3, true, false, false, false",
-            "-0.057295, 1e-3, true, false, false, false",
-            "0.057296, 1e-3, false, false, false, false",
-            "-0.057296, 1e-3, false, false, false, false",
-
-            "89.942705, 1e-3, false, false, false, true",
-            "90.057295, 1e-3, false, false, false, true",
-            "89.942704, 1e-3, false, false, false, false",
-            "90.057296, 1e-3, false, false, false, false",
-
-            "-89.942705, 1e-3, false, false, true, false",
-            "-90.057295, 1e-3, false, false, true, false",
-            "-89.942704, 1e-3, false, false, false, false",
-            "-90.057296, 1e-3, false, false, false, false",
-
-            "179.942705, 1e-3, false, true, false, false",
-            "-179.942705, 1e-3, false, true, false, false",
-            "179.942704, 1e-3, false, false, false, false",
-            "-179.942704, 1e-3, false, false, false, false",
-
-            // broad
-            "89.189708, 0.9999, true, false, false, true",
-            "-89.189708, 0.9999, true, false, true, false",
-            "89.189709, 0.9999, false, false, false, true",
-            "-89.189709, 0.9999, false, false, true, false",
-
-            "90.810292, 0.9999, false, true, false, true",
-            "-90.810292, 0.9999, false, true, true, false",
-            "90.810291, 0.9999, false, false, false, true",
-            "-90.810291, 0.9999, false, false, true, false",
-
-            "-0.810292, 0.9999, true, false, true, false",
-            "-179.189708, 0.9999, false, true, true, false",
-            "-0.810291, 0.9999, true, false, false, false",
-            "-179.189709, 0.9999, false, true, false, false",
-
-            "0.810292, 0.9999, true, false, false, true",
-            "179.189708, 0.9999, false, true, false, true",
-            "0.810291, 0.9999, true, false, false, false",
-            "179.189709, 0.9999, false, true, false, false",
+            "0, 0.572957, 10e-3, true",
+            "0, 0.572958, 10e-3, false",
+            "0, -0.572957, 10e-3, true",
+            "0, -0.572958, 10e-3, false",
+            "45, 45.572957, 10e-3, true",
+            "45, 45.572958, 10e-3, false",
+            "45, 44.427043, 10e-3, true",
+            "45, 44.427042, 10e-3, false",
+            "-45, -45.572957, 10e-3, true",
+            "-45, -45.572958, 10e-3, false",
+            "-45, -44.427043, 10e-3, true",
+            "-45, -44.427042, 10e-3, false",
     })
-    void isTest(double ddeg, double epsilon, boolean front, boolean rear, boolean left, boolean right) {
-        Complex complex = fromDeg(ddeg);
-        assertEquals(front, complex.isClose0Epsilon(epsilon));
-        assertEquals(rear, complex.isRear(epsilon));
-        assertEquals(left, complex.isLeft(epsilon));
-        assertEquals(right, complex.isRight(epsilon));
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            // Strict
-            "0, 0.572967, 10e-3, true",
-            "0, -0.572967, 10e-3, true",
-            "0, 0.572968, 10e-3, false",
-            "0, -0.572968, 10e-3, false",
-            "45, 45.572967, 10e-3, true",
-            "45, 45.572968, 10e-3, false",
-            "45, 44.427033, 10e-3, true",
-            "45, 44.427032, 10e-3, false",
-            "-45, -45.572967, 10e-3, true",
-            "-45, -45.572968, 10e-3, false",
-            "-45, -44.427033, 10e-3, true",
-            "-45, -44.427032, 10e-3, false",
-    })
-    void isTest(double a, double b, double epsilon, boolean close) {
-        Complex complexA = fromDeg(a);
-        Complex complexB = fromDeg(b);
+    void isTest(double a, double b, double range, boolean close) {
+        Angle complexA = fromDeg(a);
+        Angle complexB = fromDeg(b);
+        assertEquals(close, complexA.isCloseTo(complexB, range));
+        assertEquals(close, complexB.isCloseTo(complexA, range));
+        /*
         assertEquals(close, complexA.isCloseToEpsilon(complexB, epsilon));
         assertEquals(close, complexB.isCloseToEpsilon(complexA, epsilon));
+
+         */
     }
 
     @ParameterizedTest
@@ -224,8 +177,8 @@ class ComplexTest {
             "-180, -180",
     })
     void neg(double deg, double neg) {
-        assertThat(Complex.fromDeg(deg).neg().toDeg(), closeTo(neg, 1e-3));
-        assertThat(Complex.fromDeg(neg).neg().toDeg(), closeTo(deg, 1e-3));
+        assertThat(Angle.fromDeg(deg).neg().toDeg(), closeTo(neg, 1e-3));
+        assertThat(Angle.fromDeg(neg).neg().toDeg(), closeTo(deg, 1e-3));
     }
 
     @ParameterizedTest
@@ -237,8 +190,8 @@ class ComplexTest {
             "120, -60"
     })
     void opposite(double deg, double opposite) {
-        assertThat(Complex.fromDeg(deg).opposite().toDeg(), closeTo(opposite, 1e-3));
-        assertThat(Complex.fromDeg(opposite).opposite().toDeg(), closeTo(deg, 1e-3));
+        assertThat(Angle.fromDeg(deg).opposite().toDeg(), closeTo(opposite, 1e-3));
+        assertThat(Angle.fromDeg(opposite).opposite().toDeg(), closeTo(deg, 1e-3));
     }
 
     @ParameterizedTest
@@ -249,7 +202,7 @@ class ComplexTest {
             "-180, true, false",
     })
     void posneg(double a, boolean negative, boolean positive) {
-        Complex ca = fromDeg(a);
+        Angle ca = fromDeg(a);
         assertEquals(negative, ca.negative());
         assertEquals(positive, ca.positive());
     }
@@ -262,11 +215,11 @@ class ComplexTest {
             "30,180, -150",
     })
     void sub(double a, double b, double expected) {
-        Complex complexA = fromDeg(a);
-        Complex complexB = fromDeg(b);
-        Complex subAB = complexA.sub(complexB);
+        Angle complexA = fromDeg(a);
+        Angle complexB = fromDeg(b);
+        Angle subAB = complexA.sub(complexB);
         assertThat(subAB.toDeg(), closeTo(expected, 1e-3));
-        Complex subBa = complexB.sub(complexA);
+        Angle subBa = complexB.sub(complexA);
         assertThat(subBa.neg().toDeg(), closeTo(expected, 1e-3));
     }
 
@@ -280,7 +233,7 @@ class ComplexTest {
             "-135,1",
     })
     void tan(double a, double expected) {
-        Complex complexA = fromDeg(a);
+        Angle complexA = fromDeg(a);
         assertThat(complexA.tan(), closeTo(expected, 1e-3));
     }
 
@@ -299,7 +252,7 @@ class ComplexTest {
         Point2D offset = new Point2D.Double();
         Point2D location = new Point2D.Double(x1, y1);
 
-        Complex dir = Complex.direction(offset, location);
+        Angle dir = Angle.direction(offset, location);
 
         assertThat(dir.toDeg(), closeTo(deg, 1e-2));
     }
@@ -317,7 +270,7 @@ class ComplexTest {
             "-179.9, -180",
     })
     void toIntDegTest(double ddeg, int deg) {
-        assertEquals(deg, Complex.fromDeg(ddeg).toIntDeg());
+        assertEquals(deg, Angle.fromDeg(ddeg).toIntDeg());
     }
 
     @Test
@@ -331,6 +284,6 @@ class ComplexTest {
     @ParameterizedTest
     @ValueSource(doubles = {0D, PI / 4, PI / 3, PI / 2, -PI})
     void toRadiansTest1(double radians) {
-        assertEquals(radians, Complex.fromRad(radians).toRad());
+        assertEquals(radians, Angle.fromRad(radians).toRad());
     }
 }

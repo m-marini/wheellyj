@@ -28,13 +28,14 @@
 
 package org.mmarini.wheelly.fsm;
 
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.RobotCommands;
+import org.mmarini.wheelly.apis.MotionStatus;
 import org.mmarini.wheelly.apis.RobotStatus;
 
 import java.awt.geom.Point2D;
 
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.HALT;
+import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.ROTATE;
 import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
 
 /**
@@ -45,31 +46,32 @@ import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
  * optimises the transition upon reaching the target or triggering a callback.
  * </p>
  */
-public class MoveState extends AbstractContactEventState {
+public class MoveState extends AbstractContactEventState<MotionStatus> {
 
     /**
      * The target co-ordinates towards which the robot is travelling.
      */
-    private Point2D targetPosition;
+    private MotionStatus targetStatus;
 
     /**
-     * Initialises a new instance of {@code MoveState} with a specified commitment duration.
-     *
-     * @param commitmentTime the maximum time duration for which this state remains active
+     * Initialises a new instance of {@code MoveState}.
      */
-    public MoveState(long commitmentTime) {
-        super(commitmentTime);
+    public MoveState() {
     }
 
     /**
      * Initialises the state context and sets the target position for the robot.
      *
-     * @param ctx            the environment finite state machine context
-     * @param targetPosition the target co-ordinates to reach
+     * @param ctx          the environment finite state machine context
+     * @param targetStatus the target co-ordinates to reach
      */
-    public void init(EnvFSMContext ctx, Point2D targetPosition) {
+    public void init(EnvFSMContext ctx, MotionStatus targetStatus) {
         super.init(ctx);
-        this.targetPosition = requireNonNull(targetPosition);
+        this.targetStatus = requireNonNull(targetStatus);
+        if (HALT.equals(targetStatus.status())
+                || ROTATE.equals(targetStatus.status())) {
+            throw new IllegalArgumentException("invalid status " + targetStatus.status());
+        }
     }
 
     /**
@@ -85,36 +87,35 @@ public class MoveState extends AbstractContactEventState {
     }
 
     /**
-     * Evaluates the environment state on each clock tick and produces the next robot movement command.
+     * Evaluates the environment state on each clock tick and produces the next robot motion status.
      * <p>
-     * This method verifies if the robot is blocked in either forward or backward directions,
-     * intercepts sudden hardware contact events, checks whether the target range boundary has been
-     * successfully reached, and computes whether forward or backward movement is optimal based on the
-     * egocentric target direction.
+     * This method verifies if the robot is restricted from moving in either the forward or backward
+     * direction, immediately triggers a simulated contact event if an obstruction occurs, checks
+     * whether the target range boundaries (including pulse tolerances) have been successfully reached
+     * at a standstill, and propagates the designated travel profile if navigation is still ongoing.
      * </p>
      *
      * @param context the current finite state machine context containing the world model
-     * @return the computed {@link RobotCommands} to guide the robot's behaviour
-     * @throws NullPointerException if the internal {@code targetPosition} has not been properly initialised
+     * @return the computed {@link MotionStatus} to guide the robot's behaviour
+     * @throws NullPointerException if the internal {@code targetStatus} has not been properly initialised
      */
     @Override
-    public RobotCommands tick(EnvFSMContext context) {
+    public MotionStatus tick(EnvFSMContext context) {
         RobotStatus robotStatus = context.worldModel().robotStatus();
-        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward() || contacted()) {
-            return triggerContact(context);
-        }
         if (completed()) {
-            return complete(context);
+            return MotionStatus.halt();
+        }
+        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward()) {
+            complete(context, null);
+            return triggerContact(context, MotionStatus.halt());
         }
         double targetRange = robotStatus.robotSpec().targetRange() + DISTANCE_PER_PULSE;
         Point2D robotLocation = robotStatus.location();
+        Point2D targetPosition = targetStatus.target();
         if (robotLocation.distance(targetPosition) <= targetRange && robotStatus.halt()) {
-            return complete(context);
+            return complete(context, MotionStatus.halt());
         }
-        // Compute movement
-        Complex egocentricTargetDir = Complex.direction(robotLocation, targetPosition).sub(robotStatus.direction());
-        return egocentricTargetDir.isClose0(90)
-                ? RobotCommands.forward(0, targetPosition)
-                : RobotCommands.backward(0, targetPosition);
+
+        return targetStatus;
     }
 }

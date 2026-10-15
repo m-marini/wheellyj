@@ -275,8 +275,8 @@ class AreaExpressionTest {
         // Given a right half-plane expression
         AreaExpression exp = angle(
                 new Point2D.Double(x0, y0),
-                Complex.fromDeg(direction),
-                Complex.fromDeg(width));
+                Angle.fromDeg(direction),
+                Angle.fromDeg(width));
         GridTopology.create(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
         QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
         int[][] verticesByCell = createVerticesIndices(WIDTH, HEIGHT);
@@ -420,7 +420,7 @@ class AreaExpressionTest {
     @MethodSource("rightHalfPlaneTestDataset")
     void rightHalfPlaneTest1(int index, boolean expected, double x0, double y0, int direction) {
         // Given a right half-plane expression
-        AreaExpression exp = AreaExpression.rightHalfPlane(new Point2D.Double(x0, y0), Complex.fromDeg(direction));
+        AreaExpression exp = AreaExpression.rightHalfPlane(new Point2D.Double(x0, y0), Angle.fromDeg(direction));
         QVect[] vertices = createQVertices(new Point2D.Double(), WIDTH, HEIGHT, GRID_SIZE);
         int[][] verticesByCell = createVerticesIndices(WIDTH, HEIGHT);
 
@@ -436,14 +436,14 @@ class AreaExpressionTest {
     @MethodSource("dataRadialInner")
     void testRadialInner(double x, double y, int dirDeg, int ptDir, double ptDist) {
         Point2D.Double centre = new Point2D.Double(x, y);
-        Complex dir = Complex.fromDeg(dirDeg);
+        Angle dir = Angle.fromDeg(dirDeg);
         AreaExpression exp = radialSensorArea(centre,
-                dir, Complex.fromDeg(DEFAULT_LIDAR_FOV_DEG),
+                dir, Angle.fromDeg(DEFAULT_LIDAR_FOV_DEG),
                 DEFAULT_OBSTACLE_RADIUS, ROBOT_RADIUS, MAX_RADAR_DISTANCE);
         // sized center
         Point2D p0 = dir.opposite().at(centre, CENTRES_DISTANCE);
         // target point
-        Point2D p = dir.add(Complex.fromDeg(ptDir)).at(p0, ptDist + CENTRES_DISTANCE);
+        Point2D p = dir.add(Angle.fromDeg(ptDir)).at(p0, ptDist + CENTRES_DISTANCE);
         assertTrue(exp.createParser().test(p));
     }
 
@@ -455,15 +455,15 @@ class AreaExpressionTest {
     })
     void testRadialOuter(double x, double y, int dirDeg, int ptDir, double ptDist) {
         Point2D.Double centre = new Point2D.Double(x, y);
-        Complex dir = Complex.fromDeg(dirDeg);
+        Angle dir = Angle.fromDeg(dirDeg);
         AreaExpression exp = radialSensorArea(centre,
-                dir, Complex.fromDeg(DEFAULT_LIDAR_FOV_DEG),
+                dir, Angle.fromDeg(DEFAULT_LIDAR_FOV_DEG),
                 DEFAULT_OBSTACLE_RADIUS,
                 DEFAULT_OBSTACLE_RADIUS, MAX_RADAR_DISTANCE);
         // sized center
         Point2D p0 = dir.opposite().at(centre, CENTRES_DISTANCE);
         // target point
-        Point2D p = dir.add(Complex.fromDeg(ptDir)).at(p0, ptDist + CENTRES_DISTANCE);
+        Point2D p = dir.add(Angle.fromDeg(ptDir)).at(p0, ptDist + CENTRES_DISTANCE);
 
         assertFalse(exp.createParser().test(p));
     }
