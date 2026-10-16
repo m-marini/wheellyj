@@ -30,7 +30,7 @@ package org.mmarini.wheelly.gyms;
 
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.envs.WorldModel;
+import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.robots.RobotCommand;
 
 import java.util.List;

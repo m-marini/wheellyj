@@ -28,9 +28,9 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.envs.CircularSector;
-import org.mmarini.wheelly.envs.LabelMarker;
-import org.mmarini.wheelly.envs.PolarMap;
+import org.mmarini.wheelly.perception.CircularSector;
+import org.mmarini.wheelly.perception.LabelMarker;
+import org.mmarini.wheelly.perception.PolarMap;
 
 import javax.swing.*;
 import java.awt.*;

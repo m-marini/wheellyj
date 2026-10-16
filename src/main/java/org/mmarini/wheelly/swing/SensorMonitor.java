@@ -29,9 +29,9 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.controllers.HeadStatus;
-import org.mmarini.wheelly.controllers.MotionStatus;
-import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.robots.HeadStatus;
+import org.mmarini.wheelly.robots.MotionStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -29,9 +29,9 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.envs.WorldModel;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.robots.RobotCommand;
-import org.mmarini.wheelly.robots.RobotStatus;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;

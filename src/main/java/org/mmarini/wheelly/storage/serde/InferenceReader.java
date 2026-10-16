@@ -30,9 +30,8 @@ package org.mmarini.wheelly.storage.serde;
 
 import org.mmarini.wheelly.behaviours.HeadActionId;
 import org.mmarini.wheelly.behaviours.MoveActionId;
-import org.mmarini.wheelly.controllers.HeadStatus;
-import org.mmarini.wheelly.controllers.MotionStatus;
-import org.mmarini.wheelly.envs.*;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.perception.*;
 import org.mmarini.wheelly.robots.*;
 import org.mmarini.wheelly.utils.Angle;
 

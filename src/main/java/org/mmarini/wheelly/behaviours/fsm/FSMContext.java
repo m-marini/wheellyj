@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.behaviours.fsm;
 
-import org.mmarini.wheelly.envs.WorldModel;
+import org.mmarini.wheelly.perception.WorldModel;
 
 /**
  * Defines the execution context for the environment Finite State Machine (FSM).

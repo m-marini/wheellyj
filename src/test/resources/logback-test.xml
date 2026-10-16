@@ -52,7 +52,7 @@
     <logger name="org.mmarini.rl.agents.TrajectoryDatasetIterator" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.robots.SimRobotObstacleTest" level="INFO"/>
-    <logger name="org.mmarini.wheelly.controllers.RobotControllerStatus" level="INFO"/>
+    <logger name="org.mmarini.wheelly.control.RobotControllerStatus" level="INFO"/>
     <logger name="org.mmarini.wheelly.robots.SimRobot" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.engines.MappingState" level="INFO"/>

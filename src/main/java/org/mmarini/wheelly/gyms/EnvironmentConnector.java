@@ -32,7 +32,7 @@ import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.behaviours.EnvAction;
 import org.mmarini.wheelly.behaviours.EnvState;
-import org.mmarini.wheelly.envs.WorldModellerConnector;
+import org.mmarini.wheelly.perception.WorldModellerConnector;
 
 import java.util.Map;
 

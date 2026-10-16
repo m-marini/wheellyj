@@ -34,8 +34,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
+import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.robots.RobotCommand;
-import org.mmarini.wheelly.robots.RobotStatus;
 import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.wheelly.utils.Utils;
 

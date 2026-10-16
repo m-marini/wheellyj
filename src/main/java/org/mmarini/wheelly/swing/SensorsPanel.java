@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.swing.GridLayoutHelper;
-import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.control.RobotStatus;
 
 import javax.swing.*;
 import java.awt.*;

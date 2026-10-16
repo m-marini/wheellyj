@@ -33,7 +33,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mmarini.wheelly.envs.MapBuilder;
 import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.wheelly.utils.AreaExpression;
 import org.mmarini.yaml.Locator;
@@ -48,7 +47,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.envs.RadarMapTest.GRID_SIZE;
+import static org.mmarini.wheelly.perception.RadarMapTest.GRID_SIZE;
 import static org.mmarini.wheelly.utils.Utils.MM;
 
 class MapBuilderTest {

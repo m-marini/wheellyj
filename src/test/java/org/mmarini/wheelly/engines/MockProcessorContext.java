@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.engines;
 
-import org.mmarini.wheelly.envs.WorldModel;
+import org.mmarini.wheelly.perception.WorldModel;
 
 import java.awt.geom.Point2D;
 import java.util.*;

@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.controllers.RobotControllerStatusApi;
+import org.mmarini.wheelly.control.RobotControllerStatusApi;
 
 /**
  * The mapper robot controller status

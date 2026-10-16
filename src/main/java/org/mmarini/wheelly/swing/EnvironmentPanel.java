@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.control.RobotStatus;
 
 import java.awt.*;
 import java.awt.geom.AffineTransform;

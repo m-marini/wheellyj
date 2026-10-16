@@ -1,6 +1,6 @@
 ---
 $schema: https://mmarini.org/wheelly/controller-schema-2.0
-class: org.mmarini.wheelly.controllers.RobotController
+class: org.mmarini.wheelly.control.controllers.RobotController
 reactionInterval: 1000
 commandInterval: 600
 supplyValues: [ 1762, 2878 ]

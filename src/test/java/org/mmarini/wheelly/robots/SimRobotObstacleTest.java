@@ -35,7 +35,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.envs.MapBuilder;
 import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.geom.Point2D;

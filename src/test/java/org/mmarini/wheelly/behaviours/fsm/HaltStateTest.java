@@ -30,8 +30,8 @@ package org.mmarini.wheelly.behaviours.fsm;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.controllers.MotionStatus;
-import org.mmarini.wheelly.envs.WorldModelBuilder;
+import org.mmarini.wheelly.perception.WorldModelBuilder;
+import org.mmarini.wheelly.robots.MotionStatus;
 
 import java.util.ArrayList;
 import java.util.Iterator;

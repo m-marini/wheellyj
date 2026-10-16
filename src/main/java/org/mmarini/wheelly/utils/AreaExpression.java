@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.utils;
 
-import org.mmarini.wheelly.envs.GridTopology;
+import org.mmarini.wheelly.perception.GridTopology;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;

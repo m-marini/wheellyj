@@ -29,12 +29,12 @@
 package org.mmarini.wheelly.behaviours.fsm;
 
 import org.mmarini.wheelly.behaviours.HeadActionId;
-import org.mmarini.wheelly.controllers.HeadStatus;
-import org.mmarini.wheelly.envs.LabelMarker;
-import org.mmarini.wheelly.envs.MapCell;
-import org.mmarini.wheelly.envs.RadarMap;
-import org.mmarini.wheelly.envs.WorldModel;
-import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.perception.LabelMarker;
+import org.mmarini.wheelly.perception.MapCell;
+import org.mmarini.wheelly.perception.RadarMap;
+import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.robots.HeadStatus;
 import org.mmarini.wheelly.utils.Angle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

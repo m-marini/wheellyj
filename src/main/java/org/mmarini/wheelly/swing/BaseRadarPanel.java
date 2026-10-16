@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.envs.GridTopology;
+import org.mmarini.wheelly.perception.GridTopology;
 import org.mmarini.wheelly.utils.Angle;
 
 import javax.swing.*;

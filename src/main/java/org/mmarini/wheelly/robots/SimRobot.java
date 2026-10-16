@@ -40,9 +40,6 @@ import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
-import org.mmarini.wheelly.controllers.HeadStatus;
-import org.mmarini.wheelly.controllers.MotionStatus;
-import org.mmarini.wheelly.envs.MapBuilder;
 import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.wheelly.utils.AreaExpression;
 import org.mmarini.wheelly.utils.Utils;
@@ -62,10 +59,10 @@ import java.util.function.Predicate;
 
 import static java.lang.Math.*;
 import static java.util.Objects.requireNonNull;
+import static org.mmarini.wheelly.control.RobotStatus.OBSTACLE_SIZE;
 import static org.mmarini.wheelly.robots.HeadStatusId.FIX_DIRECTION;
 import static org.mmarini.wheelly.robots.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.robots.RobotSpec.*;
-import static org.mmarini.wheelly.robots.RobotStatus.OBSTACLE_SIZE;
 import static org.mmarini.wheelly.utils.Utils.expRandom;
 import static org.mmarini.wheelly.utils.Utils.m2mm;
 

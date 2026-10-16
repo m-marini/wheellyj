@@ -49,9 +49,9 @@
     <logger name="org.mmarini.rl.agents.DLAgent" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.robots.SimRobot" level="INFO"/>
-    <logger name="org.mmarini.wheelly.controllers.RobotController" level="INFO"/>
-    <logger name="org.mmarini.wheelly.controllers.RobotControllerStatus" level="INFO"/>
-    <logger name="org.mmarini.wheelly.envs.RadarMap" level="INFO"/>
+    <logger name="org.mmarini.wheelly.control.RobotController" level="INFO"/>
+    <logger name="org.mmarini.wheelly.control.RobotControllerStatus" level="INFO"/>
+    <logger name="org.mmarini.wheelly.perception.RadarMap" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.apps.MatrixMonitor" level="INFO"/>
     <logger name="org.mmarini.wheelly.apps.RobotCheckUp" level="INFO"/>

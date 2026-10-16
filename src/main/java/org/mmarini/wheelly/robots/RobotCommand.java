@@ -29,8 +29,6 @@
 package org.mmarini.wheelly.robots;
 
 import org.mmarini.wheelly.behaviours.EnvAction;
-import org.mmarini.wheelly.controllers.HeadStatus;
-import org.mmarini.wheelly.controllers.MotionStatus;
 import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.geom.Point2D;

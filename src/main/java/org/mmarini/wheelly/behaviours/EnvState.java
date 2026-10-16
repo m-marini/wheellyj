@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.behaviours;
 
-import org.mmarini.wheelly.envs.WorldModel;
+import org.mmarini.wheelly.perception.WorldModel;
 
 /**
  * Defines the contract for an immutable snapshot of the reinforcement learning

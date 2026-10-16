@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.behaviours.fsm;
 
-import org.mmarini.wheelly.controllers.MotionStatus;
+import org.mmarini.wheelly.robots.MotionStatus;
 
 /**
  * Represents a concrete FSM state where the robot platform is brought to a complete halt.

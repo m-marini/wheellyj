@@ -30,8 +30,8 @@ package org.mmarini.wheelly.behaviours.fsm;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.controllers.HeadStatus;
-import org.mmarini.wheelly.envs.WorldModelBuilder;
+import org.mmarini.wheelly.perception.WorldModelBuilder;
+import org.mmarini.wheelly.robots.HeadStatus;
 import org.mmarini.wheelly.utils.Angle;
 
 import java.util.ArrayList;

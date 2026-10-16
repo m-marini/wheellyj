@@ -33,8 +33,8 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.wheelly.behaviours.AgentAction;
 import org.mmarini.wheelly.behaviours.HeadActionId;
 import org.mmarini.wheelly.behaviours.MoveActionId;
-import org.mmarini.wheelly.envs.WorldModel;
-import org.mmarini.wheelly.envs.WorldModelBuilder;
+import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.perception.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;

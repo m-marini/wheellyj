@@ -28,8 +28,8 @@
 
 package org.mmarini.wheelly.behaviours.fsm;
 
-import org.mmarini.wheelly.controllers.MotionStatus;
-import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.robots.MotionStatus;
 import org.mmarini.wheelly.utils.Angle;
 
 import static java.util.Objects.requireNonNull;

@@ -30,8 +30,8 @@ package org.mmarini.wheelly.behaviours;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.behaviours.fsm.MacroActionConfig;
-import org.mmarini.wheelly.envs.WorldModelSpec;
 import org.mmarini.wheelly.gyms.StateFunction;
+import org.mmarini.wheelly.perception.WorldModelSpec;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 

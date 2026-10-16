@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.behaviours;
 
-import org.mmarini.wheelly.envs.WorldModel;
+import org.mmarini.wheelly.perception.WorldModel;
 
 import static java.util.Objects.requireNonNull;
 

@@ -34,7 +34,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.envs.GridTopology;
+import org.mmarini.wheelly.perception.GridTopology;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;

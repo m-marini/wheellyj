@@ -30,8 +30,8 @@ package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.rl.envs.WithSignalsSpec;
-import org.mmarini.wheelly.controllers.RobotControllerApi;
-import org.mmarini.wheelly.envs.InferenceConnector;
+import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.perception.InferenceConnector;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 

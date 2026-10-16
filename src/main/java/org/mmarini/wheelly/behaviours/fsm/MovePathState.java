@@ -30,8 +30,8 @@ package org.mmarini.wheelly.behaviours.fsm;
 
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
-import org.mmarini.wheelly.controllers.MotionStatus;
-import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.robots.MotionStatus;
 import org.mmarini.wheelly.utils.Angle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

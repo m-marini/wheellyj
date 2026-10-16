@@ -32,8 +32,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.envs.WorldModel;
-import org.mmarini.wheelly.envs.WorldModelBuilder;
+import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.perception.WorldModelBuilder;
 
 import java.util.List;
 import java.util.Map;

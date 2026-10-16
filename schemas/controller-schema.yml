@@ -7,7 +7,7 @@ properties:
   $schema:
     const: https://mmarini.org/wheelly/controller-schema-2.0
   class:
-    const: org.mmarini.wheelly.controllers.RobotController
+    const: org.mmarini.wheelly.control.controllers.RobotController
   reactionInterval:
     type: integer
     minimum: 1

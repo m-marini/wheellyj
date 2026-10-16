@@ -30,9 +30,9 @@ package org.mmarini.wheelly.engines;
 
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.mmarini.wheelly.envs.WorldModel;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.robots.RobotCommand;
-import org.mmarini.wheelly.robots.RobotStatus;
 import org.mmarini.wheelly.rrt.RRTPathFinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

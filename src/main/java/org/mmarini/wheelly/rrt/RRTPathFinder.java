@@ -28,9 +28,9 @@
 
 package org.mmarini.wheelly.rrt;
 
-import org.mmarini.wheelly.envs.GridTopology;
-import org.mmarini.wheelly.envs.MapCell;
-import org.mmarini.wheelly.envs.RadarMap;
+import org.mmarini.wheelly.perception.GridTopology;
+import org.mmarini.wheelly.perception.MapCell;
+import org.mmarini.wheelly.perception.RadarMap;
 import org.mmarini.wheelly.utils.AreaExpression;
 
 import java.awt.geom.Point2D;

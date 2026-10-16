@@ -37,10 +37,10 @@ import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.behaviours.BasicEnvState;
-import org.mmarini.wheelly.envs.GridMap;
-import org.mmarini.wheelly.envs.GridTopology;
-import org.mmarini.wheelly.envs.WorldModel;
-import org.mmarini.wheelly.envs.WorldModelBuilder;
+import org.mmarini.wheelly.perception.GridMap;
+import org.mmarini.wheelly.perception.GridTopology;
+import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.wheelly.utils.Angle;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -54,8 +54,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
-import static org.mmarini.wheelly.envs.WorldModelBuilder.GRID_MAP_SIZE;
 import static org.mmarini.wheelly.gyms.DLStateFunction.*;
+import static org.mmarini.wheelly.perception.WorldModelBuilder.GRID_MAP_SIZE;
 
 class DLStateFunctionTest {
     public static final double EPSILON = 1e-5;
