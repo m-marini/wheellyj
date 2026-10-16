@@ -34,8 +34,8 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.params.provider.Arguments;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.GridTopology;
-import org.mmarini.wheelly.apis.WheellyMessage;
+import org.mmarini.wheelly.envs.GridTopology;
+import org.mmarini.wheelly.robots.WheellyMessage;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -58,7 +58,7 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.Utils.zipWithIndex;
-import static org.mmarini.wheelly.apis.RadarMapBuilder.parseMap;
+import static org.mmarini.wheelly.envs.RadarMapBuilder.parseMap;
 import static org.mmarini.yaml.Utils.fromResource;
 
 public interface TestFunctions {

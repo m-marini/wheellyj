@@ -28,10 +28,10 @@
 
 package org.mmarini.wheelly.rrt;
 
-import org.mmarini.wheelly.apis.AreaExpression;
-import org.mmarini.wheelly.apis.GridTopology;
-import org.mmarini.wheelly.apis.MapCell;
-import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.envs.GridTopology;
+import org.mmarini.wheelly.envs.MapCell;
+import org.mmarini.wheelly.envs.RadarMap;
+import org.mmarini.wheelly.utils.AreaExpression;
 
 import java.awt.geom.Point2D;
 import java.util.*;

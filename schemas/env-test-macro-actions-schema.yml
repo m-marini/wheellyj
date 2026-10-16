@@ -7,7 +7,7 @@ properties:
   $schema:
     const: https://mmarini.org/wheelly/env-test-macro-actions-schema-0.1
   class:
-    const: org.mmarini.wheelly.envs.DLTestMacroActionEnvironment
+    const: org.mmarini.wheelly.behaviours.DLTestMacroActionEnvironment
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
 $id: https://mmarini.org/wheelly/env-macro-actions-schema-0.1
@@ -17,7 +17,7 @@ properties:
   $schema:
     const: https://mmarini.org/wheelly/env-macro-actions-schema-0.1
   class:
-    const: org.mmarini.wheelly.envs.DLMacroActionEnvironment
+    const: org.mmarini.wheelly.behaviours.DLMacroActionEnvironment
   action:
     enum:
       - fullScan

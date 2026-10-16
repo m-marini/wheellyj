@@ -34,10 +34,10 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.apis.Angle;
-import org.mmarini.wheelly.apis.RobotCommand;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.Utils;
+import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.utils.Angle;
+import org.mmarini.wheelly.utils.Utils;
 
 import java.awt.geom.Point2D;
 import java.util.stream.Stream;
@@ -47,12 +47,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.BACKWARD;
-import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.FORWARD;
-import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_TARGET_RANGE;
-import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.engines.AvoidingState.DEFAULT_SAFE_DISTANCE;
 import static org.mmarini.wheelly.engines.StateResult.*;
+import static org.mmarini.wheelly.robots.MotionStatusId.BACKWARD;
+import static org.mmarini.wheelly.robots.MotionStatusId.FORWARD;
+import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_TARGET_RANGE;
+import static org.mmarini.wheelly.utils.Utils.MM;
 
 class AvoidingStateTest {
     public static final long SEED = 1234L;

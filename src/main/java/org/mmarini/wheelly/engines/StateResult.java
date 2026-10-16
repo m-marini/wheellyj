@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.engines;
 
-import org.mmarini.wheelly.apis.RobotCommand;
+import org.mmarini.wheelly.robots.RobotCommand;
 
 import static java.util.Objects.requireNonNull;
 

@@ -29,9 +29,9 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.apis.WorldModel;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.behaviours.RewardFunction;
+import org.mmarini.wheelly.envs.WorldModel;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;

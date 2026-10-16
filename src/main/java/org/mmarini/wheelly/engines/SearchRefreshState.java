@@ -29,11 +29,11 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.envs.RadarMap;
+import org.mmarini.wheelly.envs.WorldModel;
+import org.mmarini.wheelly.robots.RobotStatus;
 import org.mmarini.wheelly.rrt.RRTPathFinder;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

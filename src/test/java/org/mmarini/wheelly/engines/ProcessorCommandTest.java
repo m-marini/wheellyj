@@ -31,7 +31,7 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.apis.WorldModelBuilder;
+import org.mmarini.wheelly.envs.WorldModelBuilder;
 import org.mmarini.yaml.Locator;
 
 import java.io.IOException;

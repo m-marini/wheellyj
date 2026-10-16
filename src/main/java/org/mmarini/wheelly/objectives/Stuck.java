@@ -29,13 +29,13 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.behaviours.RewardFunction;
+import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
 import static java.lang.Math.abs;
-import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
+import static org.mmarini.wheelly.utils.FuzzyFunctions.*;
 
 /**
  * The objective function that fuzzy rewards the robot stuck to obstacle behaviour.

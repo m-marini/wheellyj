@@ -28,9 +28,9 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.apis.Angle;
-import org.mmarini.wheelly.apis.GridTopology;
-import org.mmarini.wheelly.apis.MapCell;
+import org.mmarini.wheelly.envs.GridTopology;
+import org.mmarini.wheelly.envs.MapCell;
+import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.*;
 import java.awt.geom.*;

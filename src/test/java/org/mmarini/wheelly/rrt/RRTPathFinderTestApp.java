@@ -32,9 +32,9 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.disposables.Disposable;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.GridTopology;
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.RadarMapBuilder;
+import org.mmarini.wheelly.envs.GridTopology;
+import org.mmarini.wheelly.envs.RadarMap;
+import org.mmarini.wheelly.envs.RadarMapBuilder;
 import org.mmarini.wheelly.swing.BaseShape;
 import org.mmarini.wheelly.swing.CompositeShape;
 import org.mmarini.wheelly.swing.MapPanel;
@@ -50,7 +50,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import static org.mmarini.wheelly.apis.Angle.DEG0;
 import static org.mmarini.wheelly.engines.AbstractSearchAndMoveState.DEFAULT_GROWTH_DISTANCE;
 import static org.mmarini.wheelly.engines.SearchRefreshState.FREE_PROB;
 import static org.mmarini.wheelly.engines.SearchRefreshState.NEAREST_TARGET_PROB;
@@ -59,6 +58,7 @@ import static org.mmarini.wheelly.swing.BaseShape.createCircle;
 import static org.mmarini.wheelly.swing.MapPanel.Layers.TARGETS;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontally;
+import static org.mmarini.wheelly.utils.Angle.DEG0;
 
 public class RRTPathFinderTestApp {
     public static final int RADAR_SIZE = 17;

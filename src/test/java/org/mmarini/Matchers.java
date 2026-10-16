@@ -31,7 +31,7 @@ package org.mmarini;
 import org.hamcrest.CustomMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.mmarini.wheelly.apis.Angle;
+import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.geom.Point2D;
 import java.util.Optional;
@@ -39,7 +39,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.Matchers.equalTo;
-import static org.mmarini.wheelly.apis.Utils.MM;
+import static org.mmarini.wheelly.utils.Utils.MM;
 
 public interface Matchers {
 

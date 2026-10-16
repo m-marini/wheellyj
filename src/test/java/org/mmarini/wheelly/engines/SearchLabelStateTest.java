@@ -40,9 +40,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.engines.AbstractSearchAndMoveState.*;
 import static org.mmarini.wheelly.engines.TimeOutState.DEFAULT_TIMEOUT;
+import static org.mmarini.wheelly.utils.Utils.MM;
 
 class SearchLabelStateTest {
 

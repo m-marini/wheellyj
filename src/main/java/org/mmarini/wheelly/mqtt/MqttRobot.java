@@ -43,7 +43,8 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.robots.*;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.slf4j.Logger;
@@ -63,8 +64,8 @@ import java.util.stream.Stream;
 import static java.lang.Math.round;
 import static java.lang.Math.tan;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.RobotSpec.distance2Pulse;
-import static org.mmarini.wheelly.apis.RobotSpec.location2Pulses;
+import static org.mmarini.wheelly.robots.RobotSpec.distance2Pulse;
+import static org.mmarini.wheelly.robots.RobotSpec.location2Pulses;
 import static org.mmarini.wheelly.rx.RXFunc.logError;
 
 /**

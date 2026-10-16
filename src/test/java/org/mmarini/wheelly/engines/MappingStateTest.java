@@ -33,7 +33,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.controllers.MotionStatus;
+import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.robots.RobotSpec;
+import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.geom.Point2D;
 import java.util.stream.Stream;
@@ -42,13 +46,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.Matchers.angleCloseTo;
-import static org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A;
-import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.HALT;
-import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.ROTATE;
 import static org.mmarini.wheelly.engines.MappingState.DEFAULT_TURN_ANGLE;
 import static org.mmarini.wheelly.engines.MappingState.MappingStateStatus.RIGHT_SCANNING;
 import static org.mmarini.wheelly.engines.MappingState.MappingStateStatus.TURING_ROBOT;
 import static org.mmarini.wheelly.engines.StateResult.*;
+import static org.mmarini.wheelly.envs.MarkerLocatorTest.LABEL_A;
+import static org.mmarini.wheelly.robots.MotionStatusId.HALT;
+import static org.mmarini.wheelly.robots.MotionStatusId.ROTATE;
 
 class MappingStateTest {
 

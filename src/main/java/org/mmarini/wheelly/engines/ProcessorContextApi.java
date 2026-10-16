@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.engines;
 
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.envs.WorldModel;
 
 import java.awt.geom.Point2D;
 import java.util.List;

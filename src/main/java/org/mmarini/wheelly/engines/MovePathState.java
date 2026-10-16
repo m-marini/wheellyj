@@ -29,10 +29,10 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RobotCommand;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.envs.WorldModel;
+import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,8 +40,8 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.List;
 
-import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
 import static org.mmarini.wheelly.engines.StateResult.*;
+import static org.mmarini.wheelly.robots.RobotSpec.DISTANCE_PER_PULSE;
 
 /**
  * Generates the behaviour to move robot through path

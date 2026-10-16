@@ -29,11 +29,11 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RobotApi;
-import org.mmarini.wheelly.apis.RobotControllerApi;
-import org.mmarini.wheelly.apis.WorldModeller;
-import org.mmarini.wheelly.envs.EnvironmentApi;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.behaviours.EnvironmentApi;
+import org.mmarini.wheelly.behaviours.RewardFunction;
+import org.mmarini.wheelly.controllers.RobotControllerApi;
+import org.mmarini.wheelly.envs.WorldModeller;
+import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.yaml.Locator;
 
 import java.io.File;

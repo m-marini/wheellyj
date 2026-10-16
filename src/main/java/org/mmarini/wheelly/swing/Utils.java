@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.apis.Angle;
+import org.mmarini.wheelly.utils.Angle;
 
 import javax.swing.*;
 import java.awt.*;

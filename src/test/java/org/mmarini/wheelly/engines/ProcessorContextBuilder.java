@@ -28,8 +28,8 @@
 
 package org.mmarini.wheelly.engines;
 
-import org.mmarini.wheelly.apis.MapCell;
-import org.mmarini.wheelly.apis.WorldModelBuilder;
+import org.mmarini.wheelly.envs.MapCell;
+import org.mmarini.wheelly.envs.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
 import java.util.function.UnaryOperator;

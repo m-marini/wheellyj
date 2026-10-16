@@ -29,7 +29,13 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.envs.GridTopology;
+import org.mmarini.wheelly.envs.LabelMarker;
+import org.mmarini.wheelly.envs.RadarMap;
+import org.mmarini.wheelly.robots.Obstacle;
+import org.mmarini.wheelly.robots.ObstacleMap;
+import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.*;
 import java.awt.geom.Point2D;

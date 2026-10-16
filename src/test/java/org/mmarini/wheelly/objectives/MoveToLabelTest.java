@@ -32,16 +32,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.apis.Angle;
-import org.mmarini.wheelly.apis.WorldModelBuilder;
-import org.mmarini.wheelly.envs.BasicEnvState;
+import org.mmarini.wheelly.behaviours.BasicEnvState;
+import org.mmarini.wheelly.envs.WorldModelBuilder;
+import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.geom.Point2D;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-//import org.mmarini.wheelly.apis.RobotCommands;
+//import org.mmarini.wheelly.robots.RobotCommands;
 
 class MoveToLabelTest {
 

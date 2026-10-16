@@ -34,7 +34,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.controllers.HeadStatus;
+import org.mmarini.wheelly.controllers.MotionStatus;
+import org.mmarini.wheelly.envs.MarkerLocatorTest;
+import org.mmarini.wheelly.robots.RobotSpec;
+import org.mmarini.wheelly.robots.RobotStatus;
+import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.geom.Point2D;
 import java.util.stream.Stream;
@@ -44,14 +49,14 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.Matchers.angleCloseTo;
-import static org.mmarini.wheelly.apis.HeadStatus.HeadStatusId.FIX_DIRECTION;
-import static org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A;
-import static org.mmarini.wheelly.apis.MotionStatus.MotionStatusId.*;
-import static org.mmarini.wheelly.apis.RobotSpec.*;
-import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.engines.LabelStuckState.*;
 import static org.mmarini.wheelly.engines.LabelStuckState.DEFAULT_DIRECTION_RANGE;
 import static org.mmarini.wheelly.engines.StateResult.*;
+import static org.mmarini.wheelly.envs.MarkerLocatorTest.LABEL_A;
+import static org.mmarini.wheelly.robots.HeadStatusId.FIX_DIRECTION;
+import static org.mmarini.wheelly.robots.MotionStatusId.*;
+import static org.mmarini.wheelly.robots.RobotSpec.*;
+import static org.mmarini.wheelly.utils.Utils.MM;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LabelStuckStateTest {
@@ -269,14 +274,14 @@ class LabelStuckStateTest {
 
     private static int headMarkerAngle(ProcessorContextApi context) {
         RobotStatus status = context.worldModel().robotStatus();
-        return clamp(Angle.direction(status.headLocation(), context.worldModel().markers().get(org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A).location())
+        return clamp(Angle.direction(status.headLocation(), context.worldModel().markers().get(MarkerLocatorTest.LABEL_A).location())
                 .sub(status.direction())
                 .toIntDeg(), -DEFAULT_HEAD_FOV_DEG / 2, DEFAULT_HEAD_FOV_DEG / 2);
     }
 
     private static int robotMarkerDir(ProcessorContextApi context) {
         return Angle.direction(context.worldModel().robotStatus().location(),
-                context.worldModel().markers().get(org.mmarini.wheelly.apis.MarkerLocatorTest.LABEL_A).location()).toIntDeg();
+                context.worldModel().markers().get(MarkerLocatorTest.LABEL_A).location()).toIntDeg();
     }
 
     LabelStuckState state;

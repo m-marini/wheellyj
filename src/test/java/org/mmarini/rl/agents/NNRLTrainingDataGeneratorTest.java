@@ -33,7 +33,7 @@ import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.envs.DLActionFunction;
+import org.mmarini.wheelly.behaviours.DLActionFunction;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 

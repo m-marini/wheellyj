@@ -32,10 +32,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.Angle;
-import org.mmarini.wheelly.apis.WorldModelBuilder;
-import org.mmarini.wheelly.envs.BasicEnvState;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.behaviours.BasicEnvState;
+import org.mmarini.wheelly.behaviours.RewardFunction;
+import org.mmarini.wheelly.envs.WorldModelBuilder;
+import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
