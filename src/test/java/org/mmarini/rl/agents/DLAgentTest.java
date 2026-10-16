@@ -56,9 +56,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Utils.deleteRecursive;
 import static org.mmarini.rl.agents.NNRLTrainingDataGenerator.CRITIC_ID;
 import static org.mmarini.wheelly.TestFunctions.matrixShape;
-import static org.mmarini.wheelly.behaviours.DLActionFunction.HEAD_ACTION_ID;
-import static org.mmarini.wheelly.behaviours.DLActionFunction.MOVE_ACTION_ID;
-import static org.mmarini.wheelly.behaviours.DLStateFunction.MAP_SIGNAL_ID;
+import static org.mmarini.wheelly.gyms.DLActionFunction.HEAD_ACTION_ID;
+import static org.mmarini.wheelly.gyms.DLActionFunction.MOVE_ACTION_ID;
+import static org.mmarini.wheelly.gyms.DLStateFunction.MAP_SIGNAL_ID;
 
 class DLAgentTest {
     public static final int NUM_SAMPLES = 2;

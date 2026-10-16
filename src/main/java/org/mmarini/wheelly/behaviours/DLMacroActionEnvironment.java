@@ -35,11 +35,18 @@ import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
+import org.mmarini.wheelly.behaviours.fsm.FSMContext;
+import org.mmarini.wheelly.behaviours.fsm.HeadMacroActionState;
+import org.mmarini.wheelly.behaviours.fsm.MotionMacroActionState;
 import org.mmarini.wheelly.controllers.HeadStatus;
 import org.mmarini.wheelly.controllers.MotionStatus;
 import org.mmarini.wheelly.envs.WorldModel;
 import org.mmarini.wheelly.envs.WorldModelSpec;
 import org.mmarini.wheelly.envs.WorldModellerConnector;
+import org.mmarini.wheelly.gyms.ActionFunction;
+import org.mmarini.wheelly.gyms.EnvironmentApi;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.gyms.StateFunction;
 import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.wheelly.storage.serde.InferenceWriter;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
@@ -63,7 +70,7 @@ import static java.util.Objects.requireNonNull;
  * and converting agent actions back into low-level robot commands.
  * </p>
  */
-public class DLMacroActionEnvironment implements EnvironmentApi, EnvFSMContext, EnvState {
+public class DLMacroActionEnvironment implements EnvironmentApi, FSMContext, EnvState {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-macro-actions-schema-0.1";
     public static final String SEED_ID = "seed";
     public static final String MOVE_ID = "move";

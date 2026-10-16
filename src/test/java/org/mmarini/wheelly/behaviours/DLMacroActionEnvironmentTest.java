@@ -37,9 +37,11 @@ import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
+import org.mmarini.wheelly.behaviours.fsm.MacroActionConfig;
 import org.mmarini.wheelly.controllers.MotionStatus;
 import org.mmarini.wheelly.controllers.RobotControllerConnector;
 import org.mmarini.wheelly.envs.*;
+import org.mmarini.wheelly.gyms.StateFunction;
 import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.wheelly.utils.Angle;
 
