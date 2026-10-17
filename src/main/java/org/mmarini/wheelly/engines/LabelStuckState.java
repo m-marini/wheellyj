@@ -30,7 +30,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.control.RobotStatus;
-import org.mmarini.wheelly.perception.LabelMarker;
+import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.wheelly.utils.Angle;
@@ -99,7 +99,7 @@ public class LabelStuckState extends TimeOutState {
         Angle directionRange = Angle.fromDeg(locator.path(DIRECTION_RANGE_ID).getNode(root).asInt(DEFAULT_DIRECTION_RANGE));
         String labelPattern = locator.path(PATTERN_ID).getNode(root).asText("[A-Z]");
         Predicate<String> labelFilter = Pattern.compile(labelPattern).asPredicate();
-        Predicate<LabelMarker> labelMarkerFilter = m -> labelFilter.test(m.label());
+        Predicate<FiducialMarker> labelMarkerFilter = m -> labelFilter.test(m.label());
         ProcessorCommand onInit = ProcessorCommand.create(root, locator.path("onInit"));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
@@ -113,7 +113,7 @@ public class LabelStuckState extends TimeOutState {
     private final double searchDistance;
     private final Angle directionRange;
     private final double correlationDistance;
-    private final Predicate<LabelMarker> labelFilter;
+    private final Predicate<FiducialMarker> labelFilter;
 
     /**
      * Creates the abstract node
@@ -132,7 +132,7 @@ public class LabelStuckState extends TimeOutState {
      */
     protected LabelStuckState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
                               long timeout, double minDistance, double maxDistance, double searchDistance,
-                              double correlationDistance, Angle directionRange, Predicate<LabelMarker> labelFilter) {
+                              double correlationDistance, Angle directionRange, Predicate<FiducialMarker> labelFilter) {
         super(id, onInit, onEntry, onExit, timeout);
         this.maxDistance = maxDistance;
         this.searchDistance = searchDistance;
@@ -157,7 +157,7 @@ public class LabelStuckState extends TimeOutState {
                 .values()
                 .stream()
                 .filter(labelFilter)
-                .map(LabelMarker::location)
+                .map(FiducialMarker::location)
                 .filter(t -> robotLocation.distance(t) <= searchDistance)
                 .min(Comparator.comparingDouble(robotLocation::distanceSq))
                 .orElse(null);

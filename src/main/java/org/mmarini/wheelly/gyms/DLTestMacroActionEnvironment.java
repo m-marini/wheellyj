@@ -26,9 +26,10 @@
  *
  */
 
-package org.mmarini.wheelly.behaviours;
+package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.wheelly.behaviours.AgentAction;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 

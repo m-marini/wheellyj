@@ -50,12 +50,12 @@ import static java.util.Objects.requireNonNull;
  */
 public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
                          RadarMap radarMap,
-                         Map<String, LabelMarker> markers,
+                         Map<String, FiducialMarker> markers,
                          PolarMap polarMap,
                          GridMap gridMap,
                          CorrelatedCameraEvent prevCameraEvent
 ) implements
-        WithRadarMap, WithPolarMap, WithRobotStatus, WithLabelMarkers, WithGridMap {
+        WithRadarMap, WithPolarMap, WithRobotStatus, WithFiducialMarkers, WithGridMap {
 
     /**
      * Creates the world model
@@ -68,7 +68,7 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
      * @param gridMap         the grid map
      * @param prevCameraEvent the previous camera event
      */
-    public WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus, RadarMap radarMap, Map<String, LabelMarker> markers, PolarMap polarMap, GridMap gridMap, CorrelatedCameraEvent prevCameraEvent) {
+    public WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus, RadarMap radarMap, Map<String, FiducialMarker> markers, PolarMap polarMap, GridMap gridMap, CorrelatedCameraEvent prevCameraEvent) {
         this.worldSpec = requireNonNull(worldSpec);
         this.robotStatus = requireNonNull(robotStatus);
         this.radarMap = requireNonNull(radarMap);
@@ -142,7 +142,7 @@ public record WorldModel(WorldModelSpec worldSpec, RobotStatus robotStatus,
      *
      * @param markers the markers
      */
-    public WorldModel setMarkers(Map<String, LabelMarker> markers) {
+    public WorldModel setMarkers(Map<String, FiducialMarker> markers) {
         return Objects.equals(markers, this.markers)
                 ? this
                 : new WorldModel(worldSpec, robotStatus, radarMap, markers, polarMap, gridMap, prevCameraEvent);

@@ -150,10 +150,10 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
      * @param fov       the receptive sensor angle
      * @param time      the current time (ms)
      */
-    private Map<String, LabelMarker> filterCleaningArea(Map<String, LabelMarker> map,
-                                                        Point2D centre, Angle direction, double distance,
-                                                        Angle fov, long time) {
-        List<LabelMarker> markers = map.values().stream().toList();
+    private Map<String, FiducialMarker> filterCleaningArea(Map<String, FiducialMarker> map,
+                                                           Point2D centre, Angle direction, double distance,
+                                                           Angle fov, long time) {
+        List<FiducialMarker> markers = map.values().stream().toList();
         Parser parser = createCleaningArea(centre, direction, distance, fov);
         return markers.stream()
                 .map(marker -> {
@@ -172,7 +172,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                 })
                 .filter(marker -> marker.weight() > 0)
                 .collect(Collectors.toMap(
-                        LabelMarker::label,
+                        FiducialMarker::label,
                         x -> x
                 ));
     }
@@ -184,7 +184,7 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
      * @param cameraEvent the camera event
      * @param robotSpec   the robot specification
      */
-    public Map<String, LabelMarker> update(Map<String, LabelMarker> map, CorrelatedCameraEvent cameraEvent, RobotSpec robotSpec) {
+    public Map<String, FiducialMarker> update(Map<String, FiducialMarker> map, CorrelatedCameraEvent cameraEvent, RobotSpec robotSpec) {
         requireNonNull(map);
         requireNonNull(cameraEvent);
         long cameraTime = cameraEvent.cameraTime();
@@ -217,10 +217,10 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                 // Marker recognised
                 Angle markerDirection = cameraEvent.markerYaw();
                 Point2D markerLocation = markerDirection.at(lidarLocation, distance);
-                LabelMarker mapMarker = map.get(cameraEvent.qrCode());
-                Map<String, LabelMarker> map1 = filterCleaningArea(map, lidarLocation, cameraAzimuth,
+                FiducialMarker mapMarker = map.get(cameraEvent.qrCode());
+                Map<String, FiducialMarker> map1 = filterCleaningArea(map, lidarLocation, cameraAzimuth,
                         clearDistance, cleanFov, lidarTime);
-                LabelMarker newMarker;
+                FiducialMarker newMarker;
                 if (mapMarker != null) {
                     // existing label
                     // Time interval between previous proxy markerTime
@@ -235,9 +235,9 @@ public record MarkerLocator(double locationDecay, double cleanDecay, long correl
                             .setWeight(1);
                 } else {
                     // new valid label
-                    newMarker = new LabelMarker(cameraEvent.qrCode(), markerLocation, 1, lidarTime, lidarTime);
+                    newMarker = new FiducialMarker(cameraEvent.qrCode(), markerLocation, 1, lidarTime, lidarTime);
                 }
-                Map<String, LabelMarker> newMap = new HashMap<>(map1);
+                Map<String, FiducialMarker> newMap = new HashMap<>(map1);
                 newMap.put(newMarker.label(), newMarker);
                 status.updateAndGet(s -> s.markEvent(cameraEvent));
                 return newMap;

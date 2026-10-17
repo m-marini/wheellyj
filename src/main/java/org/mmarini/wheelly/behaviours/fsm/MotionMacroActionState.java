@@ -32,7 +32,7 @@ import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.control.RobotStatus;
-import org.mmarini.wheelly.perception.LabelMarker;
+import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.MapCell;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.robots.MotionStatus;
@@ -125,7 +125,7 @@ public class MotionMacroActionState extends AbstractCompletableState<MotionStatu
         Point2D robotLocation = worldModel.robotStatus().location();
         return worldModel.markers().values()
                 .stream()
-                .map(LabelMarker::location)
+                .map(FiducialMarker::location)
                 .filter(location -> robotLocation.distance(location) >= config.minMarkerDistance())
                 .min(Comparator.comparingDouble(robotLocation::distance))
                 .orElse(null);
@@ -355,12 +355,12 @@ public class MotionMacroActionState extends AbstractCompletableState<MotionStatu
      */
     private RRTPathFinder markerPathFinder(FSMContext context) {
         WorldModel worldModel = context.worldModel();
-        Map<String, LabelMarker> markers = worldModel.markers();
+        Map<String, FiducialMarker> markers = worldModel.markers();
         if (markers.isEmpty()) {
             return null;
         }
         Stream<Point2D> markerStream = markers.values().stream()
-                .map(LabelMarker::location);
+                .map(FiducialMarker::location);
         RRTPathFinder.Config rrtConfig = new RRTPathFinder.Config(config.growthDistance(), config.nearestTargetProb(),
                 config.freeProb(), worldModel.robotStatus().location());
         return RRTPathFinder.createMarkerTargets(rrtConfig, worldModel.radarMap(),

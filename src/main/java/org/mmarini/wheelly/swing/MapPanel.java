@@ -30,8 +30,8 @@ package org.mmarini.wheelly.swing;
 
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.GridTopology;
-import org.mmarini.wheelly.perception.LabelMarker;
 import org.mmarini.wheelly.perception.RadarMap;
 import org.mmarini.wheelly.robots.Obstacle;
 import org.mmarini.wheelly.robots.ObstacleMap;
@@ -93,7 +93,7 @@ public class MapPanel extends LayeredCanvas {
      *
      * @param markers the markers
      */
-    public void markers(Collection<LabelMarker> markers) {
+    public void markers(Collection<FiducialMarker> markers) {
         BaseShape shape = markers != null
                 ? CompositeShape.create(markers.stream()
                 .map(marker ->

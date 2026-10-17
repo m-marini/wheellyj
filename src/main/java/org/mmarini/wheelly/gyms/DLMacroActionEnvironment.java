@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.behaviours;
+package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.NotImplementedException;
@@ -35,13 +35,10 @@ import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
+import org.mmarini.wheelly.behaviours.*;
 import org.mmarini.wheelly.behaviours.fsm.FSMContext;
 import org.mmarini.wheelly.behaviours.fsm.HeadMacroActionState;
 import org.mmarini.wheelly.behaviours.fsm.MotionMacroActionState;
-import org.mmarini.wheelly.gyms.ActionFunction;
-import org.mmarini.wheelly.gyms.EnvironmentApi;
-import org.mmarini.wheelly.gyms.RewardFunction;
-import org.mmarini.wheelly.gyms.StateFunction;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModelSpec;
 import org.mmarini.wheelly.perception.WorldModellerConnector;

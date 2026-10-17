@@ -123,9 +123,9 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param markers the markers
      */
-    default <T extends InferenceWriter> T write(Map<String, LabelMarker> markers) throws IOException {
+    default <T extends InferenceWriter> T write(Map<String, FiducialMarker> markers) throws IOException {
         write(markers.size());
-        for (LabelMarker marker : markers.values()) {
+        for (FiducialMarker marker : markers.values()) {
             write(marker.label());
             write(marker.location())
                     .write((float) marker.weight())

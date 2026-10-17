@@ -31,7 +31,7 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.gyms.RewardFunction;
-import org.mmarini.wheelly.perception.LabelMarker;
+import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
@@ -88,15 +88,15 @@ public interface Label {
                                 double reward) {
         return (s0, a, s1) -> {
             RobotStatus robotStatus = s1.worldModel().robotStatus();
-            Map<String, LabelMarker> markers = s1.worldModel().markers();
+            Map<String, FiducialMarker> markers = s1.worldModel().markers();
             // Get the nearest labeled obstacle
             Point2D robotLocation = robotStatus.location();
-            LabelMarker labelMarker = markers.get(label);
+            FiducialMarker fiducialMarker = markers.get(label);
             // check robot power in range
-            if (labelMarker != null
+            if (fiducialMarker != null
                     && abs(robotStatus.leftPps()) < velocityThreshold
                     && abs(robotStatus.rightPps()) < velocityThreshold) {
-                Point2D markerLocation = labelMarker.location();
+                Point2D markerLocation = fiducialMarker.location();
                 double distance = markerLocation.distance(robotLocation);
                 Angle labeledDir = Angle.direction(robotLocation, markerLocation);
                 if (distance >= minDistance && distance <= maxDistance

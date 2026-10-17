@@ -40,7 +40,7 @@ public class MarkersBuilder {
     public static final double EPSILON = 1e-5;
     public static final int DECAY = 1000;
 
-    private final List<Supplier<List<LabelMarker>>> markerBuilders;
+    private final List<Supplier<List<FiducialMarker>>> markerBuilders;
     private final long cleanTime;
     private long time;
 
@@ -50,15 +50,15 @@ public class MarkersBuilder {
         cleanTime = Long.MAX_VALUE;
     }
 
-    public MarkersBuilder addMarker(LabelMarker marker) {
+    public MarkersBuilder addMarker(FiducialMarker marker) {
         return addMarkers(() -> List.of(marker));
     }
 
     public MarkersBuilder addMarker(String id, Point2D location) {
-        return addMarker(new LabelMarker(id, location, 1, time, cleanTime));
+        return addMarker(new FiducialMarker(id, location, 1, time, cleanTime));
     }
 
-    public MarkersBuilder addMarkers(Supplier<List<LabelMarker>> markers) {
+    public MarkersBuilder addMarkers(Supplier<List<FiducialMarker>> markers) {
         markerBuilders.add(markers);
         return this;
     }
@@ -68,10 +68,10 @@ public class MarkersBuilder {
         return this;
     }
 
-    public Map<String, LabelMarker> build() {
-        Map<String, LabelMarker> markers = new HashMap<>();
-        for (Supplier<List<LabelMarker>> builder : markerBuilders) {
-            for (LabelMarker marker : builder.get()) {
+    public Map<String, FiducialMarker> build() {
+        Map<String, FiducialMarker> markers = new HashMap<>();
+        for (Supplier<List<FiducialMarker>> builder : markerBuilders) {
+            for (FiducialMarker marker : builder.get()) {
                 markers.put(marker.label(), marker);
             }
         }
@@ -84,7 +84,7 @@ public class MarkersBuilder {
                         .filter(t ->
                                 RadarMapBuilder.isMarker(t._2))
                         .map(t ->
-                                new LabelMarker(t._2, t._1, 1, time, cleanTime))
+                                new FiducialMarker(t._2, t._1, 1, time, cleanTime))
                         .toList());
     }
 

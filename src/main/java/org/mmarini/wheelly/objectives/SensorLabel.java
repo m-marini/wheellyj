@@ -31,7 +31,7 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.gyms.RewardFunction;
-import org.mmarini.wheelly.perception.LabelMarker;
+import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
@@ -87,7 +87,7 @@ public interface SensorLabel {
             double frontDistance = robotStatus.frontDistance();
             Point2D robotLocation = robotStatus.location();
             // Get the nearest marker
-            Optional<LabelMarker> marker = s1.worldModel().markers().values().stream()
+            Optional<FiducialMarker> marker = s1.worldModel().markers().values().stream()
                     .min(Comparator.comparingDouble(m -> m.location().distanceSq(robotLocation)));
             // obstacle distance in range
             if (frontDistance >= minDistance

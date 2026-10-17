@@ -86,18 +86,18 @@ public class MarkerLocatorTest {
                 robotDeg, headDeg, HeadStatusId.FIX_DIRECTION, 0, 0, 0);
     }
 
-    static LabelMarker createMarkerAt(CorrelatedCameraEvent event, int markerDeg, double markerDistance) {
+    static FiducialMarker createMarkerAt(CorrelatedCameraEvent event, int markerDeg, double markerDistance) {
         return createMarkerAt(T0, event, markerDeg, markerDistance);
     }
 
-    static LabelMarker createMarkerAt(long time, CorrelatedCameraEvent event, int markerDeg, double markerDistance) {
+    static FiducialMarker createMarkerAt(long time, CorrelatedCameraEvent event, int markerDeg, double markerDistance) {
         return createMarkerAt(time, time - CLEAN_INTERVAL, event, markerDeg, markerDistance);
     }
 
-    static LabelMarker createMarkerAt(long markerTime, long cleanTime, CorrelatedCameraEvent event, int markerDeg, double markerDistance) {
+    static FiducialMarker createMarkerAt(long markerTime, long cleanTime, CorrelatedCameraEvent event, int markerDeg, double markerDistance) {
         Point2D lidarLocation = DEFAULT_ROBOT_SPEC.frontLidarLocation(event.robotLocation(), event.robotDirection(), event.headDirection());
         Point2D markerLocation = event.lidarYaw().add(Angle.fromDeg(markerDeg)).at(lidarLocation, markerDistance);
-        return new LabelMarker(LABEL_A, markerLocation, 1, markerTime, cleanTime);
+        return new FiducialMarker(LABEL_A, markerLocation, 1, markerTime, cleanTime);
     }
 
     static CorrelatedCameraEvent createUncorrelatedEvent(double xRobot, double yRobot, int robotDeg, int headDeg, int distance,
@@ -284,14 +284,14 @@ public class MarkerLocatorTest {
         // Given a correlated event with a label
         CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, distance, LABEL_A, labelDeg);
         // And a marker
-        LabelMarker marker = createMarkerAt(T0 - dTimeMarker, event, markerDeg, markerDistance);
-        Map<String, LabelMarker> map = Map.of(LABEL_A, marker);
+        FiducialMarker marker = createMarkerAt(T0 - dTimeMarker, event, markerDeg, markerDistance);
+        Map<String, FiducialMarker> map = Map.of(LABEL_A, marker);
 
         // When update by marker locator
-        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+        Map<String, FiducialMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
 
         // Then the marker should exist
-        LabelMarker newMarker = newMap.get(LABEL_A);
+        FiducialMarker newMarker = newMap.get(LABEL_A);
         assertNotNull(newMarker);
 
         // And the marker should have event time
@@ -326,18 +326,18 @@ public class MarkerLocatorTest {
         // Given a correlated event with a marker
         CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, distance, LABEL_B, labelDeg);
         // And a marker in lidar range
-        Map<String, LabelMarker> map = Map.of(LABEL_A,
+        Map<String, FiducialMarker> map = Map.of(LABEL_A,
                 createMarkerAt(event, markerDeg, markerDistance));
 
         // When update by marker locator
-        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+        Map<String, FiducialMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
 
         // Then the marker should exist
         assertThat(newMap, hasKey(LABEL_B));
         assertThat(newMap, not(hasKey(LABEL_A)));
 
         // And the marker should be labelled "B"
-        LabelMarker marker = newMap.get(LABEL_B);
+        FiducialMarker marker = newMap.get(LABEL_B);
         assertEquals(LABEL_B, marker.label());
 
         // And should have lidar message markerTime
@@ -369,12 +369,12 @@ public class MarkerLocatorTest {
         // Given a correlated event with a marker
         CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, distance, LABEL_B, labelDeg);
         // And a marker in lidar range
-        LabelMarker marker = createMarkerAt(event, markerDeg, markerDistance);
-        Map<String, LabelMarker> map = Map.of(LABEL_A,
+        FiducialMarker marker = createMarkerAt(event, markerDeg, markerDistance);
+        Map<String, FiducialMarker> map = Map.of(LABEL_A,
                 marker);
 
         // When update by marker locator
-        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+        Map<String, FiducialMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
 
         // Then the marker should exist
         assertThat(newMap, hasKey(LABEL_B));
@@ -382,7 +382,7 @@ public class MarkerLocatorTest {
         assertThat(newMap, hasEntry(LABEL_A, marker));
 
         // And the marker should be labelled "B"
-        LabelMarker markerB = newMap.get(LABEL_B);
+        FiducialMarker markerB = newMap.get(LABEL_B);
         assertEquals(LABEL_B, markerB.label());
 
         // And should have lidar message markerTime
@@ -412,16 +412,16 @@ public class MarkerLocatorTest {
         // Given a correlated event with a marker
         CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, distance, LABEL_A, labelDeg);
         // And an empty map
-        Map<String, LabelMarker> map = Map.of();
+        Map<String, FiducialMarker> map = Map.of();
 
         // When update by marker locator
-        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+        Map<String, FiducialMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
 
         // Then the marker should exist
         assertThat(newMap, hasKey(LABEL_A));
 
         // And the marker should be labelled "A"
-        LabelMarker marker = newMap.get(LABEL_A);
+        FiducialMarker marker = newMap.get(LABEL_A);
         assertEquals(LABEL_A, marker.label());
 
         // And should have lidar message markerTime
@@ -447,11 +447,11 @@ public class MarkerLocatorTest {
         // Given a correlated event with a marker
         CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, 0, UNKNOWN_QR_CODE, 0);
         // And a marker in lidar range
-        Map<String, LabelMarker> map = Map.of(LABEL_A,
+        Map<String, FiducialMarker> map = Map.of(LABEL_A,
                 createMarkerAt(event, markerDeg, markerDistance));
 
         // When update by marker locator
-        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+        Map<String, FiducialMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
 
         // Then the map should be empty
         assertTrue(newMap.isEmpty());
@@ -469,12 +469,12 @@ public class MarkerLocatorTest {
         // Given a correlated event with a marker
         CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, 0, UNKNOWN_QR_CODE, 0);
         // And a marker in lidar range
-        LabelMarker marker = createMarkerAt(event, markerDeg, markerDistance);
-        Map<String, LabelMarker> map = Map.of(LABEL_A,
+        FiducialMarker marker = createMarkerAt(event, markerDeg, markerDistance);
+        Map<String, FiducialMarker> map = Map.of(LABEL_A,
                 marker);
 
         // When update by marker locator
-        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+        Map<String, FiducialMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
 
         // Then the map should be empty
         assertThat(newMap, hasEntry(LABEL_A, marker));
@@ -489,14 +489,14 @@ public class MarkerLocatorTest {
         // Given a correlated event with a marker
         CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, 0, UNKNOWN_QR_CODE, 0);
         // And a marker in lidar range
-        LabelMarker marker = createMarkerAt(T0, T0 - dtCleanTime, event, markerDeg, markerDistance);
-        Map<String, LabelMarker> map = Map.of(LABEL_A, marker);
+        FiducialMarker marker = createMarkerAt(T0, T0 - dtCleanTime, event, markerDeg, markerDistance);
+        Map<String, FiducialMarker> map = Map.of(LABEL_A, marker);
 
         // When update by marker locator
-        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+        Map<String, FiducialMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
 
         // Then the map should have the label
-        LabelMarker newMarker = newMap.get(LABEL_A);
+        FiducialMarker newMarker = newMap.get(LABEL_A);
         assertNotNull(newMarker);
         assertThat(newMarker.weight(), greaterThan(0D));
         assertThat(newMarker.weight(), lessThan(marker.weight()));
@@ -514,10 +514,10 @@ public class MarkerLocatorTest {
         // Given a correlated event with a marker
         CorrelatedCameraEvent event = createUncorrelatedEvent(xRobot, yRobot, robotDeg, headDeg, distance, labelDeg);
         // And an empty map
-        Map<String, LabelMarker> map = Map.of();
+        Map<String, FiducialMarker> map = Map.of();
 
         // When update by marker locator
-        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+        Map<String, FiducialMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
 
         // Then the marker should exist
         assertTrue(newMap.isEmpty());
@@ -536,11 +536,11 @@ public class MarkerLocatorTest {
         // Given a correlated event with a marker
         CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, distance, UNKNOWN_QR_CODE, 0);
         // And a marker in lidar range
-        Map<String, LabelMarker> map = Map.of(LABEL_A,
+        Map<String, FiducialMarker> map = Map.of(LABEL_A,
                 createMarkerAt(event, markerDeg, markerDistance));
 
         // When update by event
-        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+        Map<String, FiducialMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
 
         // Then the map should be empty
         assertTrue(newMap.isEmpty());
@@ -559,11 +559,11 @@ public class MarkerLocatorTest {
         // Given a correlated event with a marker
         CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, distance, UNKNOWN_QR_CODE, 0);
         // And a marker near lidar range
-        Map<String, LabelMarker> map = Map.of(LABEL_A,
+        Map<String, FiducialMarker> map = Map.of(LABEL_A,
                 createMarkerAt(event, markerDeg, mm2m(distance) + deltaDistance));
 
         // When update by event
-        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+        Map<String, FiducialMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
 
         // Then the map should be empty
         assertTrue(newMap.isEmpty());
@@ -584,12 +584,12 @@ public class MarkerLocatorTest {
         // Given a correlated event with a marker
         CorrelatedCameraEvent event = createCorrelateEvent(xRobot, yRobot, robotDeg, headDeg, distance, UNKNOWN_QR_CODE, 0);
         // And a marker in lidar range
-        LabelMarker marker = createMarkerAt(event, markerDeg, markerDistance);
-        Map<String, LabelMarker> map = Map.of(LABEL_A,
+        FiducialMarker marker = createMarkerAt(event, markerDeg, markerDistance);
+        Map<String, FiducialMarker> map = Map.of(LABEL_A,
                 marker);
 
         // When update by event
-        Map<String, LabelMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
+        Map<String, FiducialMarker> newMap = locator.update(map, event, DEFAULT_ROBOT_SPEC);
 
         // Then the map should be empty
         assertThat(newMap, hasEntry(LABEL_A, marker));

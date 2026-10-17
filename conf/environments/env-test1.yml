@@ -1,6 +1,6 @@
 ---
 $schema: https://mmarini.org/wheelly/env-test-macro-actions-schema-0.1
-class: org.mmarini.wheelly.behaviours.DLTestMacroActionEnvironment
+class: org.mmarini.wheelly.gyms.DLTestMacroActionEnvironment
 stateFunction:
   $schema: https://mmarini.org/wheelly/state-func-dl-schema-0.1
   class: org.mmarini.wheelly.gyms.DLStateFunction

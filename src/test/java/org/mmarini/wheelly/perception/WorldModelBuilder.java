@@ -112,7 +112,7 @@ public class WorldModelBuilder {
      */
     public WorldModel build() {
         RobotStatus robotStatus = robotStatusBuilder.build();
-        Map<String, LabelMarker> markers = markersBuilder.build();
+        Map<String, FiducialMarker> markers = markersBuilder.build();
         RadarMap radarMap = radarMapBuilder.build();
         RadarModeller radarModeller = new RangeRadarModeller(radarMap.topology(), 1000, 1000, 1000, 1000, 1000);
         PolarMapModeller polarModeller = new PolarMapModeller(numSectors, 0.2);
@@ -149,7 +149,7 @@ public class WorldModelBuilder {
     }
 
     public WorldModelBuilder frontDistanceAtMarker(String id, double deltaFrontDistance) {
-        LabelMarker marker = markersBuilder.build().get(id);
+        FiducialMarker marker = markersBuilder.build().get(id);
         if (marker != null) {
             robotStatusBuilder.frontDistance(marker.location(), deltaFrontDistance);
         } else {

@@ -42,8 +42,8 @@ import org.mmarini.wheelly.engines.ProcessorContextApi;
 import org.mmarini.wheelly.engines.StateMachineAgent;
 import org.mmarini.wheelly.engines.StateNode;
 import org.mmarini.wheelly.mqtt.MqttRobot;
+import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.GridMap;
-import org.mmarini.wheelly.perception.LabelMarker;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModeller;
 import org.mmarini.wheelly.robots.Obstacle;
@@ -527,7 +527,7 @@ public class RobotExecutor {
         prevRobotStep = robotClock;
         this.prevRealStep = clock;
 
-        Map<String, LabelMarker> markers = worldModel.markers();
+        Map<String, FiducialMarker> markers = worldModel.markers();
         GridMap map = worldModel.gridMap();
         Angle robotDir = status.direction();
         /*

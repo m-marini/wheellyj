@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,16 +26,8 @@
  *
  */
 
-package org.mmarini.wheelly.perception;
+package org.mmarini.wheelly.behaviours;
 
-import java.util.Map;
-
-/**
- * Returns the label markers
- */
-public interface WithLabelMarkers {
-    /**
-     * Returns the radar map
-     */
-    Map<String, LabelMarker> markers();
+public interface DecisionMaker<S, A> {
+    A decide(S state);
 }

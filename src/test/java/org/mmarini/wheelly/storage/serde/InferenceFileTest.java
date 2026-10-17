@@ -79,8 +79,8 @@ class InferenceFileTest {
     public static final HeadStatus TRACK_FRONT_STATUS = HeadStatus.trackFrontFace(new Point2D.Double(2, 3));
     public static final HeadStatus TRACK_REAR_STATUS = HeadStatus.trackRearFace(new Point2D.Double(-2, -3));
     public static final AgentAction AGENT_ACTION = new AgentAction(MoveActionId.MICRO_FORWARD_ACTION, HeadActionId.SCAN_ACTION);
-    private static final Map<String, LabelMarker> MARKERS = Map.of(
-            "?", new LabelMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
+    private static final Map<String, FiducialMarker> MARKERS = Map.of(
+            "?", new FiducialMarker("?", new Point2D.Double(1, 2), 1, 2, 3));
     public static final WorldModel MODEL = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS, null, null, null);
     public static final MacroEnvState MACRO_ENV_STATE = new MacroEnvState(MODEL, MoveActionId.MICRO_FORWARD_ACTION, HeadActionId.SCAN_ACTION);
     private InferenceFileWriter writer;
@@ -240,7 +240,7 @@ class InferenceFileTest {
     void testMarkers() throws IOException {
         writer.write(MARKERS);
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-            Map<String, LabelMarker> markersRead = reader.readMarkers();
+            Map<String, FiducialMarker> markersRead = reader.readMarkers();
             assertEquals(MARKERS, markersRead);
             assertThrows(IOException.class, reader::readByte);
         }

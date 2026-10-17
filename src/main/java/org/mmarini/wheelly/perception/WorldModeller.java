@@ -191,7 +191,7 @@ public class WorldModeller implements WorldModellerApi {
         WorldModel model = currentModel;
         if (model == null) {
             RadarMap radarMap = radarModeller.empty();
-            Map<String, LabelMarker> markers = Map.of();
+            Map<String, FiducialMarker> markers = Map.of();
             model = new WorldModel(worldSpec, robotStatus, radarMap, markers, null, null, null);
         }
         model = this.updateStatus(model, robotStatus);
@@ -244,7 +244,7 @@ public class WorldModeller implements WorldModellerApi {
         CorrelatedCameraEvent prevCamera = model.prevCameraEvent();
         if (!Objects.equals(camera, prevCamera)) {
             // new camera event, new proxy: store camera event and proxy event and reset wait for first proxy
-            Map<String, LabelMarker> newMarker = markerLocator.update(model.markers(), camera, status.robotSpec());
+            Map<String, FiducialMarker> newMarker = markerLocator.update(model.markers(), camera, status.robotSpec());
             return model.setMarkers(newMarker)
                     .setPrevCameraEvent(camera);
         }

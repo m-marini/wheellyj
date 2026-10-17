@@ -113,7 +113,7 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
     @Override
     public WorldModel readModel() throws IOException {
         RobotStatus robotStatus = readStatus();
-        Map<String, LabelMarker> markers = readMarkers();
+        Map<String, FiducialMarker> markers = readMarkers();
         RadarMap radar = readRadar();
         return new WorldModel(worldSpec, robotStatus, radar, markers, null, null, null);
     }

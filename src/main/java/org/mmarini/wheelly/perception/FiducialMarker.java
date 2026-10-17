@@ -41,7 +41,7 @@ import static java.util.Objects.requireNonNull;
  * @param markerTime the instant of the last camera event (ms)
  * @param cleanTime  the clean time (ms)
  */
-public record LabelMarker(String label, Point2D location, double weight, long markerTime, long cleanTime) {
+public record FiducialMarker(String label, Point2D location, double weight, long markerTime, long cleanTime) {
 
     /**
      * Creates the label signal
@@ -52,7 +52,7 @@ public record LabelMarker(String label, Point2D location, double weight, long ma
      * @param markerTime the instant of the last camera event (ms)
      * @param cleanTime  the instant of the last clean time (ms)
      */
-    public LabelMarker(String label, Point2D location, double weight, long markerTime, long cleanTime) {
+    public FiducialMarker(String label, Point2D location, double weight, long markerTime, long cleanTime) {
         this.label = requireNonNull(label);
         this.location = requireNonNull(location);
         this.markerTime = markerTime;
@@ -65,8 +65,8 @@ public record LabelMarker(String label, Point2D location, double weight, long ma
      *
      * @param cleanTime the markerTime (ms)
      */
-    public LabelMarker setCleanTime(long cleanTime) {
-        return cleanTime == this.cleanTime ? this : new LabelMarker(label, location, weight, cleanTime, this.cleanTime);
+    public FiducialMarker setCleanTime(long cleanTime) {
+        return cleanTime == this.cleanTime ? this : new FiducialMarker(label, location, weight, cleanTime, this.cleanTime);
     }
 
     /**
@@ -74,9 +74,9 @@ public record LabelMarker(String label, Point2D location, double weight, long ma
      *
      * @param location the location
      */
-    public LabelMarker setLocation(Point2D location) {
+    public FiducialMarker setLocation(Point2D location) {
         return this.location.equals(location) ? this
-                : new LabelMarker(label, location, weight, markerTime, cleanTime);
+                : new FiducialMarker(label, location, weight, markerTime, cleanTime);
     }
 
     /**
@@ -84,8 +84,8 @@ public record LabelMarker(String label, Point2D location, double weight, long ma
      *
      * @param markerTime the markerTime (ms)
      */
-    public LabelMarker setMarkerTime(long markerTime) {
-        return markerTime == this.markerTime ? this : new LabelMarker(label, location, weight, markerTime, cleanTime);
+    public FiducialMarker setMarkerTime(long markerTime) {
+        return markerTime == this.markerTime ? this : new FiducialMarker(label, location, weight, markerTime, cleanTime);
     }
 
     /**
@@ -93,7 +93,7 @@ public record LabelMarker(String label, Point2D location, double weight, long ma
      *
      * @param weight the weight
      */
-    public LabelMarker setWeight(double weight) {
-        return weight == this.weight ? this : new LabelMarker(label, location, weight, markerTime, cleanTime);
+    public FiducialMarker setWeight(double weight) {
+        return weight == this.weight ? this : new FiducialMarker(label, location, weight, markerTime, cleanTime);
     }
 }

@@ -30,7 +30,7 @@ package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.control.RobotStatus;
-import org.mmarini.wheelly.perception.LabelMarker;
+import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.RadarMap;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.rrt.RRTPathFinder;
@@ -120,7 +120,7 @@ public class SearchLabelState extends AbstractSearchAndMoveState {
             RadarMap map = worldModel.radarMap();
             RobotStatus status = worldModel.robotStatus();
             Point2D robotLocation = status.location();
-            Point2D[] markers = worldModel.markers().values().stream().map(LabelMarker::location).toArray(Point2D[]::new);
+            Point2D[] markers = worldModel.markers().values().stream().map(FiducialMarker::location).toArray(Point2D[]::new);
             RRTPathFinder.Config config1 = new RRTPathFinder.Config(growthDistance, NEAREST_TARGET_PROB, FREE_PROB, robotLocation);
             return markers.length == 0
                     ? null

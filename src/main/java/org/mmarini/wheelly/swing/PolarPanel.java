@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.wheelly.perception.CircularSector;
-import org.mmarini.wheelly.perception.LabelMarker;
+import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.PolarMap;
 
 import javax.swing.*;
@@ -181,7 +181,7 @@ public class PolarPanel extends JComponent {
      * @param polarMap the polar map
      * @param markers  the markers
      */
-    public void setPolarMap(PolarMap polarMap, Collection<LabelMarker> markers) {
+    public void setPolarMap(PolarMap polarMap, Collection<FiducialMarker> markers) {
         if (polarMap != null) {
             int n = polarMap.sectorsNumber();
             if (numSector != n) {

@@ -45,17 +45,13 @@ import org.mmarini.rl.agents.DLAgent;
 import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.behaviours.DLMacroActionEnvironment;
 import org.mmarini.wheelly.control.RobotController;
 import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.control.RobotStatus;
-import org.mmarini.wheelly.gyms.DLEnvironment;
-import org.mmarini.wheelly.gyms.EnvironmentApi;
-import org.mmarini.wheelly.gyms.RewardFunction;
-import org.mmarini.wheelly.gyms.WithRewardCallback;
+import org.mmarini.wheelly.gyms.*;
 import org.mmarini.wheelly.mqtt.MqttRobot;
+import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.GridMap;
-import org.mmarini.wheelly.perception.LabelMarker;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModeller;
 import org.mmarini.wheelly.robots.*;
@@ -498,7 +494,7 @@ public class Wheelly {
         logger.atDebug().log("on Inference");
         WorldModel worldModel = inferenceResult._1;
         RobotStatus robotStatus = worldModel.robotStatus();
-        Map<String, LabelMarker> markers = worldModel.markers();
+        Map<String, FiducialMarker> markers = worldModel.markers();
         GridMap map = worldModel.gridMap();
 
         // Dumps world model

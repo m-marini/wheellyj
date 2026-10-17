@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.behaviours;
+package org.mmarini.wheelly.gyms;
 
 import io.reactivex.rxjava3.core.Completable;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,9 +37,10 @@ import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
+import org.mmarini.wheelly.behaviours.AgentAction;
+import org.mmarini.wheelly.behaviours.EnvState;
 import org.mmarini.wheelly.behaviours.fsm.MacroActionConfig;
 import org.mmarini.wheelly.control.RobotControllerConnector;
-import org.mmarini.wheelly.gyms.StateFunction;
 import org.mmarini.wheelly.perception.*;
 import org.mmarini.wheelly.robots.MotionStatus;
 import org.mmarini.wheelly.robots.RobotCommand;

@@ -146,20 +146,20 @@ public interface InferenceReader extends AutoCloseable, DataReader {
      *
      * @throws IOException in case of error
      */
-    default Map<String, LabelMarker> readMarkers() throws IOException {
+    default Map<String, FiducialMarker> readMarkers() throws IOException {
         int n = readInt();
-        List<LabelMarker> markers = new ArrayList<>();
+        List<FiducialMarker> markers = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             String qrCode = readString();
             Point2D location = readPoint2D();
             double weight = readFloat();
             long markerTime = readLong();
             long cleanTime = readLong();
-            markers.add(new LabelMarker(qrCode, location, weight, markerTime, cleanTime));
+            markers.add(new FiducialMarker(qrCode, location, weight, markerTime, cleanTime));
         }
         return markers.stream()
                 .collect(Collectors.toMap(
-                        LabelMarker::label,
+                        FiducialMarker::label,
                         UnaryOperator.identity()
                 ));
     }

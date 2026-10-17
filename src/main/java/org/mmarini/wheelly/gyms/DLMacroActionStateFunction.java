@@ -338,7 +338,7 @@ public class DLMacroActionStateFunction implements StateFunction {
             Angle mapDir = map.direction();
 
             // Create marker state signals
-            Map<String, LabelMarker> markerMap = model.markers();
+            Map<String, FiducialMarker> markerMap = model.markers();
 
             MapCell[] cells = map.cells();
             int idx = 0;
@@ -358,7 +358,7 @@ public class DLMacroActionStateFunction implements StateFunction {
             }
             for (int i = 0; i < markers.size(); i++) {
                 String label = markers.get(i);
-                LabelMarker marker = markerMap.get(label);
+                FiducialMarker marker = markerMap.get(label);
                 if (marker != null) {
                     Point2D location = marker.location();
                     Angle cellMapDir = Angle.direction(robotLocation, location).sub(mapDir);
