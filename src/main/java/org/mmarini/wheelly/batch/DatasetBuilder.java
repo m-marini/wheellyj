@@ -33,7 +33,7 @@ import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.MapStream;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.behaviours.BasicEnvState;
+import org.mmarini.wheelly.behaviours.WorldModelState;
 import org.mmarini.wheelly.gyms.DLActionFunction;
 import org.mmarini.wheelly.gyms.DLEnvironment;
 import org.mmarini.wheelly.perception.WorldModel;
@@ -112,7 +112,7 @@ public class DatasetBuilder {
         // Reads the inference records and convert to signals, actin masks and rewards
         DLActionFunction actionFunction = (DLActionFunction) env.actionFunction();
         Tuple2<WorldModel, RobotCommand> record = null;
-        BasicEnvState s0 = null;
+        WorldModelState s0 = null;
         RobotCommand commands = null;
         int tot = reader.available() / KB;
         try (INDArray reward = Nd4j.create(1, 1)) {
@@ -125,7 +125,7 @@ public class DatasetBuilder {
                      */
                     // Write states
                     WorldModel w1 = modeller.updateForInference(record._1);
-                    BasicEnvState s1 = new BasicEnvState(w1);
+                    WorldModelState s1 = new WorldModelState(w1);
                     Map<String, Signal> stateSignals = env.state(s1);
                     Map<String, INDArray> stateValues = MapStream.of(stateSignals)
                             .mapValues(Signal::toINDArray)

@@ -32,7 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.behaviours.BasicEnvState;
+import org.mmarini.wheelly.behaviours.WorldModelState;
 import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.wheelly.utils.Angle;
@@ -47,7 +47,7 @@ import static org.hamcrest.Matchers.closeTo;
 
 class SensorLabelTest {
 
-    static BasicEnvState createState(int headDeg, double leftPps, double rightPps, double distance, String qrCode) {
+    static WorldModelState createState(int headDeg, double leftPps, double rightPps, double distance, String qrCode) {
         WorldModelBuilder builder = new WorldModelBuilder()
                 .headAngle(headDeg)
                 .frontDistance(distance)
@@ -56,7 +56,7 @@ class SensorLabelTest {
             Point2D markerLocation = Angle.fromDeg(headDeg).at(new Point2D.Double(), distance);
             builder = builder.addMarker(qrCode, markerLocation);
         }
-        return new BasicEnvState(builder.build());
+        return new WorldModelState(builder.build());
     }
 
     @ParameterizedTest(
@@ -94,7 +94,7 @@ class SensorLabelTest {
                 "sensorRange: 30",
                 "reward: 2"
         ));
-        BasicEnvState state = createState(headDir, leftPps, rightPps,
+        WorldModelState state = createState(headDir, leftPps, rightPps,
                 distance, qrCode);
         RewardFunction f = SensorLabel.create(root, Locator.root());
 

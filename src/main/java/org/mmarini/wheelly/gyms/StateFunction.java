@@ -30,7 +30,7 @@ package org.mmarini.wheelly.gyms;
 
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.behaviours.EnvState;
+import org.mmarini.wheelly.behaviours.BehaviourState;
 
 import java.util.Map;
 
@@ -49,10 +49,10 @@ public interface StateFunction {
      * Extracts and processes the structural feature signals from a batch sequence
      * of environment state snapshots.
      *
-     * @param states a varargs array of current execution {@link EnvState} profiles to decompose
+     * @param states a varargs array of current execution {@link BehaviourState} profiles to decompose
      * @return an unmodifiable {@link Map} pairing signal identifier keys to their extracted raw {@link Signal} vectors
      */
-    Map<String, Signal> signals(EnvState... states);
+    Map<String, Signal> signals(BehaviourState... states);
 
     /**
      * Exposes the full multi-input signal specification layout dictionary defining structural properties.

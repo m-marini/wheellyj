@@ -32,7 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.behaviours.BasicEnvState;
+import org.mmarini.wheelly.behaviours.WorldModelState;
 import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.yaml.Locator;
@@ -49,9 +49,9 @@ class ExploreTest {
     public static final double DECAY = 10000d;
 
 
-    static BasicEnvState createState(int knownCount) {
+    static WorldModelState createState(int knownCount) {
         long timestamp = System.currentTimeMillis();
-        return new BasicEnvState(new WorldModelBuilder()
+        return new WorldModelState(new WorldModelBuilder()
                 .mapRadar(IntStream.range(0, knownCount), cell -> cell.addAnechoic(timestamp, DECAY))
                 .build());
     }
@@ -70,8 +70,8 @@ class ExploreTest {
                 "$schema: " + Explore.SCHEMA_NAME,
                 "class: " + Explore.class.getName()));
         RewardFunction f = Explore.create(root, Locator.root());
-        BasicEnvState state0 = createState(knownCount0);
-        BasicEnvState state1 = createState(knownCount1);
+        WorldModelState state0 = createState(knownCount0);
+        WorldModelState state1 = createState(knownCount1);
 
         double result = f.reward(state0, null, state1);
 
@@ -93,8 +93,8 @@ class ExploreTest {
                 "class: " + Explore.class.getName(),
                 "reward: 2"));
         RewardFunction f = Explore.create(root, Locator.root());
-        BasicEnvState state0 = createState(knownCount0);
-        BasicEnvState state1 = createState(knownCount1);
+        WorldModelState state0 = createState(knownCount0);
+        WorldModelState state1 = createState(knownCount1);
 
         double result = f.reward(state0, null, state1);
 

@@ -30,8 +30,8 @@ package org.mmarini.wheelly.gyms;
 
 import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.behaviours.EnvAction;
-import org.mmarini.wheelly.behaviours.EnvState;
+import org.mmarini.wheelly.behaviours.BehaviourAction;
+import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.perception.WorldModellerConnector;
 
 import java.util.Map;
@@ -67,18 +67,18 @@ public interface EnvironmentConnector {
      * post-execution state profile to extract training feedback vectors.
      * </p>
      *
-     * @param state0  the initial pre-execution {@link EnvState} profile snapshot
-     * @param actions the chosen {@link EnvAction} dispatched to the platform subsystems
-     * @param state1  the resulting post-execution {@link EnvState} profile snapshot
+     * @param state0  the initial pre-execution {@link BehaviourState} profile snapshot
+     * @param actions the chosen {@link BehaviourAction} dispatched to the platform subsystems
+     * @param state1  the resulting post-execution {@link BehaviourState} profile snapshot
      * @return the computed performance scalar reward value utilised for objective function adjustments
      */
-    double reward(EnvState state0, EnvAction actions, EnvState state1);
+    double reward(BehaviourState state0, BehaviourAction actions, BehaviourState state1);
 
     /**
      * Transforms a generic environmental state wrapper into an ND4J-compatible multi-input feature signal map.
      *
-     * @param model the active {@link EnvState} instance wrapping the current spatial and kinematic telemetry
+     * @param model the active {@link BehaviourState} instance wrapping the current spatial and kinematic telemetry
      * @return an unmodifiable {@link Map} pairing signal identity keys to their extracted raw {@link Signal} vectors
      */
-    Map<String, Signal> state(EnvState model);
+    Map<String, Signal> state(BehaviourState model);
 }

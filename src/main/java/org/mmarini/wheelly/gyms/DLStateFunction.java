@@ -30,7 +30,7 @@ package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.rl.envs.*;
-import org.mmarini.wheelly.behaviours.EnvState;
+import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.perception.*;
 import org.mmarini.wheelly.utils.Angle;
@@ -152,7 +152,7 @@ public class DLStateFunction implements StateFunction {
     }
 
     @Override
-    public Map<String, Signal> signals(EnvState... states) {
+    public Map<String, Signal> signals(BehaviourState... states) {
         int n = states.length;
         INDArray sensor = Nd4j.zeros(n, 1).castTo(DataType.FLOAT);
         INDArray canMoveStates = Nd4j.zeros(n, NUM_CAN_MOVE_STATES).castTo(DataType.FLOAT);

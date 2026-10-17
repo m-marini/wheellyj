@@ -37,8 +37,8 @@ import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.behaviours.AgentAction;
-import org.mmarini.wheelly.behaviours.EnvState;
+import org.mmarini.wheelly.behaviours.BehaviourMacroAction;
+import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.behaviours.fsm.MacroActionConfig;
 import org.mmarini.wheelly.control.RobotControllerConnector;
 import org.mmarini.wheelly.perception.*;
@@ -151,7 +151,7 @@ class DLMacroActionEnvironmentTest {
         Function<WorldModelSpec, StateFunction> stateFunc = spec ->
                 new StateFunction() {
                     @Override
-                    public Map<String, Signal> signals(EnvState... states) {
+                    public Map<String, Signal> signals(BehaviourState... states) {
                         return Map.of();
                     }
 
@@ -228,16 +228,16 @@ class DLMacroActionEnvironmentTest {
         };
         this.markerEnv = new DLMacroActionEnvironment(config, new Random(SEED)) {
             @Override
-            public AgentAction nextAction() {
-                return new AgentAction(TRACK_MARKER, LOOK_FACE_AT_MARKER_ACTION);
+            public BehaviourMacroAction nextAction() {
+                return new BehaviourMacroAction(TRACK_MARKER, LOOK_FACE_AT_MARKER_ACTION);
             }
         };
         markerEnv.connect(mockModeller);
         markerEnv.connect(mockAgent);
         this.exploreEnv = new DLMacroActionEnvironment(config, new Random(SEED)) {
             @Override
-            public AgentAction nextAction() {
-                return new AgentAction(EXPLORE_UNKNOWN_AREA, LOOK_FACE_AT_OBSTACLE_ACTION);
+            public BehaviourMacroAction nextAction() {
+                return new BehaviourMacroAction(EXPLORE_UNKNOWN_AREA, LOOK_FACE_AT_OBSTACLE_ACTION);
             }
         };
         exploreEnv.connect(mockModeller);

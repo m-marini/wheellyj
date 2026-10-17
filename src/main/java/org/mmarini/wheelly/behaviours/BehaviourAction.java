@@ -28,29 +28,14 @@
 
 package org.mmarini.wheelly.behaviours;
 
-import org.mmarini.wheelly.perception.WorldModel;
-
-import static java.util.Objects.requireNonNull;
-
 /**
- * Represents an immutable snapshot of the environment state enclosing a single world model.
+ * Defines a marker interface representing an abstract action execution profile within
+ * the robot environment.
  * <p>
- * This record serves as a fundamental data container within the reinforcement learning or
- * simulation loop, modelling the spatial and kinematic context of the robot platform
- * at a specific point in time.
+ * This interface serves as a foundational component within the reinforcement learning loop,
+ * modelling specific kinematic or behavioural instructions dispatched to the platform subsystems
+ * during an execution interval.
  * </p>
- *
- * @param worldModel the {@link WorldModel} tracking the robot telemetry and radar map data
  */
-public record BasicEnvState(WorldModel worldModel) implements EnvState {
-
-    /**
-     * Constructs a {@code BasicEnvState} ensuring that the encapsulated world model is non-null.
-     *
-     * @param worldModel the {@link WorldModel} tracking the robot telemetry and radar map data
-     * @throws NullPointerException if the provided world model is {@code null}
-     */
-    public BasicEnvState {
-        requireNonNull(worldModel);
-    }
+public interface BehaviourAction {
 }

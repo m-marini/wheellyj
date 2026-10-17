@@ -26,16 +26,8 @@
  *
  */
 
-package org.mmarini.wheelly.behaviours;
+package org.mmarini.wheelly.perception;
 
-/**
- * Defines a marker interface representing an abstract action execution profile within
- * the robot environment.
- * <p>
- * This interface serves as a foundational component within the reinforcement learning loop,
- * modelling specific kinematic or behavioural instructions dispatched to the platform subsystems
- * during an execution interval.
- * </p>
- */
-public interface EnvAction {
+public interface WithWorldModel {
+    WorldModel worldModel();
 }

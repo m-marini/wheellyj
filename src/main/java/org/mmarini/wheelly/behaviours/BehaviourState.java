@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.behaviours;
 
-import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.perception.WithWorldModel;
 
 /**
  * Defines the contract for an immutable snapshot of the reinforcement learning
@@ -39,12 +39,5 @@ import org.mmarini.wheelly.perception.WorldModel;
  * and behavioural modelling.
  * </p>
  */
-public interface EnvState {
-
-    /**
-     * Extracts the underlying world model snapshot associated with this state configuration.
-     *
-     * @return the {@link WorldModel} tracking telemetry data, robot status, and radar maps
-     */
-    WorldModel worldModel();
+public interface BehaviourState extends WithWorldModel {
 }

@@ -28,14 +28,14 @@
 
 package org.mmarini.wheelly.robots;
 
-import org.mmarini.wheelly.behaviours.EnvAction;
+import org.mmarini.wheelly.behaviours.BehaviourAction;
 import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.geom.Point2D;
 
 import static java.util.Objects.requireNonNull;
 
-public record RobotCommand(MotionStatus motionStatus, HeadStatus headStatus) implements EnvAction {
+public record RobotCommand(MotionStatus motionStatus, HeadStatus headStatus) implements BehaviourAction {
     private static final RobotCommand HALT = new RobotCommand(MotionStatus.halt(), HeadStatus.lookStraight());
 
     public static RobotCommand backward(Point2D motionTarget, Angle headAngle) {

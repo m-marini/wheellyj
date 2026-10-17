@@ -43,7 +43,7 @@ import static java.util.Objects.requireNonNull;
  * @param moveId the unique identifier for the base locomotion and alignment action branch
  * @param headId the unique identifier for the high-level semantic perception head action branch
  */
-public record AgentAction(MoveActionId moveId, HeadActionId headId) implements EnvAction {
+public record BehaviourMacroAction(MoveActionId moveId, HeadActionId headId) implements BehaviourAction {
 
     /**
      * Constructs an {@code AgentAction} record instance, validating that both action identifiers
@@ -53,7 +53,7 @@ public record AgentAction(MoveActionId moveId, HeadActionId headId) implements E
      * @param headId the unique identifier for the perception head branch; must not be null
      * @throws NullPointerException if either {@code moveId} or {@code headId} is null
      */
-    public AgentAction(MoveActionId moveId, HeadActionId headId) {
+    public BehaviourMacroAction(MoveActionId moveId, HeadActionId headId) {
         this.moveId = requireNonNull(moveId);
         this.headId = requireNonNull(headId);
     }
@@ -66,10 +66,10 @@ public record AgentAction(MoveActionId moveId, HeadActionId headId) implements E
      * @return an {@code AgentAction} instance with the updated head identifier
      * @throws NullPointerException if the provided {@code headId} is null
      */
-    public AgentAction headId(HeadActionId headId) {
+    public BehaviourMacroAction headId(HeadActionId headId) {
         return Objects.equals(headId, this.headId)
                 ? this
-                : new AgentAction(moveId, headId);
+                : new BehaviourMacroAction(moveId, headId);
     }
 
     /**
@@ -80,9 +80,9 @@ public record AgentAction(MoveActionId moveId, HeadActionId headId) implements E
      * @return an {@code AgentAction} instance with the updated movement identifier
      * @throws NullPointerException if the provided {@code moveId} is null
      */
-    public AgentAction moveId(MoveActionId moveId) {
+    public BehaviourMacroAction moveId(MoveActionId moveId) {
         return Objects.equals(moveId, this.moveId)
                 ? this
-                : new AgentAction(moveId, headId);
+                : new BehaviourMacroAction(moveId, headId);
     }
 }

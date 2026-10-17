@@ -36,7 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.behaviours.BasicEnvState;
+import org.mmarini.wheelly.behaviours.WorldModelState;
 import org.mmarini.wheelly.perception.GridMap;
 import org.mmarini.wheelly.perception.GridTopology;
 import org.mmarini.wheelly.perception.WorldModel;
@@ -117,7 +117,7 @@ class DLStateFunctionTest {
                 .frontSensor(frontSensor)
                 .rearSensor(rearSensor)
                 .build();
-        BasicEnvState state = new BasicEnvState(model);
+        WorldModelState state = new WorldModelState(model);
 
         // When ...
         Map<String, Signal> signals = dataGen.signals(state, state);
@@ -144,7 +144,7 @@ class DLStateFunctionTest {
                 .robotLocation(robotLocation)
                 .build();
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().hasContact());
-        BasicEnvState state = new BasicEnvState(model);
+        WorldModelState state = new WorldModelState(model);
 
         // When ...
         Map<String, Signal> signals = dataGen.signals(state, state);
@@ -211,7 +211,7 @@ class DLStateFunctionTest {
                 .build();
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().echogenic());
-        BasicEnvState state = new BasicEnvState(model);
+        WorldModelState state = new WorldModelState(model);
 
         // When ...
         Map<String, Signal> signals = dataGen.signals(state, state);
@@ -278,7 +278,7 @@ class DLStateFunctionTest {
                 .build();
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().empty());
-        BasicEnvState state = new BasicEnvState(model);
+        WorldModelState state = new WorldModelState(model);
 
         // When ...
         Map<String, Signal> signals = dataGen.signals(state, state);
@@ -346,7 +346,7 @@ class DLStateFunctionTest {
 //        WorldModel model = createModeller().updateForInference(createModelLabelMap(directionDeg, robotLocation, cellLocation));
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().echogenic());
-        BasicEnvState state = new BasicEnvState(model);
+        WorldModelState state = new WorldModelState(model);
 
         // When ...
         Map<String, Signal> signals = dataGen.signals(state, state);

@@ -30,9 +30,9 @@ package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.rl.envs.*;
-import org.mmarini.wheelly.behaviours.EnvState;
+import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.behaviours.HeadActionId;
-import org.mmarini.wheelly.behaviours.MacroEnvState;
+import org.mmarini.wheelly.behaviours.MacroActionState;
 import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.perception.*;
@@ -209,7 +209,7 @@ public class DLMacroActionStateFunction implements StateFunction {
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to optical features
      */
-    private INDArray cameraSignal(EnvState[] states) {
+    private INDArray cameraSignal(BehaviourState[] states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, 4 + markers.size()).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
@@ -243,13 +243,13 @@ public class DLMacroActionStateFunction implements StateFunction {
      *
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to active FSM action flags
-     * @throws IllegalArgumentException if any state element within the batch is not an instance of {@link MacroEnvState}
+     * @throws IllegalArgumentException if any state element within the batch is not an instance of {@link MacroActionState}
      */
-    private INDArray fsmSignal(EnvState[] states) {
+    private INDArray fsmSignal(BehaviourState[] states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, MoveActionId.values().length + HeadActionId.values().length).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
-            if (states[i] instanceof MacroEnvState state) {
+            if (states[i] instanceof MacroActionState state) {
 
                 int moveActionIdx = state.moveActionId().ordinal();
                 int headActionIdx = state.headActionId().ordinal();
@@ -275,7 +275,7 @@ public class DLMacroActionStateFunction implements StateFunction {
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to sensor head features
      */
-    private INDArray headSignal(EnvState[] states) {
+    private INDArray headSignal(BehaviourState[] states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, 7).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
@@ -320,7 +320,7 @@ public class DLMacroActionStateFunction implements StateFunction {
      * @param states a varargs array of current execution environment states
      * @return a 4D float {@link INDArray} matrix with dimensions {@code [batchSize, channels, width, height]}
      */
-    INDArray mapSignals(EnvState... states) {
+    INDArray mapSignals(BehaviourState... states) {
         int n = states.length;
         long numMarkers = markers.size();
         long numChannels = NUM_CELL_STATES + numMarkers;
@@ -387,7 +387,7 @@ public class DLMacroActionStateFunction implements StateFunction {
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to proximity and contact features
      */
-    private INDArray proxySignal(EnvState[] states) {
+    private INDArray proxySignal(BehaviourState[] states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, 6).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
@@ -425,7 +425,7 @@ public class DLMacroActionStateFunction implements StateFunction {
      * @param states a varargs array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to chassis kinematic features
      */
-    private INDArray robotSignal(EnvState... states) {
+    private INDArray robotSignal(BehaviourState... states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, 11).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
@@ -487,7 +487,7 @@ public class DLMacroActionStateFunction implements StateFunction {
      * @return a {@link Map} pairing signal identifier keys to their respective encapsulated {@link Signal} vectors
      */
     @Override
-    public Map<String, Signal> signals(EnvState... states) {
+    public Map<String, Signal> signals(BehaviourState... states) {
         return Map.of(
                 ROBOT_SIGNAL_ID, new ArraySignal(robotSignal(states)),
                 PROXY_SIGNAL_ID, new ArraySignal(proxySignal(states)),

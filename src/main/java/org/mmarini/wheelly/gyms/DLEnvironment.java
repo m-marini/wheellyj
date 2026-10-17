@@ -33,9 +33,9 @@ import org.mmarini.rl.agents.AgentConnector;
 import org.mmarini.rl.envs.ExecutionResult;
 import org.mmarini.rl.envs.Signal;
 import org.mmarini.rl.envs.SignalSpec;
-import org.mmarini.wheelly.behaviours.BasicEnvState;
-import org.mmarini.wheelly.behaviours.EnvAction;
-import org.mmarini.wheelly.behaviours.EnvState;
+import org.mmarini.wheelly.behaviours.BehaviourAction;
+import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.mmarini.wheelly.behaviours.WorldModelState;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModelSpec;
 import org.mmarini.wheelly.perception.WorldModellerConnector;
@@ -94,7 +94,7 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
     private StateFunction stateFunc;
     private RewardFunction rewardFunc;
     private AgentConnector agent;
-    private BasicEnvState prevState;
+    private WorldModelState prevState;
     private RobotCommand prevCommands;
     private Map<String, Signal> signals0;
     private Map<String, Signal> prevActions;
@@ -159,7 +159,7 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
         requireNonNull(agent);
         requireNonNull(stateFunc);
 
-        BasicEnvState s1 = new BasicEnvState(model);
+        WorldModelState s1 = new WorldModelState(model);
         Map<String, Signal> signals1 = state(s1);
         Map<String, Signal> actions = agent.act(signals1);
         RobotCommand commands = actionFunc.commands(actions, model).getFirst();
@@ -202,7 +202,7 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
     }
 
     @Override
-    public double reward(EnvState state0, EnvAction actions, EnvState state1) {
+    public double reward(BehaviourState state0, BehaviourAction actions, BehaviourState state1) {
         return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
@@ -212,7 +212,7 @@ public class DLEnvironment implements EnvironmentApi, WithRewardCallback {
     }
 
     @Override
-    public Map<String, Signal> state(EnvState model) {
+    public Map<String, Signal> state(BehaviourState model) {
         requireNonNull(model);
         requireNonNull(stateFunc);
         return stateFunc.signals(model);

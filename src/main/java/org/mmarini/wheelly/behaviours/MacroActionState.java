@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.behaviours;
 
+import org.mmarini.wheelly.perception.WithWorldModel;
 import org.mmarini.wheelly.perception.WorldModel;
 
 import static java.util.Objects.requireNonNull;
@@ -45,8 +46,8 @@ import static java.util.Objects.requireNonNull;
  * @param moveActionId the active {@link MoveActionId} tracking the concurrent high-level locomotion macro-action
  * @param headActionId the active {@link HeadActionId} tracking the concurrent high-level sensor head macro-action
  */
-public record MacroEnvState(WorldModel worldModel, MoveActionId moveActionId,
-                            HeadActionId headActionId) implements EnvState {
+public record MacroActionState(WorldModel worldModel, MoveActionId moveActionId,
+                               HeadActionId headActionId) implements BehaviourState, WithWorldModel {
 
     /**
      * Constructs a {@code MacroEnvState} validating that all parameters are non-null.
@@ -56,7 +57,7 @@ public record MacroEnvState(WorldModel worldModel, MoveActionId moveActionId,
      * @param headActionId the active {@link HeadActionId} tracking the concurrent high-level sensor head macro-action
      * @throws NullPointerException if the {@code worldModel}, {@code moveActionId}, or {@code headActionId} is {@code null}
      */
-    public MacroEnvState {
+    public MacroActionState {
         requireNonNull(worldModel);
         requireNonNull(moveActionId);
         requireNonNull(headActionId);

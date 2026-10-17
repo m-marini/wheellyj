@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.behaviours.AgentAction;
+import org.mmarini.wheelly.behaviours.BehaviourMacroAction;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
@@ -52,13 +52,13 @@ import static org.mmarini.wheelly.behaviours.MoveActionId.*;
  */
 public class DLTestMacroActionEnvironment extends DLMacroActionEnvironment {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-test-macro-actions-schema-0.1";
-    public static final AgentAction HALT_STRAIGHT_ACTION = new AgentAction(HALT_ACTION, LOOK_STRAIGHT_ACTION);
-    public static final AgentAction CONTINUE_ACTION = new AgentAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
+    public static final BehaviourMacroAction HALT_STRAIGHT_ACTION = new BehaviourMacroAction(HALT_ACTION, LOOK_STRAIGHT_ACTION);
+    public static final BehaviourMacroAction CONTINUE_ACTION = new BehaviourMacroAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
     public static final String ACTION_ID = "action";
-    public static final AgentAction HALT_SCAN_ACTION = new AgentAction(HALT_ACTION, SCAN_ACTION);
+    public static final BehaviourMacroAction HALT_SCAN_ACTION = new BehaviourMacroAction(HALT_ACTION, SCAN_ACTION);
     public static final String FULL_SCAN_ID = "fullScan";
-    public static final AgentAction TURN_RIGHT_SCAN = new AgentAction(TURN_RIGHT_SCAN_ACTION, LOOK_FACE_AT_OBSTACLE_ACTION);
-    public static final AgentAction EXPLORE_ACTION = new AgentAction(EXPLORE_UNKNOWN_AREA, LOOK_STRAIGHT_ACTION);
+    public static final BehaviourMacroAction TURN_RIGHT_SCAN = new BehaviourMacroAction(TURN_RIGHT_SCAN_ACTION, LOOK_FACE_AT_OBSTACLE_ACTION);
+    public static final BehaviourMacroAction EXPLORE_ACTION = new BehaviourMacroAction(EXPLORE_UNKNOWN_AREA, LOOK_STRAIGHT_ACTION);
     public static final String EXPLORE_ID = "explore";
 
     /**
@@ -98,7 +98,7 @@ public class DLTestMacroActionEnvironment extends DLMacroActionEnvironment {
         return new DLTestMacroActionEnvironment(config, random, action);
     }
 
-    private final Supplier<AgentAction> actionFunction;
+    private final Supplier<BehaviourMacroAction> actionFunction;
     private int ct;
 
     /**
@@ -121,9 +121,9 @@ public class DLTestMacroActionEnvironment extends DLMacroActionEnvironment {
     /**
      * Executes a deterministic exploration script loop modulated across a 160-tick execution cycle.
      *
-     * @return the sequential {@link AgentAction} assigned for the current step interval
+     * @return the sequential {@link BehaviourMacroAction} assigned for the current step interval
      */
-    private AgentAction explore() {
+    private BehaviourMacroAction explore() {
         return switch (ct = (ct + 1) % 160) {
             case 1 -> HALT_SCAN_ACTION;
             case 21 -> TURN_RIGHT_SCAN;
@@ -140,9 +140,9 @@ public class DLTestMacroActionEnvironment extends DLMacroActionEnvironment {
     /**
      * Executes a periodic scanning sequence script modulated across a 40-tick execution cycle.
      *
-     * @return the sequential {@link AgentAction} assigned for the current step interval
+     * @return the sequential {@link BehaviourMacroAction} assigned for the current step interval
      */
-    private AgentAction fullScan() {
+    private BehaviourMacroAction fullScan() {
         return switch (ct = (ct + 1) % 40) {
             case 1 -> HALT_SCAN_ACTION;
             case 21 -> TURN_RIGHT_SCAN;
@@ -155,17 +155,17 @@ public class DLTestMacroActionEnvironment extends DLMacroActionEnvironment {
      *
      * @return the default constant {@link #HALT_STRAIGHT_ACTION}
      */
-    private AgentAction haltStraight() {
+    private BehaviourMacroAction haltStraight() {
         return HALT_STRAIGHT_ACTION;
     }
 
     /**
      * Fetches the next scripted or deterministic action instruction mapping this testing routine cycle.
      *
-     * @return the computed {@link AgentAction} dispatched by the current active testing routine
+     * @return the computed {@link BehaviourMacroAction} dispatched by the current active testing routine
      */
     @Override
-    public AgentAction nextAction() {
+    public BehaviourMacroAction nextAction() {
         return actionFunction.get();
     }
 }
