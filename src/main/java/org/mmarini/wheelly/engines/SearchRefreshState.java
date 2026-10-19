@@ -29,11 +29,11 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.perception.RadarMap;
+import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.rrt.RRTPathFinder;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +48,7 @@ import java.util.function.Function;
  * Exits are:
  * <ul>
  *  <li><code>completed</code> at selection of path</li>
- *  <li><code>notFound</code> if no labeled point</li>
+ *  <li><code>notFound</code> if no labelled point</li>
  * </ul>
  * Return vales:
  * <ul>

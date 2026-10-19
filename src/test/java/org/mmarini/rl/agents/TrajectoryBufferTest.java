@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -31,9 +31,9 @@ package org.mmarini.rl.agents;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.rl.envs.ExecutionResult;
-import org.mmarini.rl.envs.IntSignal;
-import org.mmarini.rl.envs.Signal;
+import org.mmarini.wheelly.gyms.ExecutionResult;
+import org.mmarini.wheelly.gyms.IntSignal;
+import org.mmarini.wheelly.gyms.Signal;
 import org.nd4j.linalg.factory.Nd4j;
 
 import java.util.Map;

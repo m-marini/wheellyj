@@ -1,0 +1,143 @@
+/*
+ * Copyright (c) 2022-2026 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
+package org.mmarini.wheelly.utils;
+
+import org.jbox2d.common.Vec2;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.RandomArgumentsGenerator;
+import org.nd4j.linalg.api.buffer.DataType;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import static java.lang.Math.clamp;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
+
+class UtilsTest {
+
+    public static final int SEED = 1234;
+    public static final int NUM_RANDOM_TEST_CASES = 100;
+    static final double MAX_COORD = 3d;
+
+    static Stream<Arguments> vect2dArgs() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-MAX_COORD, MAX_COORD, 17)
+                .uniform(-MAX_COORD, MAX_COORD, 17)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0",
+            "0.5,0.5",
+            "1,1",
+            "2,1",
+            "-0.5,-0.5",
+            "-1,-1",
+            "-2,-1"
+    })
+    void clipFloat(float value, float expected) {
+        assertEquals(expected, clamp(value, -1F, 1F));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0,-1,1,-10,10",
+            "5,0.5,-1,1,-10,10",
+            "10,1,-1,1,-10,10",
+            "20,2,-1,1,-10,10",
+            "-5,-0.5,-1,1,-10,10",
+            "-10,-1,-1,1,-10,10",
+            "-20,-2,-1,1,-10,10"
+    })
+    void linearFloat(float expected, float value, float minX, float maxX, float minY, float maxY) {
+        assertEquals(expected, Utils.linear(value, minX, maxX, minY, maxY));
+    }
+
+    @Test
+    void regex() {
+        String className = Utils.class.getCanonicalName();
+        String method = "method";
+        String string = className + "." + method;
+        String regex = "^([a-zA-Z_]\\w*\\.)+([a-zA-Z_]\\w*)$";
+        Matcher m = Pattern.compile(regex).matcher(string);
+        String className1 = string.substring(0, string.length() - method.length() - 1);
+
+        assertTrue(m.matches());
+        assertThat(m.groupCount(), equalTo(2));
+        assertThat(m.group(2), equalTo(method));
+        assertThat(className1, equalTo(className));
+    }
+
+    @Test
+    void testEntropy() {
+        INDArray p = Nd4j.create(new double[]{
+                0.25, 0.25, 0.25, 0.25,
+                1d / 256, 1d / 256, 1d / 256, 253d / 256
+        }).reshape(2, 4);
+        INDArray result = p.shannonEntropy(1);
+
+        assertThat(result.castTo(DataType.FLOAT), matrixCloseTo(new long[]{2}, 1e-2,
+                2.0f,
+                0.110557f));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+            "0,0,-1,1,-10,10",
+            "5,0.5,-1,1,-10,10",
+            "10,1,-1,1,-10,10",
+            "20,2,-1,1,-10,10",
+            "-5,-0.5,-1,1,-10,10",
+            "-10,-1,-1,1,-10,10",
+            "-20,-2,-1,1,-10,10"
+    })
+    void testLinear(double expected, double value, double minX, double maxX, double minY, double maxY) {
+        assertEquals(expected, Utils.linear(value, minX, maxX, minY, maxY));
+    }
+
+    @ParameterizedTest
+    @MethodSource("vect2dArgs")
+    void vect2d(double x, double y) {
+        Vec2 expected = new Vec2((float) x, (float) y);
+        assertEquals(expected, Utils.vec2((float) x, (float) y));
+        assertEquals(expected, Utils.vec2(new float[]{(float) x, (float) y}));
+    }
+}

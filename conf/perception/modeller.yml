@@ -1,0 +1,17 @@
+---
+$schema: https://mmarini.org/wheelly/world-modeller-schema-0.2
+class: org.mmarini.wheelly.perception.WorldModeller
+radarWidth: 125
+radarHeight: 125
+radarGrid: 0.1
+obstaclePersistence: 3600000
+contactPersistence: 900000
+radarCleanInterval: 3600000
+correlationInterval: 2000
+radarDecay: 120000
+minRadarDistance: 0.3
+markerDecay: 1000
+markerCleanDecay: 300000
+markerSize: 0.2
+minNumberEvents: 2
+robotMapSize: 69

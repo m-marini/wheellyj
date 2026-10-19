@@ -37,7 +37,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.robots.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
+import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_ROBOT_SPEC;
 
 class MqttRobotTest {
     public static final String BROKER_URL = "tcp://localhost:1883";
@@ -136,7 +136,7 @@ class MqttRobotTest {
 
         List<CameraEvent> msgs = cameras;
         assertThat(msgs.getFirst().time(), greaterThan(0L));
-        assertEquals("A", msgs.getFirst().qrCode());
+        assertEquals("A", msgs.getFirst().markerId());
     }
 
     @Test

@@ -31,7 +31,6 @@ package org.mmarini.wheelly.apps;
 import com.fasterxml.jackson.databind.JsonNode;
 import hu.akarnokd.rxjava3.swing.SwingObservable;
 import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -43,16 +42,29 @@ import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.DLAgent;
-import org.mmarini.rl.agents.KeyBinWriter;
 import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.apis.*;
-import org.mmarini.wheelly.envs.DLEnvironment;
-import org.mmarini.wheelly.envs.EnvironmentApi;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.control.RobotController;
+import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.gyms.DLEnvironment;
+import org.mmarini.wheelly.gyms.GymApi;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.gyms.WithRewardCallback;
 import org.mmarini.wheelly.mqtt.MqttRobot;
+import org.mmarini.wheelly.perception.FiducialMarker;
+import org.mmarini.wheelly.perception.GridMap;
+import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.perception.WorldModeller;
+import org.mmarini.wheelly.robots.*;
+import org.mmarini.wheelly.storage.serde.InferenceFileWriter;
+import org.mmarini.wheelly.storage.serde.InferenceWriter;
+import org.mmarini.wheelly.storage.serde.KeyBinWriter;
 import org.mmarini.wheelly.swing.*;
+import org.mmarini.wheelly.utils.Angle;
+import org.mmarini.wheelly.utils.AppYaml;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -62,13 +74,16 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -175,7 +190,7 @@ public class Wheelly {
     private List<JFrame> allFrames;
     private RobotControllerApi controller;
     private WorldModeller worldModeller;
-    private EnvironmentApi environment;
+    private GymApi environment;
     private RobotApi robot;
     private Agent agent;
     private JFrame frame;
@@ -228,7 +243,7 @@ public class Wheelly {
         this.worldModeller = AppYaml.modellerFromJson(config);
         worldModeller.setRobotSpec(robot.robotSpec());
         worldModeller.connectController(controller);
-        worldModeller.connect(this::onInferenceProcess);
+        worldModeller.setDecisionMaker(this::decide);
 
         logger.atInfo().log("Creating RL environment ...");
         this.environment = AppYaml.envFromJson(config);
@@ -262,15 +277,17 @@ public class Wheelly {
         }
 
         // Creates the model dumper
-        Optional.ofNullable(this.args.getString("inference")).ifPresent(file -> {
-            try {
-                this.modelDumper = InferenceFileWriter.fromFile(
-                                new File(this.args.getString("inference")))
-                        .writeHeader(worldModeller.worldModelSpec(), worldModeller.radarModeller().topology());
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error dumping inference to {}", file);
+        String inference = this.args.getString("inference");
+        if (inference != null) {
+            this.modelDumper = InferenceFileWriter.fromFile(
+                    new File(this.args.getString("inference")));
+            switch (environment) {
+                case DLEnvironment env -> env.inferenceWriter(modelDumper);
+                default -> {
+                }
             }
-        });
+        }
+
         if (!(robot instanceof SimRobot)) {
             toolBar.relocateButton().setEnabled(false);
         }
@@ -287,41 +304,48 @@ public class Wheelly {
         toolBar.relocateButton().addActionListener(this::onRelocateButton);
         toolBar.learningButton().addActionListener(this::onLearningToggle);
         controller.addOnRobotStatus(this::onStatusReady);
-        controller.addOnCommand(sensorMonitor::onCommand);
-        controller.readErrors().subscribe(err -> {
-            comMonitor.onError(err);
-            logger.atError().setCause(err).log();
-        });
+        if (controller instanceof RobotController robotController) {
+            robotController.onMotionStatus(this::onMotionStatus);
+            robotController.onHeadStatus(this::onHeadStatus);
+        }
+        controller.readErrors()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
+                .subscribe(err -> {
+                    comMonitor.onError(err);
+                    logger.atError().setCause(err).log();
+                });
         controller.readControllerStatus()
                 .map(ControllerStatusMapper::map)
                 .distinct()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onControllerStatus);
         controller.readShutdown()
                 .observeOn(Schedulers.io())
                 .subscribe(this::onControllerShutdown);
         agent.readShutdown()
-                .observeOn(Schedulers.io())
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onAgentShutdown);
 
         controller.readShutdown().andThen(agent.readShutdown())
                 .observeOn(Schedulers.io())
                 .subscribe(this::onShutdownCompleted);
 
-        worldModeller.addOnInference(this::onInference);
-
-        Observable<WindowEvent>[] windowObs = allFrames.stream()
-                .map(f -> SwingObservable.window(f, SwingObservable.WINDOW_ACTIVE))
-                .toArray(Observable[]::new);
-        Observable.mergeArray(windowObs)
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .subscribe(this::onWindowClosing);
+        worldModeller.onDecision(this::onWorldModellerDecision);
+        for (JFrame allFrame : allFrames) {
+            allFrame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent e) {
+                    onWindowClosing(e);
+                }
+            });
+        }
 
         if (robot instanceof MqttRobot mqttRobot) {
             comMonitor.addRobot(mqttRobot);
         }
-
-        if (environment instanceof DLEnvironment dlEnvironment) {
+        if (environment instanceof WithRewardCallback dlEnvironment) {
             dlEnvironment.onReward(reward -> {
+                logger.atInfo().log("on reward");
                 envPanel.setReward(reward);
                 sensorMonitor.onReward(reward);
             });
@@ -458,61 +482,20 @@ public class Wheelly {
         comMonitor.onControllerStatus(status);
     }
 
-    /**
-     * Handles the inference event
-     *
-     * @param inferenceResult the inference result
-     */
-    private void onInference(Tuple2<WorldModel, RobotCommands> inferenceResult) {
-        logger.atDebug().log("on Inference");
-        WorldModel worldModel = inferenceResult._1;
-        RobotStatus robotStatus = worldModel.robotStatus();
-        Map<String, LabelMarker> markers = worldModel.markers();
-        GridMap map = worldModel.gridMap();
-
-        // Dumps world model
-        if (modelDumper != null) {
-            try {
-                modelDumper.write(worldModel, inferenceResult._2);
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error dumping model");
-            }
-        }
-
-        long robotClock = robotStatus.robotTime();
-        envPanel.radarMap(worldModel.radarMap());
-        envPanel.markers(markers.values());
-        Complex robotDir = robotStatus.direction();
-
-        gridPanel.setGridMap(map);
-        gridPanel.setRobotDirection(robotDir.sub(map.direction()));
-        Point2D center = map.center();
-
-        /*
-         * Transforms the marker locations to grid map coordinates
-         */
-        AffineTransform tr = AffineTransform.getRotateInstance(map.direction().toRad());
-        tr.translate(-center.getX(), -center.getY());
-
-        List<Point2D> mks = markers.values().stream()
-                .map(p -> tr.transform(p.location(), null))
-                .toList();
-        gridPanel.setMarkers(mks);
-
-        long time = System.currentTimeMillis();
-        if (prevRobotStep >= 0) {
-            envPanel.setReactionRealTime(reactionRealTime.add(time - prevStep).value() * 1e-3);
-            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep).value() * 1e-3);
-        }
-        prevRobotStep = robotClock;
-        prevStep = time;
-        logger.atDebug().log("on Inference end");
+    private RobotCommand decide(WorldModel state) {
+        return active.get()
+                ? environment.decide(state)
+                : RobotCommand.halt();
     }
 
-    private RobotCommands onInferenceProcess(WorldModel state) {
-        return active.get()
-                ? environment.onInference(state)
-                : RobotCommands.halt();
+    private void onHeadStatus(HeadStatus status) {
+        SwingUtilities.invokeLater(() ->
+                sensorMonitor.onHeadStatusCommand(status));
+    }
+
+    private void onMotionStatus(MotionStatus status) {
+        SwingUtilities.invokeLater(() ->
+                sensorMonitor.onMotionStatus(status));
     }
 
     /**
@@ -547,7 +530,34 @@ public class Wheelly {
      * @param map the obstacle map
      */
     private void onObstacleMap(Collection<Obstacle> map) {
-        envPanel.obstacles(map);
+        SwingUtilities.invokeLater(() ->
+                envPanel.obstacles(map)
+        );
+    }
+
+    /**
+     * Handles the status ready event
+     *
+     * @param status the status
+     */
+    private void onStatusReady(RobotStatus status) {
+        if (robotStartTimestamp < 0) {
+            robotStartTimestamp = status.robotTime();
+        }
+        SwingUtilities.invokeLater(() -> {
+            envPanel.robotStatus(status);
+            sensorMonitor.onStatus(status);
+            envPanel.setTimeRatio(controller.simRealSpeed());
+        });
+        long now = System.currentTimeMillis();
+        if (now > autosaveInstant) {
+            agent.backup();
+            autosaveInstant = now + savingInterval;
+        }
+        long robotElapsed = status.robotTime() - robotStartTimestamp;
+        if (robotElapsed > sessionDuration) {
+            shutDown();
+        }
     }
 
     /**
@@ -611,26 +621,12 @@ public class Wheelly {
     }
 
     /**
-     * Handles the status ready event
+     * Handles the window shuttingDown events
      *
-     * @param status the status
+     * @param ignoredWindowEvent the event
      */
-    private void onStatusReady(RobotStatus status) {
-        envPanel.robotStatus(status);
-        sensorMonitor.onStatus(status);
-        if (robotStartTimestamp < 0) {
-            robotStartTimestamp = status.robotTime();
-        }
-        long robotElapsed = status.robotTime() - robotStartTimestamp;
-        envPanel.setTimeRatio(controller.simRealSpeed());
-        long now = System.currentTimeMillis();
-        if (now > autosaveInstant) {
-            agent.backup();
-            autosaveInstant = now + savingInterval;
-        }
-        if (robotElapsed > sessionDuration) {
-            shutDown();
-        }
+    private void onWindowClosing(WindowEvent ignoredWindowEvent) {
+        shutDown();
     }
 
     /**
@@ -645,12 +641,54 @@ public class Wheelly {
     }
 
     /**
-     * Handles the window shuttingDown events
+     * Handles the inference event
      *
-     * @param windowEvent the event
+     * @param inferenceResult the inference result
      */
-    private void onWindowClosing(WindowEvent windowEvent) {
-        shutDown();
+    private void onWorldModellerDecision(Tuple2<WorldModel, RobotCommand> inferenceResult) {
+        logger.atDebug().log("on Inference");
+        WorldModel worldModel = inferenceResult._1;
+        RobotStatus robotStatus = worldModel.robotStatus();
+        Map<Integer, FiducialMarker> markers = worldModel.markers();
+        GridMap map = worldModel.gridMap();
+
+        // Dumps world model
+        if (modelDumper != null) {
+            try {
+                modelDumper.write(worldModel, inferenceResult._2);
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error dumping model");
+            }
+        }
+
+        long robotClock = robotStatus.robotTime();
+        envPanel.radarMap(worldModel.radarMap());
+        envPanel.markers(markers.values());
+        Angle robotDir = robotStatus.direction();
+
+        gridPanel.setGridMap(map);
+        gridPanel.setRobotDirection(robotDir.sub(map.direction()));
+        Point2D center = map.center();
+
+        /*
+         * Transforms the marker locations to grid map coordinates
+         */
+        AffineTransform tr = AffineTransform.getRotateInstance(map.direction().toRad());
+        tr.translate(-center.getX(), -center.getY());
+
+        List<Point2D> mks = markers.values().stream()
+                .map(p -> tr.transform(p.location(), null))
+                .toList();
+        gridPanel.setMarkers(mks);
+
+        long time = System.currentTimeMillis();
+        if (prevRobotStep >= 0) {
+            envPanel.setReactionRealTime(reactionRealTime.add(time - prevStep).value() * 1e-3);
+            envPanel.setReactionRobotTime(reactionRobotTime.add(robotClock - prevRobotStep).value() * 1e-3);
+        }
+        prevRobotStep = robotClock;
+        prevStep = time;
+        logger.atDebug().log("on Inference end");
     }
 
     /**
@@ -675,8 +713,7 @@ public class Wheelly {
 
         if (robot instanceof SimRobot robot1) {
             // Add the obstacles location changes
-            robot1.readObstacleMap()
-                    .subscribe(this::onObstacleMap);
+            robot1.onObstacleMap(this::onObstacleMap);
             relocateButton.setEnabled(true);
         } else {
             relocateButton.setEnabled(false);

@@ -213,14 +213,16 @@
         </dependency>
         <dependency>
             <groupId>com.github.akarnokd</groupId>
-            <artifactId>rxjava3-bridge</artifactId>
-            <version>3.0.2</version>
+            <artifactId>rxjava3-swing</artifactId>
+            <version>3.1.1</version>
         </dependency>
+        <!-- Chatgpt
         <dependency>
             <groupId>io.github.sashirestela</groupId>
             <artifactId>simple-openai</artifactId>
             <version>${simple-openai.version}</version>
         </dependency>
+        -->
         <!-- OkHttp dependency is optional if you decide to use it with simple-openai -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>

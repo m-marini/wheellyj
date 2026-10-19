@@ -1,0 +1,89 @@
+/*
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
+package org.mmarini.wheelly.perception;
+
+import java.awt.geom.Point2D;
+
+import static java.util.Objects.requireNonNull;
+
+/**
+ * Defines the label marker
+ *
+ * @param markerId   the qrcode label
+ * @param location   the marker location
+ * @param weight     the weight of marker signals
+ * @param markerTime the instant of the last camera event (ms)
+ * @param cleanTime  the clean time (ms)
+ */
+public record FiducialMarker(int markerId, Point2D location, double weight, long markerTime, long cleanTime) {
+
+    /**
+     * Creates the label signal
+     */
+    public FiducialMarker {
+        requireNonNull(location);
+    }
+
+    /**
+     * Returns the label marker with the clean time
+     *
+     * @param cleanTime the markerTime (ms)
+     */
+    public FiducialMarker setCleanTime(long cleanTime) {
+        return cleanTime == this.cleanTime ? this : new FiducialMarker(markerId, location, weight, cleanTime, this.cleanTime);
+    }
+
+    /**
+     * Returns the label marker with the location
+     *
+     * @param location the location
+     */
+    public FiducialMarker setLocation(Point2D location) {
+        return this.location.equals(location) ? this
+                : new FiducialMarker(markerId, location, weight, markerTime, cleanTime);
+    }
+
+    /**
+     * Returns the label marker with the marker time
+     *
+     * @param markerTime the markerTime (ms)
+     */
+    public FiducialMarker setMarkerTime(long markerTime) {
+        return markerTime == this.markerTime ? this : new FiducialMarker(markerId, location, weight, markerTime, cleanTime);
+    }
+
+    /**
+     * Returns the label marker with the weight
+     *
+     * @param weight the weight
+     */
+    public FiducialMarker setWeight(double weight) {
+        return weight == this.weight ? this : new FiducialMarker(markerId, location, weight, markerTime, cleanTime);
+    }
+}

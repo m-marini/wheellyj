@@ -5,7 +5,7 @@ class: org.mmarini.wheelly.mqtt.MqttRobot
 brokerUrl: tcp://mosquitto.home:1883
 user: wheellyj
 password: wheellyj
-robotId: "wheelly/e05a1b66f89c/v1"
+robotId: "wheelly/e05a1b66f89c/v2"
 qrDeviceId: "wheellyqr/d94775b8c6f4/v0"
 configureTimeout: 2000
 retryInterval: 3000

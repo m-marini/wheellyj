@@ -32,10 +32,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.WorldModelBuilder;
-import org.mmarini.wheelly.envs.BasicEnvState;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.behaviours.WorldModelState;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.WorldModelBuilder;
+import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -44,16 +44,17 @@ import java.io.IOException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
+import static org.mmarini.wheelly.perception.MarkerLocatorTest.MARKER0;
 
 class LabelTest {
 
-    static BasicEnvState createState(int robotDeg, int headDeg, double leftPps, double rightPps, int obstacleDir, double distance) {
-        Point2D marker = Complex.fromDeg(obstacleDir).at(new Point2D.Double(0, 0), distance);
-        return new BasicEnvState(new WorldModelBuilder()
+    static WorldModelState createState(int robotDeg, int headDeg, double leftPps, double rightPps, int obstacleDir, double distance) {
+        Point2D marker = Angle.fromDeg(obstacleDir).at(new Point2D.Double(0, 0), distance);
+        return new WorldModelState(new WorldModelBuilder()
                 .robotDir(robotDeg)
                 .headAngle(headDeg)
                 .robotSpeed(leftPps, rightPps)
-                .addMarker("A", marker)
+                .addMarker(MARKER0, marker)
                 .build());
     }
 
@@ -97,7 +98,7 @@ class LabelTest {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + Label.SCHEMA_NAME,
                 "class: " + Label.class.getName(),
-                "label: A",
+                "markerId: 0",
                 "minDistance: 0.5",
                 "maxDistance: 1",
                 "velocityThreshold: 1",
@@ -107,12 +108,12 @@ class LabelTest {
         ));
         RewardFunction f = Label.create(root, Locator.root());
 
-        BasicEnvState state = createState(robotDir,
+        WorldModelState state = createState(robotDir,
                 sensorDir,
                 leftPps, rightPps,
                 obstacleDir, distance);
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

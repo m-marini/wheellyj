@@ -1,6 +1,6 @@
 ---
 $schema: https://mmarini.org/wheelly/map-schema-1.0
-class: org.mmarini.wheelly.apis.MapBuilder
+class: org.mmarini.wheelly.robots.MapBuilder
 size: 51
 gridSize: 0.2
 shapes:

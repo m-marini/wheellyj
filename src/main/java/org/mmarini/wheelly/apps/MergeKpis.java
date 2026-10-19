@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -37,9 +37,9 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.MapStream;
 import org.mmarini.ParallelProcess;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.agents.BinArrayFile;
-import org.mmarini.rl.agents.KeyFileMap;
 import org.mmarini.swing.Messages;
+import org.mmarini.wheelly.storage.serde.BinArrayFile;
+import org.mmarini.wheelly.storage.serde.KeyFileMap;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;

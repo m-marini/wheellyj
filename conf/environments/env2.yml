@@ -1,22 +1,25 @@
 ---
-$schema: https://mmarini.org/wheelly/env-macroActions-schema-0.1
-class: org.mmarini.wheelly.envs.DLMacroActionEnvironment
+$schema: https://mmarini.org/wheelly/env-macro-actions-schema-0.1
+class: org.mmarini.wheelly.gyms.DLMacroActionEnvironment
 stateFunction:
   $schema: https://mmarini.org/wheelly/state-func-dl-schema-0.1
-  class: org.mmarini.wheelly.envs.DLStateFunction
+  class: org.mmarini.wheelly.gyms.DLStateFunction
   markerLabels:
     - A
+freeProb: 0.5
+commitmentDuration: 5000
+growthDistance: 0.5
+markerStopDistance: 0.8
 # maxIterations: 100
 maxSearchTime: 3000
-maxRobotGoalToMarkerDistance: 0.8
-# pathSafetyDistance:
-# growthDistance: 0.5
-commitmentDuration: 5000
-scanInterval: 1000
-microDistance: 0.3
-minMarkerDistance: 0.4
-minObstacleDistance: 0.4
-minHeadTargetDistance: 0.3
-# safeDistance:
-turnScanAngle: 120
 microAngle: 5
+microDistance: 0.3
+minGoals: 3
+minMarkerDistance: 0.4
+minNumberOfSamples: 1
+minObstacleDistance: 0.4
+nearestTargetProb: 0.05
+safeDistance: 0.3
+# seed: 1234
+scanAngleInterval: 5
+turnScanAngle: 120

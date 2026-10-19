@@ -41,16 +41,26 @@ import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.model.stats.StatsListener;
 import org.deeplearning4j.ui.model.storage.InMemoryStatsStorage;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.agents.*;
+import org.mmarini.rl.agents.Agent;
+import org.mmarini.rl.agents.DLAgent;
+import org.mmarini.rl.agents.DLListener;
+import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.batch.BatchAgent;
 import org.mmarini.wheelly.batch.BatchTrainer;
 import org.mmarini.wheelly.batch.ProgressInfo;
-import org.mmarini.wheelly.envs.DLEnvironment;
-import org.mmarini.wheelly.envs.EnvironmentApi;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.gyms.DLEnvironment;
+import org.mmarini.wheelly.gyms.GymApi;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.WorldModeller;
+import org.mmarini.wheelly.robots.RobotApi;
+import org.mmarini.wheelly.storage.serde.BinArrayFile;
+import org.mmarini.wheelly.storage.serde.KeyBinWriter;
 import org.mmarini.wheelly.swing.KpisPanel;
 import org.mmarini.wheelly.swing.Utils;
+import org.mmarini.wheelly.utils.AppYaml;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -185,7 +195,7 @@ public class BatchTraining {
         modeller.connectController(controller);
 
         // Creates environment
-        EnvironmentApi env = AppYaml.envFromJson(config);
+        GymApi env = AppYaml.envFromJson(config);
         if (env instanceof DLEnvironment we) {
             this.environment = we;
         } else {

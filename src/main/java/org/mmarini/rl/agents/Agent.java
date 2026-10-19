@@ -28,7 +28,8 @@
 
 package org.mmarini.rl.agents;
 
-import org.mmarini.wheelly.apis.WithShutdownCompletable;
+import org.mmarini.wheelly.gyms.AgentConnector;
+import org.mmarini.wheelly.utils.WithShutdownCompletable;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;

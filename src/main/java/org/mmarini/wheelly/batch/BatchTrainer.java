@@ -31,10 +31,9 @@ package org.mmarini.wheelly.batch;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.mmarini.rl.agents.BinArrayFile;
 import org.mmarini.rl.agents.RLDatasetIterator;
 import org.mmarini.rl.agents.TrainingKpis;
-import org.mmarini.wheelly.apis.BatchAgent;
+import org.mmarini.wheelly.storage.serde.BinArrayFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

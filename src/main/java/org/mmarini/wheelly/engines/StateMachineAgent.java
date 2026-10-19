@@ -31,7 +31,11 @@ package org.mmarini.wheelly.engines;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.perception.DecisionMaker;
+import org.mmarini.wheelly.perception.WithClearMap;
+import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.slf4j.Logger;
@@ -57,7 +61,7 @@ import static org.mmarini.wheelly.engines.StateResult.*;
  *     It is a mutable object
  * </p>
  */
-public class StateMachineAgent implements ProcessorContextApi, InferenceConnector {
+public class StateMachineAgent implements ProcessorContextApi, DecisionMaker<WorldModel, RobotCommand> {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/agent-state-machine-schema-0.4";
     private static final Logger logger = LoggerFactory.getLogger(StateMachineAgent.class);
 
@@ -95,7 +99,7 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
     private final StateFlow flow;
     private final PublishProcessor<StateNode> stateProcessor;
     private StateNode currentNode;
-    private WorldModellerConnector modeller;
+    private WithClearMap modeller;
     private WorldModel worldModel;
 
     /**
@@ -114,13 +118,6 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
         this.pathProcessor = PublishProcessor.create();
     }
 
-    /**
-     * Returns the state flow
-     */
-    public StateFlow flow() {
-        return flow;
-    }
-
     @Override
     public void clearMap() {
         this.modeller.clearRadarMap();
@@ -129,6 +126,29 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
     @Override
     public StateNode currentNode() {
         return currentNode;
+    }
+
+    /**
+     * Returns the robot command by inferring the event world model
+     *
+     * @param worldModel the world model
+     */
+    @Override
+    public RobotCommand decide(WorldModel worldModel) {
+        this.worldModel = worldModel;
+        if (this.currentNode == null) {
+            initContext();
+        }
+        RobotCommand command = step();
+        stepUpProcessor.onNext(this);
+        return command;
+    }
+
+    /**
+     * Returns the state flow
+     */
+    public StateFlow flow() {
+        return flow;
     }
 
     @Override
@@ -149,7 +169,7 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
             onInit.execute(this);
         }
 
-        // Initializes all states
+        // Initialises all states
         for (StateNode state : flow.states()) {
             state.init(this);
         }
@@ -166,24 +186,15 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
      *
      * @param modeller the modeller
      */
-    public void modeller(WorldModeller modeller) {
+    public void modeller(WithClearMap modeller) {
         this.modeller = modeller;
     }
 
-    /**
-     * Returns the robot command by inferring the event world model
-     *
-     * @param worldModel the world model
-     */
     @Override
-    public RobotCommands onInference(WorldModel worldModel) {
-        this.worldModel = worldModel;
-        if (this.currentNode == null) {
-            initContext();
-        }
-        RobotCommands commands = step();
-        stepUpProcessor.onNext(this);
-        return commands;
+    public StateMachineAgent path(List<Point2D> path) {
+        pathProcessor.onNext(path != null
+                ? path : List.of());
+        return this;
     }
 
     @Override
@@ -206,9 +217,19 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
     }
 
     @Override
-    public StateMachineAgent path(List<Point2D> path) {
-        pathProcessor.onNext(path != null
-                ? path : List.of());
+    public <T> ProcessorContextApi put(String key, T value) {
+        values.put(key, value);
+        if (key.endsWith("." + TARGET_ID)) {
+            Object obj = get(key);
+            if (obj instanceof Point2D target) {
+                target(target);
+            }
+        } else if (key.endsWith("." + PATH_ID)) {
+            Object obj = get(key);
+            if (obj instanceof List<?> path) {
+                path((List<Point2D>) path);
+            }
+        }
         return this;
     }
 
@@ -248,69 +269,6 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
     }
 
     @Override
-    public <T> ProcessorContextApi put(String key, T value) {
-        values.put(key, value);
-        if (key.endsWith("." + TARGET_ID)) {
-            Object obj = get(key);
-            if (obj instanceof Point2D target) {
-                target(target);
-            }
-        } else if (key.endsWith("." + PATH_ID)) {
-            Object obj = get(key);
-            if (obj instanceof List<?> path) {
-                path((List<Point2D>) path);
-            }
-        }
-        return this;
-    }
-
-    @Override
-    public int stackSize() {
-        return stack.size();
-    }
-
-    /**
-     * Returns the robot command by processing the next transition
-     */
-    public RobotCommands step() {
-        // Process the state node
-        StateResult result = currentNode.step(this);
-        logger.atDebug().log("node: {}, result: {}", currentNode, result);
-        // Execute robot command
-        String exitTag = result.exitCode();
-        RobotCommands commands = result.commands();
-        triggerProcessor.onNext(exitTag);
-        if (!NONE_EXIT.equals(exitTag)) {
-            //find for transition match
-            flow.transitions().stream()
-                    .filter(t ->
-                            t.from().equals(currentNode.id()) && t.isTriggered(exitTag))
-                    .findFirst()
-                    .ifPresentOrElse(t -> {
-                        // trigger the exit call back
-                        logger.debug("{}: Trigger {}", currentNode.id(), result);
-                        currentNode.exit(this);
-                        // trigger the transition call back
-                        t.activate(this);
-                        // Change the state
-                        currentNode = flow.getState(t.to());
-                        // trigger the entry state call back
-                        logger.debug("{}: entry", currentNode.id());
-                        currentNode.entry(this);
-                        stateProcessor.onNext(currentNode);
-                    },
-                    () -> logger.debug("Trigger {} - {} ignored", currentNode.id(), exitTag)
-            );
-        }
-        return commands;
-    }
-
-    @Override
-    public WorldModel worldModel() {
-        return worldModel;
-    }
-
-    @Override
     public void remove(String key) {
         values.remove(key);
         if (key.endsWith("." + TARGET_ID)) {
@@ -321,8 +279,54 @@ public class StateMachineAgent implements ProcessorContextApi, InferenceConnecto
     }
 
     @Override
+    public int stackSize() {
+        return stack.size();
+    }
+
+    /**
+     * Returns the robot command by processing the next transition
+     */
+    public RobotCommand step() {
+        // Process the state node
+        StateResult result = currentNode.step(this);
+        logger.atDebug().log("node: {}, result: {}", currentNode, result);
+        // Execute robot command
+        String exitTag = result.exitCode();
+        //RobotCommands commands = result.commands();
+        triggerProcessor.onNext(exitTag);
+        if (!NONE_EXIT.equals(exitTag)) {
+            //find for transition match
+            flow.transitions().stream()
+                    .filter(t ->
+                            t.from().equals(currentNode.id()) && t.isTriggered(exitTag))
+                    .findFirst()
+                    .ifPresentOrElse(t -> {
+                                // trigger the exit call back
+                                logger.debug("{}: Trigger {}", currentNode.id(), result);
+                                currentNode.exit(this);
+                                // trigger the transition call back
+                                t.activate(this);
+                                // Change the state
+                                currentNode = flow.getState(t.to());
+                                // trigger the entry state call back
+                                logger.debug("{}: entry", currentNode.id());
+                                currentNode.entry(this);
+                                stateProcessor.onNext(currentNode);
+                            },
+                            () -> logger.debug("Trigger {} - {} ignored", currentNode.id(), exitTag)
+                    );
+        }
+        return result.command();
+    }
+
+    @Override
     public StateMachineAgent target(Point2D target) {
         targetProcessor.onNext(Optional.ofNullable(target));
         return this;
+    }
+
+    @Override
+    public WorldModel worldModel() {
+        return worldModel;
     }
 }

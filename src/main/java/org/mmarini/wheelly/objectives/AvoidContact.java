@@ -30,9 +30,11 @@ package org.mmarini.wheelly.objectives;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.WithWorldModel;
+import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
 /**
@@ -41,7 +43,7 @@ import org.mmarini.yaml.Locator;
 public interface AvoidContact {
     String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-avoid-contact-schema-0.1";
 
-    static RewardFunction avoid(double reward) {
+    static RewardFunction<WithWorldModel, RobotCommand> avoid(double reward) {
         return (s0, a, s1) -> {
             RobotStatus status = s1.worldModel().robotStatus();
                 return !status.canMoveForward() || !status.canMoveBackward()
@@ -53,10 +55,10 @@ public interface AvoidContact {
     /**
      * Returns the reward function from configuration
      *
-     * @param root    the root json document
+     * @param root    the root JSON document
      * @param locator the locator
      */
-    static RewardFunction create(JsonNode root, Locator locator) {
+    static RewardFunction<WithWorldModel, RobotCommand> create(JsonNode root, Locator locator) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double reward = locator.path("reward").getNode(root).asDouble(-1d);
         return avoid(reward);

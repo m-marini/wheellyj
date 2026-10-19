@@ -29,7 +29,13 @@
 package org.mmarini.wheelly.swing;
 
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.perception.FiducialMarker;
+import org.mmarini.wheelly.perception.GridTopology;
+import org.mmarini.wheelly.perception.RadarMap;
+import org.mmarini.wheelly.robots.Obstacle;
+import org.mmarini.wheelly.robots.ObstacleMap;
+import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
@@ -87,7 +93,7 @@ public class MapPanel extends LayeredCanvas {
      *
      * @param markers the markers
      */
-    public void markers(Collection<LabelMarker> markers) {
+    public void markers(Collection<FiducialMarker> markers) {
         BaseShape shape = markers != null
                 ? CompositeShape.create(markers.stream()
                 .map(marker ->
@@ -200,7 +206,7 @@ public class MapPanel extends LayeredCanvas {
      * @param sensorDir        the sensor direction
      * @param maxRadarDistance the max radar distance (m)
      */
-    public void robot(Point2D location, Complex direction, Complex sensorDir, double maxRadarDistance) {
+    public void robot(Point2D location, Angle direction, Angle sensorDir, double maxRadarDistance) {
         List<BaseShape> shapes = new ArrayList<>();
         if (location != null) {
             if (direction != null) {

@@ -44,14 +44,14 @@
 
     <logger name="org.mmarini" level="INFO"/>
 
-    <logger name="org.mmarini.rl.agents.BinArrayFile" level="INFO"/>
-    <logger name="org.mmarini.rl.agents.CSVWriter" level="INFO"/>
+    <logger name="org.mmarini.wheelly.storage.serde.BinArrayFile" level="INFO"/>
+    <logger name="org.mmarini.wheelly.storage.csv.CSVWriter" level="INFO"/>
     <logger name="org.mmarini.rl.agents.DLAgent" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.apis.SimRobot" level="INFO"/>
-    <logger name="org.mmarini.wheelly.apis.RobotController" level="INFO"/>
-    <logger name="org.mmarini.wheelly.apis.RobotControllerStatus" level="INFO"/>
-    <logger name="org.mmarini.wheelly.apis.RadarMap" level="INFO"/>
+    <logger name="org.mmarini.wheelly.robots.SimRobot" level="INFO"/>
+    <logger name="org.mmarini.wheelly.control.RobotController" level="INFO"/>
+    <logger name="org.mmarini.wheelly.control.RobotControllerStatus" level="INFO"/>
+    <logger name="org.mmarini.wheelly.perception.RadarMap" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.apps.MatrixMonitor" level="INFO"/>
     <logger name="org.mmarini.wheelly.apps.RobotCheckUp" level="INFO"/>
@@ -75,11 +75,11 @@
     <logger name="org.mmarini.wheelly.engines.SearchUnknownState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.SearchRefreshState" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.envs.DLEnvironment" level="INFO"/>
-    <logger name="org.mmarini.wheelly.envs.DLMacroActionEnvironment" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.gyms.DLEnvironment" level="INFO"/>
+    <logger name="org.mmarini.wheelly.gyms.MacroActionAdapter" level="DEBUG"/>
 
     <logger name="org.mmarini.wheelly.fsm.CoordinatedMotionState" level="DEBUG"/>
-    <logger name="org.mmarini.wheelly.fsm.AsyncMovePathState" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.behaviours.fsm.MovePathState" level="DEBUG"/>
 
     <logger name="org.mmarini.wheelly.mqtt.MqttRobot" level="INFO"/>
 

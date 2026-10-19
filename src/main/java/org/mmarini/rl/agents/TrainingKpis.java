@@ -29,6 +29,7 @@
 package org.mmarini.rl.agents;
 
 import org.mmarini.MapStream;
+import org.mmarini.wheelly.storage.serde.KeyBinWriter;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 

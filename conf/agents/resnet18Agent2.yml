@@ -158,7 +158,7 @@ network:
       move:
         type: OutputLayer
         inputs: [ out ]
-        nOut: 15
+        nOut: 16
         activation: SoftMax
         lossFunction: NegativeLogLikelihood
         weightInit:
@@ -166,7 +166,7 @@ network:
       head:
         type: OutputLayer
         inputs: [ out ]
-        nOut: 7
+        nOut: 9
         activation: SoftMax
         lossFunction: NegativeLogLikelihood
         weightInit:

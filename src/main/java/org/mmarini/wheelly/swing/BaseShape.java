@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,9 +28,9 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.GridTopology;
-import org.mmarini.wheelly.apis.MapCell;
+import org.mmarini.wheelly.perception.GridTopology;
+import org.mmarini.wheelly.perception.MapCell;
+import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.*;
 import java.awt.geom.*;
@@ -77,7 +77,7 @@ public interface BaseShape {
      * @param location  location
      * @param direction direction
      */
-    static AffineTransform at(Point2D location, Complex direction) {
+    static AffineTransform at(Point2D location, Angle direction) {
         AffineTransform at = AffineTransform.getTranslateInstance(location.getX(), location.getY());
         at.rotate(-direction.toRad());
         return at;
@@ -232,7 +232,7 @@ public interface BaseShape {
      * @param location  the location
      * @param direction the direction
      */
-    static BaseShape createRobotShape(Point2D location, Complex direction) {
+    static BaseShape createRobotShape(Point2D location, Angle direction) {
         AffineTransform at = at(location, direction);
         return new CompositeShape(
                 createPolygon(ROBOT_COLOR, BORDER_STROKE, true, at, ROBOT_POINTS),
@@ -247,7 +247,7 @@ public interface BaseShape {
      * @param sensorDirection the sensor direction
      * @param length          the length of sensor (m)
      */
-    static BaseShape createSensorShape(Point2D location, Complex sensorDirection, float length) {
+    static BaseShape createSensorShape(Point2D location, Angle sensorDirection, float length) {
         return createPolygon(SENSOR_COLOR, BORDER_STROKE, false, at(location, sensorDirection),
                 0, -length,
                 0, length);

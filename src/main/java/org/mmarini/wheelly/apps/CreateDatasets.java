@@ -38,12 +38,18 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.batch.BatchAgent;
 import org.mmarini.wheelly.batch.DatasetBuilder;
 import org.mmarini.wheelly.batch.ProgressInfo;
-import org.mmarini.wheelly.envs.DLEnvironment;
-import org.mmarini.wheelly.envs.EnvironmentApi;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.gyms.DLEnvironment;
+import org.mmarini.wheelly.gyms.GymApi;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.WorldModeller;
+import org.mmarini.wheelly.robots.RobotApi;
+import org.mmarini.wheelly.storage.serde.InferenceFileReader;
+import org.mmarini.wheelly.utils.AppYaml;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -165,7 +171,7 @@ public class CreateDatasets {
         modeller.connectController(controller);
 
         // Creates environment
-        EnvironmentApi env = AppYaml.envFromJson(config);
+        GymApi env = AppYaml.envFromJson(config);
         if (env instanceof DLEnvironment we) {
             this.environment = we;
         } else {

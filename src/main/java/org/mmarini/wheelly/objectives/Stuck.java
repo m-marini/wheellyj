@@ -29,13 +29,15 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.WithWorldModel;
+import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
 import static java.lang.Math.abs;
-import static org.mmarini.wheelly.apis.FuzzyFunctions.*;
+import static org.mmarini.wheelly.utils.FuzzyFunctions.*;
 
 /**
  * The objective function that fuzzy rewards the robot stuck to obstacle behaviour.
@@ -48,10 +50,10 @@ public interface Stuck {
     /**
      * Returns the reward function from configuration
      *
-     * @param root    the root json document
+     * @param root    the root JSON document
      * @param locator the locator
      */
-    static RewardFunction create(JsonNode root, Locator locator) {
+    static RewardFunction<WithWorldModel, RobotCommand> create(JsonNode root, Locator locator) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double distance0 = locator.path("distance0").getNode(root).asDouble();
         double distance1 = locator.path("distance1").getNode(root).asDouble();
@@ -70,7 +72,7 @@ public interface Stuck {
      * @param x4          maximum distance for 0 reward
      * @param sensorRange tolerance of sensor front position in DEG
      */
-    static RewardFunction stuck(double x1, double x2, double x3, double x4, int sensorRange) {
+    static RewardFunction<WithWorldModel, RobotCommand> stuck(double x1, double x2, double x3, double x4, int sensorRange) {
         return (s0, e, s1) -> {
             RobotStatus status = s1.worldModel().robotStatus();
             double dist = status.frontDistance();
