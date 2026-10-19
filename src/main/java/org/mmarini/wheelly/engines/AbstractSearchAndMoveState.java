@@ -128,8 +128,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
                     logger.atDebug().log("Search completed");
                     return path;
                 })
-                .subscribeOn(Schedulers.computation())
-                .observeOn(Schedulers.io())
+                .subscribeOn(Schedulers.io())
                 .subscribe(path1 -> {
                             // Search completed with result
                             Object id = searchStatus.getAndUpdate(s -> null);
