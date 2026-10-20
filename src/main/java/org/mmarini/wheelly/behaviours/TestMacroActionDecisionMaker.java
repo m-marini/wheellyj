@@ -48,7 +48,7 @@ import static org.mmarini.wheelly.behaviours.MoveActionId.*;
  * full panoramic field sweeps and targeted area explorations to evaluate state telemetry synchronisation.
  * </p>
  */
-public class TestMacroActionDecisionMaker implements DecisionMaker<MacroActionState, BehaviourMacroAction> {
+public class TestMacroActionDecisionMaker implements DecisionMaker<MacroActionsState, BehaviourMacroAction> {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-test-macro-actions-schema-0.1";
     public static final BehaviourMacroAction HALT_STRAIGHT_ACTION = new BehaviourMacroAction(HALT_ACTION, LOOK_STRAIGHT_ACTION);
     public static final BehaviourMacroAction CONTINUE_ACTION = new BehaviourMacroAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
@@ -115,7 +115,7 @@ public class TestMacroActionDecisionMaker implements DecisionMaker<MacroActionSt
      * @return the computed {@link BehaviourMacroAction} dispatched by the current active testing routine
      */
     @Override
-    public BehaviourMacroAction decide(MacroActionState state) {
+    public BehaviourMacroAction decide(MacroActionsState state) {
         return actionFunction.get();
     }
 

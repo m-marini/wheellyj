@@ -31,7 +31,7 @@ package org.mmarini.wheelly.storage.serde;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.behaviours.BehaviourMacroAction;
 import org.mmarini.wheelly.behaviours.HeadActionId;
-import org.mmarini.wheelly.behaviours.MacroActionState;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
 import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.perception.*;
@@ -97,15 +97,15 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
         return new BehaviourMacroAction(move, head);
     }
 
-    public MacroActionState readMacroEnvState() throws IOException {
+    public MacroActionsState readMacroEnvState() throws IOException {
         WorldModel model = readModel();
         MoveActionId move = readMoveActionId();
         HeadActionId head = readHeadActionId();
-        return new MacroActionState(model, move, head);
+        return new MacroActionsState(model, move, head);
     }
 
-    public Tuple2<MacroActionState, BehaviourMacroAction> readMacroEnvStep() throws IOException {
-        MacroActionState state = readMacroEnvState();
+    public Tuple2<MacroActionsState, BehaviourMacroAction> readMacroEnvStep() throws IOException {
+        MacroActionsState state = readMacroEnvState();
         BehaviourMacroAction action = readAgentAction();
         return Tuple2.of(state, action);
     }

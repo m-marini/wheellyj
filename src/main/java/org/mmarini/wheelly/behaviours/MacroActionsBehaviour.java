@@ -57,20 +57,20 @@ import static java.util.Objects.requireNonNull;
  * and converting agent actions back into low-level robot commands.
  * </p>
  */
-public class MacroActionBehaviour implements BehaviourApi, FSMContext, BehaviourState {
+public class MacroActionsBehaviour implements BehaviourApi, FSMContext, BehaviourState {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/behave-macro-actions-schema-0.1";
     public static final String SEED_ID = "seed";
-    private static final Logger logger = LoggerFactory.getLogger(MacroActionBehaviour.class);
+    private static final Logger logger = LoggerFactory.getLogger(MacroActionsBehaviour.class);
 
     /**
      * Creates the deep learning environment from a JSON configuration file.
      *
      * @param root the document root node
      * @param file the configuration file
-     * @return the initialised {@link MacroActionBehaviour} instance
+     * @return the initialised {@link MacroActionsBehaviour} instance
      * @throws IOException if a validation or reading error occurs
      */
-    public static MacroActionBehaviour create(JsonNode root, File file) throws IOException {
+    public static MacroActionsBehaviour create(JsonNode root, File file) throws IOException {
         return create(root, Locator.root());
     }
 
@@ -81,18 +81,18 @@ public class MacroActionBehaviour implements BehaviourApi, FSMContext, Behaviour
      * @param locator the locator of configuration
      * @throws IOException if a validation or reading error occurs
      */
-    public static MacroActionBehaviour create(JsonNode root, Locator locator) throws IOException {
+    public static MacroActionsBehaviour create(JsonNode root, Locator locator) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         MacroActionConfig config = MacroActionConfig.fromJson(root, locator);
         long seed = locator.path(SEED_ID).getNode(root).asLong();
         Random random = seed == 0 ? new Random() : new Random(seed);
-        return new MacroActionBehaviour(config, random);
+        return new MacroActionsBehaviour(config, random);
     }
 
     private final MotionMacroActionState motionState;
     private final HeadMacroActionState headState;
     private WorldModel currentWorldModel;
-    private DecisionMaker<MacroActionState, BehaviourMacroAction> decisionMaker;
+    private DecisionMaker<MacroActionsState, BehaviourMacroAction> decisionMaker;
 
     /**
      * Creates the deep learning environment
@@ -100,7 +100,7 @@ public class MacroActionBehaviour implements BehaviourApi, FSMContext, Behaviour
      * @param config the configuration
      * @param random the random generator
      */
-    public MacroActionBehaviour(MacroActionConfig config, Random random) {
+    public MacroActionsBehaviour(MacroActionConfig config, Random random) {
         requireNonNull(config);
         this.motionState = new MotionMacroActionState(config, requireNonNull(random));
         this.headState = new HeadMacroActionState(config);
@@ -117,7 +117,7 @@ public class MacroActionBehaviour implements BehaviourApi, FSMContext, Behaviour
      * @param worldModel the world model instance to store
      * @return this environment instance for method chaining
      */
-    public MacroActionBehaviour currentWorldModel(WorldModel worldModel) {
+    public MacroActionsBehaviour currentWorldModel(WorldModel worldModel) {
         this.currentWorldModel = requireNonNull(worldModel);
         return this;
     }
@@ -132,7 +132,7 @@ public class MacroActionBehaviour implements BehaviourApi, FSMContext, Behaviour
                 || motionState.expired()
                 || motionState.completed()) {
             // Generates a new macro action from inference engine
-            BehaviourMacroAction nextAction = decisionMaker.decide(new MacroActionState(state, motionState.currentAction(), headState.currentAction()));
+            BehaviourMacroAction nextAction = decisionMaker.decide(new MacroActionsState(state, motionState.currentAction(), headState.currentAction()));
             headState.init(this, nextAction.headId());
             motionState.init(this, nextAction.moveId());
         }
@@ -141,7 +141,7 @@ public class MacroActionBehaviour implements BehaviourApi, FSMContext, Behaviour
         return new RobotCommand(motionCmd, headCmd);
     }
 
-    public void decisionMaker(DecisionMaker<MacroActionState, BehaviourMacroAction> decisionMaker) {
+    public void decisionMaker(DecisionMaker<MacroActionsState, BehaviourMacroAction> decisionMaker) {
         this.decisionMaker = requireNonNull(decisionMaker);
     }
 

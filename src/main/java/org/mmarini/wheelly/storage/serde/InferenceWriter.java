@@ -30,7 +30,7 @@ package org.mmarini.wheelly.storage.serde;
 
 import org.mmarini.wheelly.behaviours.BehaviourMacroAction;
 import org.mmarini.wheelly.behaviours.HeadActionId;
-import org.mmarini.wheelly.behaviours.MacroActionState;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
 import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.perception.*;
@@ -191,7 +191,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param state the state
      */
-    default <T extends InferenceWriter> T write(MacroActionState state) throws IOException {
+    default <T extends InferenceWriter> T write(MacroActionsState state) throws IOException {
         return write(state.worldModel())
                 .write(state.moveActionId())
                 .write(state.headActionId());
@@ -321,7 +321,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         return (T) this;
     }
 
-    default <T extends InferenceWriter> T write(MacroActionState macroEnvState, BehaviourMacroAction agentAction) throws IOException {
+    default <T extends InferenceWriter> T write(MacroActionsState macroEnvState, BehaviourMacroAction agentAction) throws IOException {
         write(macroEnvState)
                 .write(agentAction);
         return (T) this;

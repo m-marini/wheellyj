@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.utils;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.wheelly.behaviours.BehaviourApi;
 import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.gyms.GymApi;
 import org.mmarini.wheelly.gyms.RewardFunction;
@@ -40,6 +41,10 @@ import java.io.File;
 import java.io.IOException;
 
 public interface AppYaml {
+
+    static BehaviourApi behaviourFromJson(JsonNode config) throws Throwable {
+        return BehaviourApi.fromFile(new File(config.path("behaviour").asText()));
+    }
 
     /**
      * Returns the controller from configuration file reading "robot" and "controller" properties

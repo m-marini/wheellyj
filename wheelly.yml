@@ -3,9 +3,9 @@ $schema: https://mmarini.org/wheelly/wheelly-schema-3.0
 robot: conf/robots/simRobotSmallNoObstacles.yml
 #robot: conf/robots/simRobot1Obstacles.yml
 #robot: conf/robots/mqttRobot.yml
-controller: conf/controllers/controller.yml
-modeller: conf/modellers/modeller.yml
-environment: conf/environments/env.yml
+controller: conf/control/controller.yml
+modeller: conf/perception/modeller.yml
+environment: conf/gyms/env.yml
 rewardFunction: conf/objectives/findLabel2.yml
 agent: conf/agents/resnet18Agent.yml
 savingInterval: 14400000

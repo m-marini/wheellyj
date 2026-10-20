@@ -1,13 +1,13 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/state-func-dl-macro-action-schema-0.1
+$id: https://mmarini.org/wheelly/state-func-macro-actions-schema-0.1
 title: RL state function
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/state-func-dl-macro-action-schema-0.1
+    const: https://mmarini.org/wheelly/state-func-macro-actions-schema-0.1
   class:
-    const: org.mmarini.wheelly.gyms.DLMacroActionStateFunction
+    const: org.mmarini.wheelly.gyms.MacroActionsStateFunction
   markerLabels:
     type: array
     items:

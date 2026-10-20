@@ -55,7 +55,7 @@ import static org.mmarini.yaml.Utils.EMPTY_OBJECTS;
  * and converting agent actions back into low-level robot commands.
  * </p>
  */
-public class MacroActionAdapter implements GymAdapter<MacroActionState, BehaviourMacroAction> {
+public class MacroActionsAdapter implements GymAdapter<MacroActionsState, BehaviourMacroAction> {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-macro-actions-schema-0.1";
     public static final String MOVE_ID = "move";
     public static final String HEAD_ID = "head";
@@ -65,17 +65,17 @@ public class MacroActionAdapter implements GymAdapter<MacroActionState, Behaviou
             HEAD_ID, new IntSignalSpec(new long[]{1, 1}, HeadActionId.values().length),
             MOVE_ID, new IntSignalSpec(new long[]{1, 1}, MoveActionId.values().length)
     );
-    private static final Logger logger = LoggerFactory.getLogger(MacroActionAdapter.class);
+    private static final Logger logger = LoggerFactory.getLogger(MacroActionsAdapter.class);
 
     /**
      * Creates the deep learning environment from a JSON configuration file.
      *
      * @param root the document root node
      * @param file the configuration file
-     * @return the initialised {@link MacroActionAdapter} instance
+     * @return the initialised {@link MacroActionsAdapter} instance
      * @throws IOException if a validation or reading error occurs
      */
-    public static MacroActionAdapter create(JsonNode root, File file) throws IOException {
+    public static MacroActionsAdapter create(JsonNode root, File file) throws IOException {
         return create(root, Locator.root());
     }
 
@@ -86,15 +86,15 @@ public class MacroActionAdapter implements GymAdapter<MacroActionState, Behaviou
      * @param locator the locator of configuration
      * @throws IOException if a validation or reading error occurs
      */
-    public static MacroActionAdapter create(JsonNode root, Locator locator) throws IOException {
+    public static MacroActionsAdapter create(JsonNode root, Locator locator) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        Function<WorldModelSpec, StateFunction<MacroActionAdapter>> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
+        Function<WorldModelSpec, StateFunction<MacroActionsAdapter>> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
                 EMPTY_OBJECTS, EMPTY_CLASSES);
-        return new MacroActionAdapter(null, null);
+        return new MacroActionsAdapter(null, null);
     }
 
-    private final StateFunction<MacroActionState> stateFunc;
-    private final RewardFunction<MacroActionState, BehaviourMacroAction> rewardFunc;
+    private final StateFunction<MacroActionsState> stateFunc;
+    private final RewardFunction<MacroActionsState, BehaviourMacroAction> rewardFunc;
     private volatile AgentConnector agent;
     private volatile MacroActionStepState stepState;
     private DoubleConsumer onReward;
@@ -105,8 +105,8 @@ public class MacroActionAdapter implements GymAdapter<MacroActionState, Behaviou
      * @param stateFunc
      * @param rewardFunc
      */
-    public MacroActionAdapter(StateFunction<MacroActionState> stateFunc,
-                              RewardFunction<MacroActionState, BehaviourMacroAction> rewardFunc) {
+    public MacroActionsAdapter(StateFunction<MacroActionsState> stateFunc,
+                               RewardFunction<MacroActionsState, BehaviourMacroAction> rewardFunc) {
         this.stateFunc = requireNonNull(stateFunc);
         this.rewardFunc = requireNonNull(rewardFunc);
         logger.atDebug().log("Created");
@@ -132,7 +132,7 @@ public class MacroActionAdapter implements GymAdapter<MacroActionState, Behaviou
     }
 
     @Override
-    public BehaviourMacroAction decide(MacroActionState state) {
+    public BehaviourMacroAction decide(MacroActionsState state) {
         WorldModel model = state.worldModel();
         Map<String, Signal> signals1 = state(state);
         Map<String, Signal> actions = agent.act(signals1);
@@ -194,7 +194,7 @@ public class MacroActionAdapter implements GymAdapter<MacroActionState, Behaviou
      * @param callback the consumer function that receives the reward value
      * @return this environment instance for method chaining
      */
-    public MacroActionAdapter onReward(DoubleConsumer callback) {
+    public MacroActionsAdapter onReward(DoubleConsumer callback) {
         this.onReward = onReward != null ? onReward.andThen(callback) : callback;
         return this;
     }
@@ -212,7 +212,7 @@ public class MacroActionAdapter implements GymAdapter<MacroActionState, Behaviou
      * @param state1  the resulting environment state after the action execution
      * @return the calculated reward value, or {@code 0.0} if no reward function is configured
      */
-    public double reward(MacroActionState state0, BehaviourMacroAction actions, MacroActionState state1) {
+    public double reward(MacroActionsState state0, BehaviourMacroAction actions, MacroActionsState state1) {
         return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
@@ -227,7 +227,7 @@ public class MacroActionAdapter implements GymAdapter<MacroActionState, Behaviou
      * @return a map pairing signal identifiers with their processed {@link Signal} values
      * @throws NullPointerException if the provided model is null
      */
-    public Map<String, Signal> state(MacroActionState model) {
+    public Map<String, Signal> state(MacroActionsState model) {
         requireNonNull(model);
         ensureConnected();
         return stateFunc.signals(model);
@@ -260,7 +260,7 @@ public class MacroActionAdapter implements GymAdapter<MacroActionState, Behaviou
      * @param prevActions  the raw action signals generated by the agent for the step
      */
     private record MacroActionStepState(
-            MacroActionState prevState,
+            MacroActionsState prevState,
             Map<String, Signal> signals0,
             BehaviourMacroAction prevCommands,
             Map<String, Signal> prevActions

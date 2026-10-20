@@ -56,7 +56,7 @@ import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.utils.Angle.DEG0;
 import static org.mmarini.wheelly.utils.Utils.MM;
 
-class HeadMacroActionStateTest {
+class HeadMacroActionsStateTest {
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
     public static final String MARKER_A = "A";

@@ -54,7 +54,7 @@ import static org.mmarini.wheelly.behaviours.fsm.MacroActionConfig.DEFAULT_MACRO
 import static org.mmarini.wheelly.robots.MotionStatusId.BACKWARD;
 import static org.mmarini.wheelly.utils.Utils.MM;
 
-class MacroActionBehaviourTest {
+class MacroActionsBehaviourTest {
 
     public static final int SEED = 1234;
 
@@ -139,8 +139,8 @@ class MacroActionBehaviourTest {
     private static final Angle HEAD_DIR = Angle.fromDeg(45);
 
     WorldModelBuilder builder;
-    MacroActionBehaviour exploreBehaviour;
-    MacroActionBehaviour markerBehaviour;
+    MacroActionsBehaviour exploreBehaviour;
+    MacroActionsBehaviour markerBehaviour;
 
     @BeforeEach
     void setUp() {
@@ -171,13 +171,13 @@ class MacroActionBehaviourTest {
                 return null;
             }
         };
-        this.markerBehaviour = new MacroActionBehaviour(DEFAULT_MACRO_ACTION_CONFIG, new Random(SEED));
+        this.markerBehaviour = new MacroActionsBehaviour(DEFAULT_MACRO_ACTION_CONFIG, new Random(SEED));
         markerBehaviour.connect(mockModeller);
         markerBehaviour.decisionMaker(state ->
                 new BehaviourMacroAction(TRACK_MARKER, LOOK_FACE_AT_MARKER_ACTION)
         );
 
-        this.exploreBehaviour = new MacroActionBehaviour(DEFAULT_MACRO_ACTION_CONFIG, new Random(SEED));
+        this.exploreBehaviour = new MacroActionsBehaviour(DEFAULT_MACRO_ACTION_CONFIG, new Random(SEED));
         exploreBehaviour.decisionMaker(state ->
                 new BehaviourMacroAction(EXPLORE_UNKNOWN_AREA, LOOK_FACE_AT_OBSTACLE_ACTION));
         exploreBehaviour.connect(mockModeller);

@@ -45,6 +45,7 @@ import org.mmarini.rl.agents.DLAgent;
 import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
+import org.mmarini.wheelly.behaviours.BehaviourApi;
 import org.mmarini.wheelly.control.RobotController;
 import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.control.RobotStatus;
@@ -188,10 +189,11 @@ public class Wheelly {
     private long prevRobotStep;
     private long prevStep;
     private List<JFrame> allFrames;
+    private RobotApi robot;
     private RobotControllerApi controller;
     private WorldModeller worldModeller;
     private GymApi environment;
-    private RobotApi robot;
+    private BehaviourApi behaviuor;
     private Agent agent;
     private JFrame frame;
     private InferenceWriter modelDumper;
@@ -237,26 +239,22 @@ public class Wheelly {
 
         logger.atInfo().log("Creating controller ...");
         this.controller = AppYaml.controllerFromJson(config);
-        controller.connectRobot(robot);
 
         logger.atInfo().log("Creating world modeller ...");
         this.worldModeller = AppYaml.modellerFromJson(config);
-        worldModeller.setRobotSpec(robot.robotSpec());
-        worldModeller.connectController(controller);
-        worldModeller.setDecisionMaker(this::decide);
+
+        logger.atInfo().log("Creating behaviour ...");
+        this.behaviuor = AppYaml.behaviourFromJson(config);
 
         logger.atInfo().log("Creating RL environment ...");
         this.environment = AppYaml.envFromJson(config);
-        environment.connect(worldModeller);
 
         logger.atInfo().log("Create reward function ...");
         RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
-        environment.setRewardFunc(rewardFunc);
 
         logger.atInfo().log("Creating agent ...");
         this.agent = Agent.fromFile(
                 new File(Locator.locate("agent").getNode(config).asText()));
-
         if (agent instanceof DLAgent dlAgent) {
             dlAgent = dlAgent.concurrentTraining(args.getBoolean("parallel"))
                     .onKpis(this::onKpis)
@@ -264,9 +262,18 @@ public class Wheelly {
             agent = dlAgent;
         }
 
+        controller.connectRobot(robot);
+
+        worldModeller.setRobotSpec(robot.robotSpec());
+        worldModeller.connectController(controller);
+        worldModeller.setDecisionMaker(this::decide);
+
+        environment.connect(worldModeller);
+        environment.setRewardFunc(rewardFunc);
+        environment.connect(agent);
+
         this.savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
         autosaveInstant = System.currentTimeMillis() + savingInterval;
-        environment.connect(agent);
 
         kpisPanel.addActionColumns(environment.actionSpec()
                 .keySet().stream().sorted().toArray(String[]::new));
@@ -424,6 +431,12 @@ public class Wheelly {
         allFrames = List.of(frame);
     }
 
+    private RobotCommand decide(WorldModel state) {
+        return active.get()
+                ? environment.decide(state)
+                : RobotCommand.halt();
+    }
+
     /**
      * Returns the validated application configuration
      *
@@ -482,20 +495,9 @@ public class Wheelly {
         comMonitor.onControllerStatus(status);
     }
 
-    private RobotCommand decide(WorldModel state) {
-        return active.get()
-                ? environment.decide(state)
-                : RobotCommand.halt();
-    }
-
     private void onHeadStatus(HeadStatus status) {
         SwingUtilities.invokeLater(() ->
                 sensorMonitor.onHeadStatusCommand(status));
-    }
-
-    private void onMotionStatus(MotionStatus status) {
-        SwingUtilities.invokeLater(() ->
-                sensorMonitor.onMotionStatus(status));
     }
 
     /**
@@ -524,6 +526,11 @@ public class Wheelly {
         agent.learning(learning);
     }
 
+    private void onMotionStatus(MotionStatus status) {
+        SwingUtilities.invokeLater(() ->
+                sensorMonitor.onMotionStatus(status));
+    }
+
     /**
      * Handles the obstacle map
      *
@@ -533,31 +540,6 @@ public class Wheelly {
         SwingUtilities.invokeLater(() ->
                 envPanel.obstacles(map)
         );
-    }
-
-    /**
-     * Handles the status ready event
-     *
-     * @param status the status
-     */
-    private void onStatusReady(RobotStatus status) {
-        if (robotStartTimestamp < 0) {
-            robotStartTimestamp = status.robotTime();
-        }
-        SwingUtilities.invokeLater(() -> {
-            envPanel.robotStatus(status);
-            sensorMonitor.onStatus(status);
-            envPanel.setTimeRatio(controller.simRealSpeed());
-        });
-        long now = System.currentTimeMillis();
-        if (now > autosaveInstant) {
-            agent.backup();
-            autosaveInstant = now + savingInterval;
-        }
-        long robotElapsed = status.robotTime() - robotStartTimestamp;
-        if (robotElapsed > sessionDuration) {
-            shutDown();
-        }
     }
 
     /**
@@ -621,12 +603,28 @@ public class Wheelly {
     }
 
     /**
-     * Handles the window shuttingDown events
+     * Handles the status ready event
      *
-     * @param ignoredWindowEvent the event
+     * @param status the status
      */
-    private void onWindowClosing(WindowEvent ignoredWindowEvent) {
-        shutDown();
+    private void onStatusReady(RobotStatus status) {
+        if (robotStartTimestamp < 0) {
+            robotStartTimestamp = status.robotTime();
+        }
+        SwingUtilities.invokeLater(() -> {
+            envPanel.robotStatus(status);
+            sensorMonitor.onStatus(status);
+            envPanel.setTimeRatio(controller.simRealSpeed());
+        });
+        long now = System.currentTimeMillis();
+        if (now > autosaveInstant) {
+            agent.backup();
+            autosaveInstant = now + savingInterval;
+        }
+        long robotElapsed = status.robotTime() - robotStartTimestamp;
+        if (robotElapsed > sessionDuration) {
+            shutDown();
+        }
     }
 
     /**
@@ -638,6 +636,25 @@ public class Wheelly {
         active.set(false);
         toolBar.pauseButton().setEnabled(false);
         toolBar.playButton().setEnabled(true);
+    }
+
+    /**
+     * Handles the window shuttingDown events
+     *
+     * @param ignoredWindowEvent the event
+     */
+    private void onWindowClosing(WindowEvent ignoredWindowEvent) {
+        shutDown();
+    }
+
+    /**
+     * Handles the windows opened
+     * Initialises the agent
+     *
+     * @param e the event
+     */
+    private void onWindowOpened(WindowEvent e) {
+        controller.start();
     }
 
     /**
@@ -689,16 +706,6 @@ public class Wheelly {
         prevRobotStep = robotClock;
         prevStep = time;
         logger.atDebug().log("on Inference end");
-    }
-
-    /**
-     * Handles the windows opened
-     * Initialises the agent
-     *
-     * @param e the event
-     */
-    private void onWindowOpened(WindowEvent e) {
-        controller.start();
     }
 
     /**

@@ -92,5 +92,5 @@ public interface BehaviourApi extends DecisionMaker<WorldModel, RobotCommand> {
         return Utils.createObject(file);
     }
 
-    void decisionMaker(DecisionMaker<MacroActionState, BehaviourMacroAction> decisionMaker);
+    void decisionMaker(DecisionMaker<MacroActionsState, BehaviourMacroAction> decisionMaker);
 }

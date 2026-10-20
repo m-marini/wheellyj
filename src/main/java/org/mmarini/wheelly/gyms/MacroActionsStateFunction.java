@@ -31,7 +31,7 @@ package org.mmarini.wheelly.gyms;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.behaviours.HeadActionId;
-import org.mmarini.wheelly.behaviours.MacroActionState;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
 import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.perception.*;
@@ -64,7 +64,7 @@ import static org.mmarini.wheelly.utils.Utils.cm2m;
  * web camera visuals, concurrent finite state machine actions, and an occupancy grid map grid.
  * </p>
  */
-public class MacroActionStateFunction implements StateFunction<MacroActionState> {
+public class MacroActionsStateFunction implements StateFunction<MacroActionsState> {
 
     /**
      * Identifier key for the grid map multidimensional signal.
@@ -105,7 +105,7 @@ public class MacroActionStateFunction implements StateFunction<MacroActionState>
     /**
      * Validation URI location matching the JSON schema definition for this function.
      */
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-func-dl-macro-action-schema-0.1";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-func-macro-actions-schema-0.1";
 
     /**
      * Identifier key for the robot chassis kinematics feature vector.
@@ -135,7 +135,7 @@ public class MacroActionStateFunction implements StateFunction<MacroActionState>
     public static final int PROXY_SIGNAL_SIZE = 4;
     public static final int HEAD_SIGNAL_SIZE = 7 + HeadStatusId.values().length;
     public static final int FSM_SIGNAL_SIZE = MoveActionId.values().length + HeadActionId.values().length;
-    private static final Logger logger = LoggerFactory.getLogger(MacroActionStateFunction.class);
+    private static final Logger logger = LoggerFactory.getLogger(MacroActionsStateFunction.class);
 
     /**
      * Creates a new state function configured with the specified world bounds and
@@ -143,11 +143,11 @@ public class MacroActionStateFunction implements StateFunction<MacroActionState>
      *
      * @param worldSpec the structural world limits and specification profile
      * @param markers   the explicit list of unique optical marker labels
-     * @return a newly initialised {@link MacroActionStateFunction} instance
+     * @return a newly initialised {@link MacroActionsStateFunction} instance
      */
-    public static MacroActionStateFunction create(WorldModelSpec worldSpec, List<String> markers) {
+    public static MacroActionsStateFunction create(WorldModelSpec worldSpec, List<String> markers) {
         Map<String, SignalSpec> spec = createSpec(worldSpec, markers.size());
-        return new MacroActionStateFunction(markers, spec);
+        return new MacroActionsStateFunction(markers, spec);
     }
 
     /**
@@ -158,12 +158,12 @@ public class MacroActionStateFunction implements StateFunction<MacroActionState>
      * @return a functional lambda mapper waiting to build the state engine from a {@link WorldModelSpec}
      * @throws IOException if schema validation rules fail or data reading is disrupted
      */
-    public static Function<WorldModelSpec, StateFunction<MacroActionState>> create(JsonNode root, Locator locator) throws IOException {
+    public static Function<WorldModelSpec, StateFunction<MacroActionsState>> create(JsonNode root, Locator locator) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         List<String> markers = locator.path(MARKER_LABELS_ID).elements(root)
                 .map(l -> l.getNode(root).asText())
                 .toList();
-        return spec -> MacroActionStateFunction.create(spec, markers);
+        return spec -> MacroActionsStateFunction.create(spec, markers);
     }
 
     /**
@@ -195,7 +195,7 @@ public class MacroActionStateFunction implements StateFunction<MacroActionState>
      * @param markers the explicit list of visual target marker tags
      * @param spec    the fully detailed multi-input signal specification layout
      */
-    public MacroActionStateFunction(List<String> markers, Map<String, SignalSpec> spec) {
+    public MacroActionsStateFunction(List<String> markers, Map<String, SignalSpec> spec) {
         this.markers = requireNonNull(markers);
         this.spec = requireNonNull(spec);
         logger.atDebug().log("Created");
@@ -246,13 +246,13 @@ public class MacroActionStateFunction implements StateFunction<MacroActionState>
      *
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to active FSM action flags
-     * @throws IllegalArgumentException if any state element within the batch is not an instance of {@link MacroActionState}
+     * @throws IllegalArgumentException if any state element within the batch is not an instance of {@link MacroActionsState}
      */
-    private INDArray fsmSignal(MacroActionState[] states) {
+    private INDArray fsmSignal(MacroActionsState[] states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, MoveActionId.values().length + HeadActionId.values().length).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
-            MacroActionState state = states[i];
+            MacroActionsState state = states[i];
             int moveActionIdx = state.moveActionId().ordinal();
             int headActionIdx = state.headActionId().ordinal();
 
@@ -274,7 +274,7 @@ public class MacroActionStateFunction implements StateFunction<MacroActionState>
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to sensor head features
      */
-    private INDArray headSignal(MacroActionState[] states) {
+    private INDArray headSignal(MacroActionsState[] states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, HEAD_SIGNAL_SIZE).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
@@ -319,7 +319,7 @@ public class MacroActionStateFunction implements StateFunction<MacroActionState>
      * @param states a varargs array of current execution environment states
      * @return a 4D float {@link INDArray} matrix with dimensions {@code [batchSize, channels, width, height]}
      */
-    INDArray mapSignals(MacroActionState... states) {
+    INDArray mapSignals(MacroActionsState... states) {
         int n = states.length;
         long numMarkers = markers.size();
         long numChannels = NUM_CELL_STATES + numMarkers;
@@ -386,7 +386,7 @@ public class MacroActionStateFunction implements StateFunction<MacroActionState>
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to proximity and contact features
      */
-    private INDArray proxySignal(MacroActionState[] states) {
+    private INDArray proxySignal(MacroActionsState[] states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, PROXY_SIGNAL_SIZE).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
@@ -419,7 +419,7 @@ public class MacroActionStateFunction implements StateFunction<MacroActionState>
      * @param states a varargs array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to chassis kinematic features
      */
-    private INDArray robotSignal(MacroActionState... states) {
+    private INDArray robotSignal(MacroActionsState... states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, 12).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
@@ -476,7 +476,7 @@ public class MacroActionStateFunction implements StateFunction<MacroActionState>
      * @return a {@link Map} pairing signal identifier keys to their respective encapsulated {@link Signal} vectors
      */
     @Override
-    public Map<String, Signal> signals(MacroActionState... states) {
+    public Map<String, Signal> signals(MacroActionsState... states) {
         return Map.of(
                 ROBOT_SIGNAL_ID, new ArraySignal(robotSignal(states)),
                 PROXY_SIGNAL_ID, new ArraySignal(proxySignal(states)),

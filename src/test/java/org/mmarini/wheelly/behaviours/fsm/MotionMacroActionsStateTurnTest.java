@@ -60,7 +60,7 @@ import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_DIRECTION_RANGE;
 import static org.mmarini.wheelly.robots.RobotSpec.MAX_RADAR_DISTANCE;
 import static org.mmarini.wheelly.utils.Utils.MM;
 
-class MotionMacroActionStateTurnTest {
+class MotionMacroActionsStateTurnTest {
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
     public static final double MAX_TARGET_DISTANCE = 1;

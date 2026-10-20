@@ -52,7 +52,7 @@ import static org.mmarini.wheelly.behaviours.MoveActionId.HALT_ACTION;
 import static org.mmarini.wheelly.behaviours.fsm.MacroActionConfig.DEFAULT_COMMITMENT_DURATION;
 import static org.mmarini.wheelly.behaviours.fsm.MacroActionConfig.DEFAULT_MACRO_ACTION_CONFIG;
 
-class MotionMacroActionStateTest {
+class MotionMacroActionsStateTest {
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
 

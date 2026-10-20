@@ -57,7 +57,7 @@ import static org.mmarini.wheelly.robots.MotionStatusId.FORWARD;
 import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_TARGET_RANGE;
 import static org.mmarini.wheelly.utils.Utils.MM;
 
-class MotionMacroActionStatePathTest {
+class MotionMacroActionsStatePathTest {
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
 
