@@ -30,7 +30,6 @@ package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.behaviours.*;
-import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModelSpec;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
@@ -88,27 +87,25 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
      */
     public static MacroActionsAdapter create(JsonNode root, Locator locator) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        Function<WorldModelSpec, StateFunction<MacroActionsAdapter>> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
+        Function<WorldModelSpec, StateFunction<MacroActionsState>> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
                 EMPTY_OBJECTS, EMPTY_CLASSES);
-        return new MacroActionsAdapter(null, null);
+        return new MacroActionsAdapter(stateFuncBuilder);
     }
 
-    private final StateFunction<MacroActionsState> stateFunc;
-    private final RewardFunction<MacroActionsState, BehaviourMacroAction> rewardFunc;
-    private volatile AgentConnector agent;
-    private volatile MacroActionStepState stepState;
+    private final Function<WorldModelSpec, StateFunction<MacroActionsState>> stateFuncBuilder;
+    private StateFunction<MacroActionsState> stateFunc;
+    private RewardFunction<MacroActionsState, BehaviourMacroAction> rewardFunc;
+    private AgentConnector agent;
+    private MacroActionStepState stepState;
     private DoubleConsumer onReward;
 
     /**
      * Creates the deep learning environment
      *
-     * @param stateFunc
-     * @param rewardFunc
+     * @param stateFuncBuilder
      */
-    public MacroActionsAdapter(StateFunction<MacroActionsState> stateFunc,
-                               RewardFunction<MacroActionsState, BehaviourMacroAction> rewardFunc) {
-        this.stateFunc = requireNonNull(stateFunc);
-        this.rewardFunc = requireNonNull(rewardFunc);
+    public MacroActionsAdapter(Function<WorldModelSpec, StateFunction<MacroActionsState>> stateFuncBuilder) {
+        this.stateFuncBuilder = stateFuncBuilder;
         logger.atDebug().log("Created");
     }
 
@@ -133,7 +130,12 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
 
     @Override
     public BehaviourMacroAction decide(MacroActionsState state) {
-        WorldModel model = state.worldModel();
+        if (stateFunc == null) {
+            throw new IllegalStateException("Missing state function");
+        }
+        if (rewardFunc == null) {
+            throw new IllegalStateException("Missing reward function");
+        }
         Map<String, Signal> signals1 = state(state);
         Map<String, Signal> actions = agent.act(signals1);
 
@@ -216,6 +218,10 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
         return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
+    public void rewardFunc(RewardFunction<MacroActionsState, BehaviourMacroAction> rewardFunc) {
+        this.rewardFunc = rewardFunc;
+    }
+
     /**
      * Extracts and encodes the sensory signals from the current environment state.
      * <p>
@@ -245,6 +251,10 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
     @Override
     public Map<String, SignalSpec> stateSpec() {
         return stateFunc.spec();
+    }
+
+    public void worldModelSpec(WorldModelSpec worldModelSpec) {
+        this.stateFunc = stateFuncBuilder.apply(worldModelSpec);
     }
 
     /**

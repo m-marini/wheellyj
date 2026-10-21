@@ -45,14 +45,11 @@ import org.mmarini.rl.agents.DLAgent;
 import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.behaviours.BehaviourApi;
+import org.mmarini.wheelly.behaviours.*;
 import org.mmarini.wheelly.control.RobotController;
 import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.control.RobotStatus;
-import org.mmarini.wheelly.gyms.DLEnvironment;
-import org.mmarini.wheelly.gyms.GymApi;
-import org.mmarini.wheelly.gyms.RewardFunction;
-import org.mmarini.wheelly.gyms.WithRewardCallback;
+import org.mmarini.wheelly.gyms.*;
 import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.GridMap;
@@ -99,6 +96,7 @@ import static org.mmarini.yaml.Utils.fromFile;
 public class Wheelly {
     public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-3.0";
     public static final int LAYOUT_INTERVAL = 300;
+    public static final BehaviourMacroAction HALT_ACTION = new BehaviourMacroAction(MoveActionId.HALT_ACTION, HeadActionId.LOOK_STRAIGHT_ACTION);
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
 
     static {
@@ -192,7 +190,7 @@ public class Wheelly {
     private RobotApi robot;
     private RobotControllerApi controller;
     private WorldModeller worldModeller;
-    private GymApi environment;
+    private GymAdapter<MacroActionsState, BehaviourMacroAction> environment;
     private BehaviourApi behaviuor;
     private Agent agent;
     private JFrame frame;
@@ -247,10 +245,10 @@ public class Wheelly {
         this.behaviuor = AppYaml.behaviourFromJson(config);
 
         logger.atInfo().log("Creating RL environment ...");
-        this.environment = AppYaml.envFromJson(config);
+        this.environment = AppYaml.adapterfromFile(config);
 
         logger.atInfo().log("Create reward function ...");
-        RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
+        RewardFunction<MacroActionsState, BehaviourMacroAction> rewardFunc = AppYaml.rewardFromJson(config);
 
         logger.atInfo().log("Creating agent ...");
         this.agent = Agent.fromFile(
@@ -266,11 +264,13 @@ public class Wheelly {
 
         worldModeller.setRobotSpec(robot.robotSpec());
         worldModeller.connectController(controller);
-        worldModeller.setDecisionMaker(this::decide);
 
-        environment.connect(worldModeller);
-        environment.setRewardFunc(rewardFunc);
-        environment.connect(agent);
+        environment.agent(agent);
+        if (environment instanceof MacroActionsAdapter adapter) {
+            worldModeller.setDecisionMaker(adapter);
+            adapter.worldModelSpec(worldModeller.worldModelSpec());
+            adapter.rewardFunc(rewardFunc);
+        }
 
         this.savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
         autosaveInstant = System.currentTimeMillis() + savingInterval;
@@ -431,10 +431,19 @@ public class Wheelly {
         allFrames = List.of(frame);
     }
 
+    /*
     private RobotCommand decide(WorldModel state) {
         return active.get()
                 ? environment.decide(state)
                 : RobotCommand.halt();
+    }
+
+     */
+
+    private BehaviourMacroAction decide(MacroActionsState state) {
+        return active.get()
+                ? environment.decide(state)
+                : HALT_ACTION;
     }
 
     /**

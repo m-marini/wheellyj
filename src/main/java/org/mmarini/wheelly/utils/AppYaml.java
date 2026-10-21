@@ -30,7 +30,9 @@ package org.mmarini.wheelly.utils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.behaviours.BehaviourApi;
+import org.mmarini.wheelly.behaviours.BehaviourMacroAction;
 import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.gyms.GymAdapter;
 import org.mmarini.wheelly.gyms.GymApi;
 import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModeller;
@@ -41,6 +43,10 @@ import java.io.File;
 import java.io.IOException;
 
 public interface AppYaml {
+
+    static <S, A> GymAdapter<S, BehaviourMacroAction> adapterfromFile(JsonNode config) throws Throwable {
+        return GymAdapter.fromFile(new File(config.path("environment").asText()));
+    }
 
     static BehaviourApi behaviourFromJson(JsonNode config) throws Throwable {
         return BehaviourApi.fromFile(new File(config.path("behaviour").asText()));
@@ -104,7 +110,7 @@ public interface AppYaml {
      * @param config the JSON configuration
      * @throws IOException in case of error
      */
-    static RewardFunction rewardFromJson(JsonNode config) throws IOException {
+    static <S, A> RewardFunction<S, A> rewardFromJson(JsonNode config) throws IOException {
         return RewardFunction.fromFile(new File(config.path("rewardFunction").asText()));
     }
 

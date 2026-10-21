@@ -29,7 +29,14 @@
 package org.mmarini.wheelly.gyms;
 
 import org.mmarini.wheelly.perception.DecisionMaker;
+import org.mmarini.yaml.Utils;
+
+import java.io.File;
 
 public interface GymAdapter<S, A> extends DecisionMaker<S, A>, WithSignalsSpec {
+    static <S, A> GymAdapter<S, A> fromFile(File file) throws Throwable {
+        return Utils.createObject(file);
+    }
+
     void agent(AgentConnector agent);
 }
