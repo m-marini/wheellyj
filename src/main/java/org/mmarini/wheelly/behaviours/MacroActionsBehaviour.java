@@ -34,8 +34,8 @@ import org.mmarini.wheelly.behaviours.fsm.HeadMacroActionState;
 import org.mmarini.wheelly.behaviours.fsm.MacroActionConfig;
 import org.mmarini.wheelly.behaviours.fsm.MotionMacroActionState;
 import org.mmarini.wheelly.perception.DecisionMaker;
+import org.mmarini.wheelly.perception.PerceptionConnector;
 import org.mmarini.wheelly.perception.WorldModel;
-import org.mmarini.wheelly.perception.WorldModellerConnector;
 import org.mmarini.wheelly.robots.HeadStatus;
 import org.mmarini.wheelly.robots.MotionStatus;
 import org.mmarini.wheelly.robots.RobotCommand;
@@ -107,7 +107,7 @@ public class MacroActionsBehaviour implements BehaviourApi, FSMContext, Behaviou
         logger.atDebug().log("Created");
     }
 
-    public void connect(WorldModellerConnector connector) {
+    public void connect(PerceptionConnector connector) {
         requireNonNull(connector);
     }
 

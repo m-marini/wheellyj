@@ -32,9 +32,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.behaviours.BehaviourAction;
 import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.behaviours.WorldModelState;
+import org.mmarini.wheelly.perception.PerceptionConnector;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModelSpec;
-import org.mmarini.wheelly.perception.WorldModellerConnector;
 import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.wheelly.storage.serde.InferenceWriter;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
@@ -122,7 +122,7 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
     }
 
     @Override
-    public void connect(WorldModellerConnector connector) {
+    public void connect(PerceptionConnector connector) {
         requireNonNull(connector);
         WorldModelSpec worldSpec = connector.worldModelSpec();
         this.stateFunc = stateFunctionBuilder.apply(worldSpec);

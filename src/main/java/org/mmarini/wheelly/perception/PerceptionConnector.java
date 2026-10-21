@@ -28,18 +28,27 @@
 
 package org.mmarini.wheelly.perception;
 
-import org.mmarini.wheelly.control.RobotControllerConnector;
 import org.mmarini.wheelly.robots.RobotCommand;
 
 /**
- * Models the world by interpreting the event flow
+ * Defines the contract for connecting external subsystems to the environment perceptor.
+ * <p>
+ * This interface extends the decision-making API by binding it to a {@link WorldModel}
+ * observation space and a {@link RobotCommand} action space. It functions as the core
+ * integration link within the perception stack, mapping raw sensory interpretations
+ * into structured environment models used by the agent to determine the next locomotion tasks.
+ * </p>
  */
-public interface WorldModellerApi extends WorldModellerConnector, WithClearMap, WithDecisionCallback<WorldModel, RobotCommand> {
+public interface PerceptionConnector extends WithDecisionMaker<WorldModel, RobotCommand> {
 
     /**
-     * Connects the controller
+     * Returns the structural and dimensional specification of the world model.
+     * <p>
+     * The returned specification delineates the spatial boundaries, grid layouts,
+     * or architectural parameters characterising the environment map and state vectors.
+     * </p>
      *
-     * @param controller the controller
+     * @return The {@link WorldModelSpec} describing the constraints and layout of the world model.
      */
-    WorldModellerApi connectController(RobotControllerConnector controller);
+    WorldModelSpec worldModelSpec();
 }

@@ -29,8 +29,26 @@
 package org.mmarini.wheelly.perception;
 
 /**
- * Allows connecting to the world modeller
+ * Defines the contract for components that accept the injection of a decision-making entity.
+ * <p>
+ * This interface establishes a standard mechanism to bind an environmental processing layer
+ * or perception pipeline to a specific policy engine. It decouples state estimation routines
+ * from the actual action selection logic, facilitating interchangeable strategies for agent behaviour.
+ * </p>
+ *
+ * @param <S> The type representing the state or observation space ingested by the decision maker.
+ * @param <A> The type representing the action or command space produced by the decision maker.
  */
 public interface WithDecisionMaker<S, A> {
-    void setDecisionMaker(DecisionMaker<S, A> decisionMaker);
+
+    /**
+     * Injects the decision-making engine responsible for mapping environmental states into actions.
+     * <p>
+     * The attached decision maker is invoked within the control loop to evaluate incoming state snapshots
+     * and select the corresponding target behaviours or commands.
+     * </p>
+     *
+     * @param decisionMaker The {@link DecisionMaker} instance to be assigned to this component.
+     */
+    void decisionMaker(DecisionMaker<S, A> decisionMaker);
 }

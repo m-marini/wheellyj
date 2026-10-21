@@ -266,7 +266,7 @@ public class Wheelly {
         controller.connectRobot(robot);
 
         worldModeller.setRobotSpec(robot.robotSpec());
-        // TODO worldModeller.connectController(controller);
+        worldModeller.connectController(controller);
 
         environment.agent(agent);
         if (environment instanceof MacroActionsAdapter adapter) {
@@ -343,7 +343,7 @@ public class Wheelly {
                 .observeOn(Schedulers.io())
                 .subscribe(this::onShutdownCompleted);
 
-        // TODO worldModeller.onDecision(this::onWorldModellerDecision);
+        worldModeller.onDecision(this::onWorldModellerDecision);
         for (JFrame allFrame : allFrames) {
             allFrame.addWindowListener(new WindowAdapter() {
                 @Override

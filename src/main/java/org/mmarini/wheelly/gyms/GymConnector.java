@@ -30,7 +30,7 @@ package org.mmarini.wheelly.gyms;
 
 import org.mmarini.wheelly.behaviours.BehaviourAction;
 import org.mmarini.wheelly.behaviours.BehaviourState;
-import org.mmarini.wheelly.perception.WorldModellerConnector;
+import org.mmarini.wheelly.perception.PerceptionConnector;
 
 import java.util.Map;
 
@@ -47,9 +47,9 @@ public interface GymConnector {
     /**
      * Binds the active world modeller data provider channel to this environment container.
      *
-     * @param connector the {@link WorldModellerConnector} routing continuous radar map updates and sensor streams
+     * @param connector the {@link PerceptionConnector} routing continuous radar map updates and sensor streams
      */
-    void connect(WorldModellerConnector connector);
+    void connect(PerceptionConnector connector);
 
     /**
      * Binds the core reinforcement learning decision-making agent to this environment lifecycle loop.

@@ -32,7 +32,7 @@ import io.reactivex.rxjava3.core.Completable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.control.RobotControllerConnector;
+import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.perception.*;
 import org.mmarini.wheelly.robots.MotionStatus;
 import org.mmarini.wheelly.robots.RobotCommand;
@@ -146,14 +146,14 @@ class MacroActionsBehaviourTest {
     void setUp() {
         this.builder = new WorldModelBuilder();
         // When getting path to nearest marker
-        WorldModellerApi mockModeller = new WorldModellerApi() {
+        Perceptor mockModeller = new Perceptor() {
             @Override
             public WorldModel clearRadarMap() {
                 return null;
             }
 
             @Override
-            public WorldModellerApi connectController(RobotControllerConnector controller) {
+            public Perceptor connectController(RobotControllerApi controller) {
                 return null;
             }
 
@@ -162,7 +162,7 @@ class MacroActionsBehaviourTest {
             }
 
             @Override
-            public void setDecisionMaker(DecisionMaker<WorldModel, RobotCommand> decisionMaker) {
+            public void decisionMaker(DecisionMaker<WorldModel, RobotCommand> decisionMaker) {
 
             }
 

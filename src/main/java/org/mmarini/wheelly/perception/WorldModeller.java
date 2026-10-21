@@ -31,7 +31,8 @@ package org.mmarini.wheelly.perception;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.control.RobotControllerConnector;
+import org.mmarini.wheelly.control.Controller;
+import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.robots.CorrelatedCameraEvent;
 import org.mmarini.wheelly.robots.RobotCommand;
@@ -52,7 +53,7 @@ import static java.util.Objects.requireNonNull;
  * Models the world by interpreting the event flow,
  * creating the radar map, the polar map and the robot relative radar map.
  */
-public class WorldModeller implements WorldModellerApi {
+public class WorldModeller implements Perceptor {
 
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/world-modeller-schema-0.2";
 
@@ -95,7 +96,7 @@ public class WorldModeller implements WorldModellerApi {
     private Consumer<Tuple2<WorldModel, RobotCommand>> onDecision;
     private WorldModelSpec worldSpec;
     private WorldModel currentModel;
-    private RobotControllerConnector controller;
+    private Controller controller;
     private DecisionMaker<WorldModel, RobotCommand> decisionMaker;
 
     /**
@@ -103,7 +104,7 @@ public class WorldModeller implements WorldModellerApi {
      *
      * @param radarModeller the radar modeller
      * @param markerLocator the marker locator
-     * @param onDecision  the inference callback list
+     * @param onDecision    the inference callback list
      * @param robotMapSize  the robot relative map size
      */
     protected WorldModeller(RadarModeller radarModeller, MarkerLocator markerLocator,
@@ -125,7 +126,7 @@ public class WorldModeller implements WorldModellerApi {
     }
 
     @Override
-    public WorldModeller connectController(RobotControllerConnector controller) {
+    public WorldModeller connectController(RobotControllerApi controller) {
         this.controller = requireNonNull(controller);
         controller.onLatch(this::onLatch);
         controller.onInference(this::onInference);
@@ -189,7 +190,7 @@ public class WorldModeller implements WorldModellerApi {
     }
 
     @Override
-    public void setDecisionMaker(DecisionMaker<WorldModel, RobotCommand> decisionMaker) {
+    public void decisionMaker(DecisionMaker<WorldModel, RobotCommand> decisionMaker) {
         this.decisionMaker = decisionMaker;
     }
 
