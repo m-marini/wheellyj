@@ -42,7 +42,6 @@ import org.deeplearning4j.nn.weights.WeightInit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.TextTable;
-import org.mmarini.rl.agents.TestMultiDataSetIterator;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.MultiDataSetIterator;

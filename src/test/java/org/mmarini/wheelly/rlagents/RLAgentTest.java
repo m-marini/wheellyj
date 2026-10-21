@@ -38,10 +38,6 @@ import org.deeplearning4j.nn.weights.WeightInit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.rl.agents.DLAgent;
-import org.mmarini.rl.agents.NNRLTrainingDataGenerator;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.wheelly.gyms.ExecutionResult;
 import org.mmarini.wheelly.gyms.SignalSpec;
 import org.nd4j.linalg.activations.Activation;
@@ -201,12 +197,12 @@ class RLAgentTest {
 
     @Test
     void testMissingAction() {
-        Map<String, SignalSpecOld> stateSpec = Map.of(MAP_SIGNAL_ID, new IntSignalSpec(new long[]{NUM_CHANNELS, GRID_SIZE, GRID_SIZE}, NUM_SAMPLES));
-        Map<String, SignalSpecOld> actionSpec = Map.of(
-                MOVE_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_MOVEMENT_COMMANDS),
-                HEAD_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS),
-                "missing1", new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS),
-                "missing2", new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS)
+        Map<String, SignalSpec> stateSpec = Map.of(MAP_SIGNAL_ID, SignalSpec.create(1, NUM_CHANNELS, GRID_SIZE, GRID_SIZE));
+        Map<String, SignalSpec> actionSpec = Map.of(
+                MOVE_ACTION_ID, SignalSpec.create(1, 1),
+                HEAD_ACTION_ID, SignalSpec.create(1, 1),
+                "missing1", SignalSpec.create(1, 1),
+                "missing2", SignalSpec.create(1, 1)
         );
         ComputationGraphConfiguration conf = build();
         ComputationGraph net = new ComputationGraph(conf);
@@ -214,23 +210,23 @@ class RLAgentTest {
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, FILE, false));
+                RLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, FILE, false));
         assertThat(ex.getMessage(), matchesPattern("Missing output layers \\[missing1, missing2]"));
     }
 
     @Test
     void testMissingState() {
-        Map<String, SignalSpecOld> stateSpec = Map.of();
-        Map<String, SignalSpecOld> actionSpec = Map.of(
-                MOVE_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_MOVEMENT_COMMANDS),
-                HEAD_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS)
+        Map<String, SignalSpec> stateSpec = Map.of();
+        Map<String, SignalSpec> actionSpec = Map.of(
+                MOVE_ACTION_ID, SignalSpec.create(1, 1),
+                HEAD_ACTION_ID, SignalSpec.create(1, 1)
         );
         ComputationGraphConfiguration conf = build();
         ComputationGraph net = new ComputationGraph(conf);
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> DLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, FILE, false));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> RLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, FILE, false));
         assertThat(ex.getMessage(), matchesPattern("Missing input layers \\[map]"));
     }
 

@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.rl.envs;
+package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
@@ -35,42 +35,29 @@ import org.mmarini.yaml.Locator;
 import java.io.IOException;
 import java.util.Map;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.isA;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.TestFunctions.text;
 import static org.mmarini.yaml.Utils.fromText;
 
 class SignalSpecTest {
 
-    private static final String YAML = text("---",
-            "a:",
-            "  type: int",
-            "  shape: [1, 2]",
-            "  numValues: 2",
-            "b:",
-            "  type: float",
-            "  shape: [2, 1]",
-            "  minValue: 0",
-            "  maxValue: 1"
-    );
+    private static final String YAML = """
+            ---
+            a:
+              shape: [1, 2]
+            b:
+              shape: [1, 1]
+            """;
 
     @Test
     void load() throws IOException {
         JsonNode node = fromText(YAML);
 
-        Map<String, SignalSpecOld> spec = SignalSpecOld.createSignalSpecMap(node, Locator.root());
+        Map<String, SignalSpec> spec = SignalSpec.createSignalSpecMap(node, Locator.root());
 
-        SignalSpecOld a = spec.get("a");
-        assertThat(a, isA(IntSignalSpec.class));
-        assertEquals(2, ((IntSignalSpec) a).numValues());
+        SignalSpec a = spec.get("a");
         assertArrayEquals(new long[]{1, 2}, a.shape());
 
-        SignalSpecOld b = spec.get("b");
-        assertThat(b, isA(FloatSignalSpec.class));
-        assertEquals(0f, ((FloatSignalSpec) b).minValue());
-        assertEquals(1f, ((FloatSignalSpec) b).maxValue());
-        assertArrayEquals(new long[]{2, 1}, b.shape());
+        SignalSpec b = spec.get("b");
+        assertArrayEquals(new long[]{1, 1}, b.shape());
     }
 }

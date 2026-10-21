@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -29,9 +29,9 @@
 package org.mmarini.wheelly.swing;
 
 import io.reactivex.rxjava3.functions.Consumer;
-import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apps.DoubleReducedValue;
+import org.mmarini.wheelly.rlagents.TrainingKpis;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.slf4j.Logger;

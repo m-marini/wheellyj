@@ -42,8 +42,6 @@ import org.deeplearning4j.ui.model.stats.StatsListener;
 import org.deeplearning4j.ui.model.storage.InMemoryStatsStorage;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.agents.Agent;
-import org.mmarini.rl.agents.DLAgent;
-import org.mmarini.rl.agents.DLListener;
 import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.rl.envs.DLEnvironment;
 import org.mmarini.rl.envs.GymApi;
@@ -55,6 +53,8 @@ import org.mmarini.wheelly.batch.ProgressInfo;
 import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.perception.PerceptionConnector;
 import org.mmarini.wheelly.perception.WorldModeller;
+import org.mmarini.wheelly.rlagents.DLListener;
+import org.mmarini.wheelly.rlagents.RLAgent;
 import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.wheelly.storage.serde.BinArrayFile;
 import org.mmarini.wheelly.storage.serde.KeyBinWriter;
@@ -229,7 +229,7 @@ public class BatchTraining {
         }
 
         numEpochs = Locator.locate("numEpochs").getNode(config).asInt(agent.numEpochs());
-        if (agent instanceof DLAgent dlAgent) {
+        if (agent instanceof RLAgent dlAgent) {
             if (args.getBoolean("ui")) {
                 UIServer uiServer = UIServer.getInstance();
                 StatsStorage statsStorage = new InMemoryStatsStorage();
@@ -324,7 +324,7 @@ public class BatchTraining {
      */
     private void onKpis(TrainingKpis kpis) {
         try {
-            kpisPanel.print(kpis);
+            // TODO kpisPanel.print(kpis);
             if (kpisWriter != null) {
                 kpis.write(kpisWriter);
             }
@@ -414,7 +414,7 @@ public class BatchTraining {
                 .collect(Tuple2.toMap());
         BinArrayFile rewardFile = new BinArrayFile(new File(path, "rewards.bin"));
         long size = rewardFile.size();
-        if (agent instanceof DLAgent dlAgent) {
+        if (agent instanceof RLAgent dlAgent) {
             DLListener listener = new DLListener((int) (size * numEpochs));
             if (statsListener != null) {
                 dlAgent.network().setListeners(statsListener, listener);

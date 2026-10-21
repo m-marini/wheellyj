@@ -40,9 +40,6 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.agents.Agent;
-import org.mmarini.rl.agents.DLAgent;
-import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.behaviours.*;
@@ -58,6 +55,9 @@ import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.GridMap;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModeller;
+import org.mmarini.wheelly.rlagents.Agent;
+import org.mmarini.wheelly.rlagents.RLAgent;
+import org.mmarini.wheelly.rlagents.TrainingKpis;
 import org.mmarini.wheelly.robots.*;
 import org.mmarini.wheelly.storage.serde.InferenceFileWriter;
 import org.mmarini.wheelly.storage.serde.InferenceWriter;
@@ -193,7 +193,7 @@ public class Wheelly {
     private RobotApi robot;
     private RobotControllerApi controller;
     private WorldModeller perceptor;
-    private GymAdapter environment;
+    private GymAdapter adapter;
     private BehaviourApi behaviuor;
     private Agent agent;
     private JFrame frame;
@@ -248,7 +248,7 @@ public class Wheelly {
         this.behaviuor = AppYaml.behaviourFromJson(config);
 
         logger.atInfo().log("Creating RL environment ...");
-        this.environment = AppYaml.adapterfromFile(config);
+        this.adapter = AppYaml.adapterfromFile(config);
 
         logger.atInfo().log("Create reward function ...");
         RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
@@ -256,7 +256,7 @@ public class Wheelly {
         logger.atInfo().log("Creating agent ...");
         this.agent = Agent.fromFile(
                 new File(Locator.locate("agent").getNode(config).asText()));
-        if (agent instanceof DLAgent dlAgent) {
+        if (agent instanceof RLAgent dlAgent) {
             dlAgent = dlAgent.concurrentTraining(args.getBoolean("parallel"))
                     .onKpis(this::onKpis)
                     .onRewards(this::onRewards);
@@ -270,17 +270,19 @@ public class Wheelly {
 
         perceptor.decisionMaker(behaviuor);
 
-        environment.agent(agent);
-        if (environment instanceof MacroActionsAdapter adapter) {
-            // TODO worldModeller.setDecisionMaker(adapter);
-            adapter.worldModelSpec(perceptor.worldModelSpec());
-            adapter.rewardFunc(rewardFunc);
+        behaviuor.decisionMaker(adapter);
+
+        adapter.agent(agent);
+
+        if (adapter instanceof MacroActionsAdapter maAdapter) {
+            maAdapter.worldModelSpec(perceptor.worldModelSpec());
+            maAdapter.rewardFunc(rewardFunc);
         }
 
         this.savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
         autosaveInstant = System.currentTimeMillis() + savingInterval;
 
-        kpisPanel.addActionColumns(environment.actionSpec()
+        kpisPanel.addActionColumns(adapter.actionSpec()
                 .keySet().stream().sorted().toArray(String[]::new));
 
         String kpisPath = args.getString("kpis");
@@ -358,7 +360,7 @@ public class Wheelly {
         if (robot instanceof MqttRobot mqttRobot) {
             comMonitor.addRobot(mqttRobot);
         }
-        if (environment instanceof WithRewardCallback dlEnvironment) {
+        if (adapter instanceof WithRewardCallback dlEnvironment) {
             dlEnvironment.onReward(reward -> {
                 logger.atInfo().log("on reward");
                 envPanel.setReward(reward);
@@ -450,7 +452,7 @@ public class Wheelly {
 
     private BehaviourAction decide(BehaviourState state) {
         return active.get()
-                ? environment.decide(state)
+                ? adapter.decide(state)
                 : HALT_ACTION;
     }
 
