@@ -183,7 +183,7 @@ public class MacroActionsStateFunction implements StateFunction {
                 ROBOT_SIGNAL_ID, SignalSpec.create(1, ROBOT_SIGNAL_SIZE),
                 PROXY_SIGNAL_ID, SignalSpec.create(1, PROXY_SIGNAL_SIZE),
                 HEAD_SIGNAL_ID, SignalSpec.create(1, HEAD_SIGNAL_SIZE),
-                CAMERA_SIGNAL_ID, SignalSpec.create(CAMERA_SIGNAL_BASE_SIZE + numMarkers),
+                CAMERA_SIGNAL_ID, SignalSpec.create(1, CAMERA_SIGNAL_BASE_SIZE + numMarkers),
                 FSM_SIGNAL_ID, SignalSpec.create(1, FSM_SIGNAL_SIZE),
                 MAP_SIGNAL_ID, SignalSpec.create(1, numChannels, radarSize, radarSize)
         );

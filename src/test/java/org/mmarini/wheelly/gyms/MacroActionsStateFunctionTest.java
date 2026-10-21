@@ -34,7 +34,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.DLStateFunction;
 import org.mmarini.wheelly.behaviours.*;
 import org.mmarini.wheelly.perception.GridMap;
@@ -55,7 +54,8 @@ import java.util.stream.Stream;
 
 import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasKey;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 import static org.mmarini.wheelly.behaviours.HeadActionId.LOOK_STRAIGHT_ACTION;
@@ -146,9 +146,9 @@ class MacroActionsStateFunctionTest {
             "-1",
             "0"
     })
-    void testCameraSignal(int marker) {
+    void testCameraSignal(int markerId) {
         WorldModel model = builder
-                .cameraMarker(marker)
+                .cameraMarker(markerId)
                 .updateLidarTime()
                 .addTime(1)
                 .build();
@@ -166,14 +166,14 @@ class MacroActionsStateFunctionTest {
         expected.putScalar(0, 0, 0);
         expected.putScalar(0, 1, 1);
         expected.putScalar(0, 2, 1);
-        expected.putScalar(0, 3, marker < 0 ? 1 : 0);
-        expected.putScalar(0, 4, marker >= 0 ? 1 : 0);
+        expected.putScalar(0, 3, markerId < 0 ? 1 : 0);
+        expected.putScalar(0, 4, markerId >= 0 ? 1 : 0);
 
         expected.putScalar(1, 0, 0);
         expected.putScalar(1, 1, 1);
         expected.putScalar(1, 2, 1);
-        expected.putScalar(1, 3, 1 - marker);
-        expected.putScalar(1, 4, marker);
+        expected.putScalar(1, 3, markerId < 0 ? 1 : 0);
+        expected.putScalar(1, 4, markerId >= 0 ? 1 : 0);
 
         assertThat(signal, matrixCloseTo(expected, 1e-3));
     }
@@ -194,7 +194,6 @@ class MacroActionsStateFunctionTest {
         assertThat(signals, hasKey(FSM_SIGNAL_ID));
         // And should be arrayed
         INDArray signal = signals.get(FSM_SIGNAL_ID);
-        assertThat(signal, isA(ArraySignal.class));
         // And should contain the one hot action signals
         INDArray expected = Nd4j.zeros(2, 25);
         expected.putScalar(0, moveActionId.ordinal(), 1.0);
@@ -232,7 +231,6 @@ class MacroActionsStateFunctionTest {
         assertThat(signals, hasKey(HEAD_SIGNAL_ID));
         // And
         INDArray signal = signals.get(HEAD_SIGNAL_ID);
-        assertThat(signal, isA(ArraySignal.class));
         // And
         INDArray expected = Nd4j.zeros(2, 10);
         double sinHead = sin(toRadians(headDeg));
@@ -277,7 +275,6 @@ class MacroActionsStateFunctionTest {
 
         // Then ...
         assertThat(signals, hasKey("map"));
-        assertThat(signals.get("map"), isA(ArraySignal.class));
         INDArray signal = signals.get("map");
         assertArrayEquals(new long[]{2, DLStateFunction.NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
@@ -343,7 +340,6 @@ class MacroActionsStateFunctionTest {
 
         // Then ...
         assertThat(signals, hasKey("map"));
-        assertThat(signals.get("map"), isA(ArraySignal.class));
         INDArray signal = signals.get("map");
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
@@ -409,7 +405,6 @@ class MacroActionsStateFunctionTest {
 
         // Then ...
         assertThat(signals, hasKey("map"));
-        assertThat(signals.get("map"), isA(ArraySignal.class));
         INDArray signal = signals.get("map");
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
@@ -476,7 +471,6 @@ class MacroActionsStateFunctionTest {
 
         // Then ...
         assertThat(signals, hasKey("map"));
-        assertThat(signals.get("map"), isA(ArraySignal.class));
         INDArray signal = signals.get("map");
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
@@ -546,7 +540,6 @@ class MacroActionsStateFunctionTest {
         assertThat(signals, hasKey(PROXY_SIGNAL_ID));
         // And
         INDArray signal = signals.get(PROXY_SIGNAL_ID);
-        assertThat(signal, isA(ArraySignal.class));
         // And
         INDArray expected = Nd4j.zeros(2, 4);
         for (int i = 0; i < 2; i++) {
@@ -611,7 +604,6 @@ class MacroActionsStateFunctionTest {
         assertThat(signals, hasKey(ROBOT_SIGNAL_ID));
         // And
         INDArray signal = signals.get(ROBOT_SIGNAL_ID);
-        assertThat(signal, isA(ArraySignal.class));
         // And
         assertThat(signal, matrixCloseTo(expected, 1e-3));
     }

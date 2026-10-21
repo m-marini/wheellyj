@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.behaviours.BehaviourAction;
 import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.gyms.AdapterConnector;
+import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.wheelly.gyms.WithRewardCallback;
 import org.mmarini.wheelly.perception.PerceptionConnector;
@@ -128,6 +129,18 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
 
     }
 
+    public void connect(PerceptionConnector connector) {
+        requireNonNull(connector);
+        WorldModelSpec worldSpec = connector.worldModelSpec();
+        this.stateFunc = stateFunctionBuilder.apply(worldSpec);
+    }
+
+    public void connect(AgentConnector agent) {
+        requireNonNull(agent);
+        agent.validate(stateSpec(), actionSpec());
+        this.agent = agent;
+    }
+
     public RobotCommand decide(WorldModel model) {
         requireNonNull(model);
         requireNonNull(agent);
@@ -169,26 +182,9 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
         return commands;
     }
 
-    public void connect(PerceptionConnector connector) {
-        requireNonNull(connector);
-        WorldModelSpec worldSpec = connector.worldModelSpec();
-        this.stateFunc = stateFunctionBuilder.apply(worldSpec);
-    }
-
-    public void connect(AgentConnector agent) {
-        requireNonNull(agent);
-        agent.validate(stateSpec(), actionSpec());
-        this.agent = agent;
-    }
-
     @Override
     public BehaviourAction decide(BehaviourState state) {
         return null;
-    }
-
-    @Override
-    public void learning(boolean learning) {
-
     }
 
     /**
@@ -206,8 +202,33 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
     }
 
     @Override
+    public void learning(boolean learning) {
+
+    }
+
+    @Override
+    public DLEnvironment onReward(DoubleConsumer callback) {
+        onReward = onReward != null ? onReward.andThen(callback) : callback;
+        return this;
+    }
+
+    public double reward(BehaviourStateOld state0, BehaviourActionOld actions, BehaviourStateOld state1) {
+        return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
+    }
+
+    @Override
+    public void setRewardFunc(RewardFunction rewardFunc) {
+
+    }
+
     public void setRewardFunc(RewardFunctionOld rewardFunc) {
 
+    }
+
+    public Map<String, Signal> state(BehaviourStateOld model) {
+        requireNonNull(model);
+        requireNonNull(stateFunc);
+        return stateFunc.signals(model);
     }
 
     @Override
@@ -221,23 +242,7 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
     }
 
     @Override
-    public DLEnvironment onReward(DoubleConsumer callback) {
-        onReward = onReward != null ? onReward.andThen(callback) : callback;
-        return this;
-    }
-
-    public double reward(BehaviourStateOld state0, BehaviourActionOld actions, BehaviourStateOld state1) {
-        return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
-    }
-
-    public Map<String, Signal> state(BehaviourStateOld model) {
-        requireNonNull(model);
-        requireNonNull(stateFunc);
-        return stateFunc.signals(model);
-    }
-
-    @Override
-    public void validate(Map<String, SignalSpecOld> stateSpec, Map<String, SignalSpecOld> actionSpec) {
+    public void validate(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec) {
 
     }
 }

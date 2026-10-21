@@ -28,10 +28,9 @@
 
 package org.mmarini.rl.envs;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.gyms.GymAdapter;
-import org.mmarini.yaml.Locator;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
@@ -46,38 +45,6 @@ import java.util.Map;
  * </p>
  */
 public interface GymApi extends GymAdapter {
-
-    /**
-     * Parses and instantiates a concrete {@code EnvironmentApi} implementation from a JSON document configuration block.
-     * <p>
-     * This utility utilises reflection mapping to inject the active physical or simulated controller api dependency
-     * directly into the newly generated environment context block.
-     * </p>
-     *
-     * @param config     the root JSON node containing the environment property tree schema
-     * @param locator    the contextual locator pattern targeting the relative configuration scope
-     * @param controller the active {@link RobotControllerApi} mapping the hardware layer
-     * @return a fully initialised {@code EnvironmentApi} instance
-     */
-    static GymApi fromConfig(JsonNode config, Locator locator, RobotControllerApi controller) {
-        return Utils.createObject(config, locator, new Object[]{controller}, new Class[]{RobotControllerApi.class});
-    }
-
-    /**
-     * Parses and instantiates a concrete {@code EnvironmentApi} implementation from a physical configuration file.
-     * <p>
-     * This utility reads structural parameters from the designated file path, injecting the provided
-     * controller api dependency into the target constructor layout.
-     * </p>
-     *
-     * @param file       the physical configuration file instance (e.g., YAML or JSON source)
-     * @param controller the active {@link RobotControllerApi} mapping the hardware layer
-     * @return a fully initialised {@code EnvironmentApi} instance
-     * @throws Throwable if any instantiation, validation, or reflection processing errors occur
-     */
-    static GymApi fromFile(File file, RobotControllerApi controller) throws Throwable {
-        return Utils.createObject(file, new Object[]{controller}, new Class[]{RobotControllerApi.class});
-    }
 
     /**
      * Parses and instantiates a concrete {@code EnvironmentApi} implementation from a physical configuration file
@@ -104,7 +71,7 @@ public interface GymApi extends GymAdapter {
      *
      * @param rewardFunc the targeted {@link RewardFunctionOld} component to attach to this environment context
      */
-    void setRewardFunc(RewardFunctionOld rewardFunc);
+    void setRewardFunc(RewardFunction rewardFunc);
 
-    void validate(Map<String, SignalSpecOld> stateSpec, Map<String, SignalSpecOld> actionSpec);
+    void validate(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec);
 }
