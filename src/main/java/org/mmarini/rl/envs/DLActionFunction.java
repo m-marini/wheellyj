@@ -26,10 +26,13 @@
  *
  */
 
-package org.mmarini.wheelly.gyms;
+package org.mmarini.rl.envs;
 
 import org.mmarini.Tuple2;
 import org.mmarini.Utils;
+import org.mmarini.wheelly.gyms.ActionFunction;
+import org.mmarini.wheelly.gyms.ArraySignal;
+import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.wheelly.perception.GridMap;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.robots.HeadStatus;
@@ -197,7 +200,7 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param model   the current world model for spatial awareness context
      * @return the resolved {@code RobotCommand} instruction
      */
-    RobotCommand decodeCommand(int headIdx, int moveIdx, WorldModel model) {
+    public RobotCommand decodeCommand(int headIdx, int moveIdx, WorldModel model) {
         Angle headDir = headAngle(headIdx, model);
         if (isHalt(moveIdx)) {
             return RobotCommand.halt(headDir);
@@ -225,7 +228,7 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param model     the current world state containing robot positioning and specifications
      * @return a {@code Complex} angular representation of the safe target head direction
      */
-    Angle headAngle(int headIndex, WorldModel model) {
+    public Angle headAngle(int headIndex, WorldModel model) {
         Angle headRelAngle = headAngle(headIndex);
         Angle absoluteDirection = headRelAngle.add(model.gridMap().direction());
         Angle sensDir = absoluteDirection.sub(model.robotStatus().direction());
@@ -239,7 +242,7 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param headIndex the discrete head action index
      * @return a {@code Complex} angular offset relative to the base map direction
      */
-    Angle headAngle(int headIndex) {
+    public Angle headAngle(int headIndex) {
         int i = headIndex - (numHeadRotations - 1) / 2;
         double deg = i * 180.0 / (numHeadRotations - 1);
         return Angle.fromDeg(deg);
@@ -326,7 +329,7 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param model   the current world model providing environmental spatial context
      * @return the computed integer identifier corresponding to the target action index
      */
-    int moveIndex(RobotCommand command, WorldModel model) {
+    public int moveIndex(RobotCommand command, WorldModel model) {
         MotionStatus motionStatus = command.motionStatus();
         return switch (motionStatus.status()) {
             case ROTATE -> rotationIndex(motionStatus.targetDir()
@@ -382,7 +385,7 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @param gridMap the map layout specifying reference coordinates and headings
      * @return the transformed {@code Point2D} in absolute world coordinates
      */
-    Point2D target(int moveIdx, GridMap gridMap) {
+    public Point2D target(int moveIdx, GridMap gridMap) {
         Point2D relativeTarget = target(moveIdx);
         Point2D mapCentre = gridMap.center();
         AffineTransform tr = AffineTransform.getTranslateInstance(mapCentre.getX(), mapCentre.getY());

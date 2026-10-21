@@ -29,8 +29,8 @@
 package org.mmarini.rl.agents;
 
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.gyms.IntSignalSpec;
-import org.mmarini.wheelly.gyms.Signal;
+import org.mmarini.rl.envs.IntSignalSpec;
+import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.gyms.SignalSpec;
 
 import java.util.Map;

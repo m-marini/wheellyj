@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.gyms;
+package org.mmarini.rl.envs;
 
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;

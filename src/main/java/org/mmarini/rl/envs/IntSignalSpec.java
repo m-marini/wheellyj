@@ -26,11 +26,12 @@
  *
  */
 
-package org.mmarini.wheelly.gyms;
+package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -49,7 +50,7 @@ public class IntSignalSpec extends SignalSpec {
      * @param node    the json document
      * @param locator the locator
      */
-    static IntSignalSpec create(JsonNode node, Locator locator) {
+    public static IntSignalSpec create(JsonNode node, Locator locator) {
         long[] shape = SignalSpec.createShape(node, locator);
         int numValues = locator.path("numValues").getNode(node).asInt();
         return new IntSignalSpec(shape, numValues);

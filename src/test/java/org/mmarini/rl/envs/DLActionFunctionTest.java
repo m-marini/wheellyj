@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.gyms;
+package org.mmarini.rl.envs;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +35,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
+import org.mmarini.wheelly.gyms.ArraySignal;
+import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.wheelly.robots.RobotCommand;
@@ -54,10 +56,10 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
+import static org.mmarini.rl.envs.DLActionFunction.HEAD_ACTION_ID;
+import static org.mmarini.rl.envs.DLActionFunction.MOVE_ACTION_ID;
+import static org.mmarini.rl.envs.DLMapActionFunction.*;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
-import static org.mmarini.wheelly.gyms.DLActionFunction.HEAD_ACTION_ID;
-import static org.mmarini.wheelly.gyms.DLActionFunction.MOVE_ACTION_ID;
-import static org.mmarini.wheelly.gyms.DLMapActionFunction.*;
 import static org.mmarini.wheelly.robots.HeadStatusId.FIX_DIRECTION;
 import static org.mmarini.wheelly.robots.MotionStatusId.*;
 import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_HEAD_FOV_DEG;

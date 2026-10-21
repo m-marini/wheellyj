@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.gyms;
 
+import org.mmarini.rl.envs.Signal;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 

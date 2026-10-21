@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.gyms;
 
+import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.behaviours.BehaviourActionOld;
 import org.mmarini.wheelly.behaviours.BehaviourStateOld;
 import org.mmarini.wheelly.perception.PerceptionConnector;

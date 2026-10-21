@@ -38,7 +38,12 @@ import org.deeplearning4j.nn.weights.WeightInit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.gyms.*;
+import org.mmarini.rl.envs.IntSignal;
+import org.mmarini.rl.envs.IntSignalSpec;
+import org.mmarini.rl.envs.Signal;
+import org.mmarini.wheelly.gyms.ArraySignal;
+import org.mmarini.wheelly.gyms.ExecutionResult;
+import org.mmarini.wheelly.gyms.SignalSpec;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -55,10 +60,10 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Utils.deleteRecursive;
 import static org.mmarini.rl.agents.NNRLTrainingDataGenerator.CRITIC_ID;
+import static org.mmarini.rl.envs.DLActionFunction.HEAD_ACTION_ID;
+import static org.mmarini.rl.envs.DLActionFunction.MOVE_ACTION_ID;
+import static org.mmarini.rl.envs.DLStateFunction.MAP_SIGNAL_ID;
 import static org.mmarini.wheelly.TestFunctions.matrixShape;
-import static org.mmarini.wheelly.gyms.DLActionFunction.HEAD_ACTION_ID;
-import static org.mmarini.wheelly.gyms.DLActionFunction.MOVE_ACTION_ID;
-import static org.mmarini.wheelly.gyms.DLStateFunction.MAP_SIGNAL_ID;
 
 class DLAgentTest {
     public static final int NUM_SAMPLES = 2;

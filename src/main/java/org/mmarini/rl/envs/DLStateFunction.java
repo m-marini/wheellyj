@@ -26,11 +26,14 @@
  *
  */
 
-package org.mmarini.wheelly.gyms;
+package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.behaviours.BehaviourStateOld;
 import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.gyms.ArraySignal;
+import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.wheelly.gyms.StateFunction;
 import org.mmarini.wheelly.perception.*;
 import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;

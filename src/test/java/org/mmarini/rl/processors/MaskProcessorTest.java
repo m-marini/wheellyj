@@ -30,7 +30,11 @@ package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.gyms.*;
+import org.mmarini.rl.envs.FloatSignalSpec;
+import org.mmarini.rl.envs.IntSignalSpec;
+import org.mmarini.rl.envs.Signal;
+import org.mmarini.wheelly.gyms.ArraySignal;
+import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;

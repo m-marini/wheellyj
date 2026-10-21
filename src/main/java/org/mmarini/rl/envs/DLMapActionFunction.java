@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.gyms;
+package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
@@ -96,7 +96,7 @@ public class DLMapActionFunction {
      * @param gridStep   the grid step (m)
      * @param hideRadius the hidden radius (m)
      */
-    static List<Point2D> createIndicesMap(int gridSize, double gridStep, double hideRadius) {
+    public static List<Point2D> createIndicesMap(int gridSize, double gridStep, double hideRadius) {
         List<Point2D> map = new ArrayList<>();
         int o = (gridSize - 1) / 2;
         double hideRadius2 = hideRadius * hideRadius;

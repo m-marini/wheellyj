@@ -29,7 +29,11 @@
 package org.mmarini.rl.agents;
 
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.gyms.*;
+import org.mmarini.rl.envs.IntSignal;
+import org.mmarini.rl.envs.IntSignalSpec;
+import org.mmarini.rl.envs.Signal;
+import org.mmarini.wheelly.gyms.ExecutionResult;
+import org.mmarini.wheelly.gyms.SignalSpec;
 
 import java.util.ArrayList;
 import java.util.List;

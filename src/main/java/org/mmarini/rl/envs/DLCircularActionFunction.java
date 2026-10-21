@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.gyms;
+package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;

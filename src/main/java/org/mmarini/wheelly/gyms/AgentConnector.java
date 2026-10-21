@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.gyms;
 
 import org.mmarini.rl.agents.Agent;
+import org.mmarini.rl.envs.Signal;
 
 import java.util.Map;
 

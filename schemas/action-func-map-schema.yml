@@ -7,7 +7,7 @@ properties:
   $schema:
     const: https://mmarini.org/wheelly/action-func-map-schema-0.1
   class:
-    const: org.mmarini.wheelly.gyms.DLMapActionFunction
+    const: org.mmarini.rl.envs.DLMapActionFunction
   numRotations:
     type: integer
     minimum: 2

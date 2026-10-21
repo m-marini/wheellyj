@@ -30,8 +30,6 @@ package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.gyms.FloatSignalSpec;
-import org.mmarini.wheelly.gyms.IntSignalSpec;
 import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.yaml.Locator;
 

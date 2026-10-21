@@ -30,7 +30,7 @@ package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import org.mmarini.wheelly.gyms.Signal;
+import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;

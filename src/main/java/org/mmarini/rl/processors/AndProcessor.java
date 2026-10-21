@@ -29,9 +29,9 @@
 package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.rl.envs.IntSignalSpec;
+import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.IntSignalSpec;
-import org.mmarini.wheelly.gyms.Signal;
 import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;

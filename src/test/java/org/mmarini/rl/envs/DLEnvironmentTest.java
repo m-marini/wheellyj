@@ -26,10 +26,11 @@
  *
  */
 
-package org.mmarini.wheelly.gyms;
+package org.mmarini.rl.envs;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 
@@ -39,11 +40,11 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasKey;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.wheelly.gyms.DLActionFunction.HEAD_ACTION_ID;
-import static org.mmarini.wheelly.gyms.DLActionFunction.MOVE_ACTION_ID;
-import static org.mmarini.wheelly.gyms.DLCircularActionFunction.DEFAULT_GRID_STEP;
-import static org.mmarini.wheelly.gyms.DLMapActionFunction.DEFAULT_GRID_SIZE;
-import static org.mmarini.wheelly.gyms.DLMapActionFunction.DEFAULT_HIDE_RADIUS;
+import static org.mmarini.rl.envs.DLActionFunction.HEAD_ACTION_ID;
+import static org.mmarini.rl.envs.DLActionFunction.MOVE_ACTION_ID;
+import static org.mmarini.rl.envs.DLCircularActionFunction.DEFAULT_GRID_STEP;
+import static org.mmarini.rl.envs.DLMapActionFunction.DEFAULT_GRID_SIZE;
+import static org.mmarini.rl.envs.DLMapActionFunction.DEFAULT_HIDE_RADIUS;
 
 class DLEnvironmentTest {
     public static final int NUM_SENSOR_VALUES = 4;

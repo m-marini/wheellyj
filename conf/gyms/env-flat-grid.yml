@@ -1,9 +1,9 @@
 ---
 $schema: https://mmarini.org/wheelly/env-dl-schema-1.0
-class: org.mmarini.wheelly.gyms.DLEnvironment
+class: org.mmarini.rl.envs.DLEnvironment
 actionFunction:
   $schema: https://mmarini.org/wheelly/action-func-map-schema-0.1
-  class: org.mmarini.wheelly.gyms.DLMapActionFunction
+  class: org.mmarini.rl.envs.DLMapActionFunction
   numRotations: 36
   numHeadRotations: 7
   gridSize: 31
@@ -11,6 +11,6 @@ actionFunction:
   hideRadius: 0.3
 stateFunction:
   $schema: https://mmarini.org/wheelly/state-func-dl-schema-0.1
-  class: org.mmarini.wheelly.gyms.DLStateFunction
+  class: org.mmarini.rl.envs.DLStateFunction
   markerLabels:
     - A

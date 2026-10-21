@@ -75,7 +75,7 @@
     <logger name="org.mmarini.wheelly.engines.SearchUnknownState" level="INFO"/>
     <logger name="org.mmarini.wheelly.engines.SearchRefreshState" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.gyms.DLEnvironment" level="INFO"/>
+    <logger name="org.mmarini.rl.envs.DLEnvironment" level="INFO"/>
     <logger name="org.mmarini.wheelly.gyms.MacroActionsAdapter" level="DEBUG"/>
 
     <logger name="org.mmarini.wheelly.fsm.CoordinatedMotionState" level="DEBUG"/>

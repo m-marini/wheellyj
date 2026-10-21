@@ -29,8 +29,8 @@
 package org.mmarini.rl.agents;
 
 import org.mmarini.MapStream;
+import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.gyms.ExecutionResult;
-import org.mmarini.wheelly.gyms.Signal;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;

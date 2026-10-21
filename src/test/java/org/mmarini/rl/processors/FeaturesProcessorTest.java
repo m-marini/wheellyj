@@ -32,7 +32,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.wheelly.gyms.*;
+import org.mmarini.rl.envs.FloatSignalSpec;
+import org.mmarini.rl.envs.IntSignalSpec;
+import org.mmarini.rl.envs.Signal;
+import org.mmarini.wheelly.gyms.ArraySignal;
+import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 

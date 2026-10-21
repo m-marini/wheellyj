@@ -34,6 +34,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
+import org.mmarini.rl.envs.DLStateFunction;
+import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.behaviours.HeadActionId;
 import org.mmarini.wheelly.behaviours.MacroAction;
 import org.mmarini.wheelly.behaviours.MacroActionsStateOld;

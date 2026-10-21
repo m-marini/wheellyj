@@ -29,6 +29,8 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.rl.envs.FloatSignalSpec;
+import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 

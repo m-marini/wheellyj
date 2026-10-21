@@ -29,6 +29,9 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.rl.envs.FloatSignalSpec;
+import org.mmarini.rl.envs.IntSignalSpec;
+import org.mmarini.rl.envs.Signal;
 import org.mmarini.wheelly.behaviours.BehaviourStateOld;
 import org.mmarini.wheelly.behaviours.HeadActionId;
 import org.mmarini.wheelly.behaviours.MacroActionsStateOld;

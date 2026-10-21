@@ -26,12 +26,13 @@
  *
  */
 
-package org.mmarini.wheelly.gyms;
+package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.behaviours.BehaviourActionOld;
 import org.mmarini.wheelly.behaviours.BehaviourStateOld;
 import org.mmarini.wheelly.behaviours.WorldModelState;
+import org.mmarini.wheelly.gyms.*;
 import org.mmarini.wheelly.perception.PerceptionConnector;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModelSpec;

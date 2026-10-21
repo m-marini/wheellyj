@@ -28,6 +28,8 @@
 
 package org.mmarini.wheelly.gyms;
 
+import org.mmarini.rl.envs.Signal;
+
 import java.util.Map;
 import java.util.StringJoiner;
 
