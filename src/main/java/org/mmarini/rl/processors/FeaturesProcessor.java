@@ -29,10 +29,10 @@
 package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -56,7 +56,7 @@ public interface FeaturesProcessor {
      * @param locator the locator of environment
      * @param inSpec  the input specification
      */
-    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
+    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpecOld> inSpec) {
         String outName = locator.path("name").getNode(root).asText();
         String input = locator.path("input").getNode(root).asText();
         validate(outName, input, inSpec);
@@ -66,7 +66,7 @@ public interface FeaturesProcessor {
         JsonNode jsonNode = locator.getNode(root);
 
         // Creates output spec
-        Map<String, SignalSpec> outputSpec = createSpec(outName, input, inSpec);
+        Map<String, SignalSpecOld> outputSpec = createSpec(outName, input, inSpec);
 
         UnaryOperator<Map<String, Signal>> encode = createSignalEncoder(outName, input, spec);
         return new InputProcessor(encode, outputSpec, jsonNode);
@@ -132,8 +132,8 @@ public interface FeaturesProcessor {
      * @param input   the input signal name
      * @param inSpec  the input specification
      */
-    static Map<String, SignalSpec> createSpec(String outName, String input, Map<String, SignalSpec> inSpec) {
-        Map<String, SignalSpec> result = new HashMap<>(inSpec);
+    static Map<String, SignalSpecOld> createSpec(String outName, String input, Map<String, SignalSpecOld> inSpec) {
+        Map<String, SignalSpecOld> result = new HashMap<>(inSpec);
         long[] shape = createOutputShape((IntSignalSpec) inSpec.get(input));
         result.put(outName, new IntSignalSpec(shape, 2));
         return result;
@@ -146,7 +146,7 @@ public interface FeaturesProcessor {
      * @param input   the input name
      * @param inSpec  the input specification
      */
-    static void validate(String outName, String input, Map<String, SignalSpec> inSpec) {
+    static void validate(String outName, String input, Map<String, SignalSpecOld> inSpec) {
         validateAlreadyDefinedName(inSpec, outName);
         validateExistingNames(inSpec, input);
         validateTypes(inSpec, IntSignalSpec.class, input);

@@ -34,12 +34,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
+import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.DLStateFunction;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.behaviours.HeadActionId;
-import org.mmarini.wheelly.behaviours.MacroAction;
-import org.mmarini.wheelly.behaviours.MacroActionsStateOld;
-import org.mmarini.wheelly.behaviours.MoveActionId;
+import org.mmarini.wheelly.behaviours.*;
 import org.mmarini.wheelly.perception.GridMap;
 import org.mmarini.wheelly.perception.GridTopology;
 import org.mmarini.wheelly.perception.WorldModel;
@@ -140,7 +137,7 @@ class MacroActionsStateFunctionTest {
 
     @BeforeEach
     void setUp() {
-        this.stateFunc = MacroActionsStateFunction.create(new WorldModelBuilder().build().worldSpec(), List.of("A"));
+        this.stateFunc = MacroActionsStateFunction.create(new WorldModelBuilder().build().worldSpec(), List.of(MARKER0));
         this.builder = new WorldModelBuilder();
     }
 
@@ -155,16 +152,14 @@ class MacroActionsStateFunctionTest {
                 .updateLidarTime()
                 .addTime(1)
                 .build();
-        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
-
+        BehaviourState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
         // When ...
-        Map<String, Signal> signals = stateFunc.signals(state, state);
+        Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then
         assertThat(signals, hasKey(CAMERA_SIGNAL_ID));
         // And
-        Signal signal = signals.get(CAMERA_SIGNAL_ID);
-        assertThat(signal, isA(ArraySignal.class));
+        INDArray signal = signals.get(CAMERA_SIGNAL_ID);
         // And
         INDArray expected = Nd4j.zeros(2, 5);
 
@@ -180,7 +175,7 @@ class MacroActionsStateFunctionTest {
         expected.putScalar(1, 3, 1 - marker);
         expected.putScalar(1, 4, marker);
 
-        assertThat(signal.toINDArray(), matrixCloseTo(expected, 1e-3));
+        assertThat(signal, matrixCloseTo(expected, 1e-3));
     }
 
     @ParameterizedTest
@@ -190,15 +185,15 @@ class MacroActionsStateFunctionTest {
         WorldModel model = builder.build();
         MoveActionId moveActionId = agentAction.moveActionId();
         HeadActionId headActionId = agentAction.headActionId();
-        MacroActionsStateOld state = new MacroActionsStateOld(model, moveActionId, headActionId);
+        MacroActionsState state = new MacroActionsState(model, moveActionId, headActionId);
 
         // When ...
-        Map<String, Signal> signals = stateFunc.signals(state, state);
+        Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then signal should contain fsm signal
         assertThat(signals, hasKey(FSM_SIGNAL_ID));
         // And should be arrayed
-        Signal signal = signals.get(FSM_SIGNAL_ID);
+        INDArray signal = signals.get(FSM_SIGNAL_ID);
         assertThat(signal, isA(ArraySignal.class));
         // And should contain the one hot action signals
         INDArray expected = Nd4j.zeros(2, 25);
@@ -206,7 +201,7 @@ class MacroActionsStateFunctionTest {
         expected.putScalar(0, headActionId.ordinal() + MoveActionId.values().length, 1.0);
         expected.putScalar(1, moveActionId.ordinal(), 1.0);
         expected.putScalar(1, headActionId.ordinal() + MoveActionId.values().length, 1.0);
-        assertThat(signal.toINDArray(), matrixCloseTo(expected, 1e-3));
+        assertThat(signal, matrixCloseTo(expected, 1e-3));
     }
 
     @ParameterizedTest
@@ -228,15 +223,15 @@ class MacroActionsStateFunctionTest {
                 .frontDistance(frontDistance * 0.01)
                 .rearDistance(rearDistance * 0.01)
                 .build();
-        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        BehaviourState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         // When ...
-        Map<String, Signal> signals = stateFunc.signals(state, state);
+        Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then
         assertThat(signals, hasKey(HEAD_SIGNAL_ID));
         // And
-        Signal signal = signals.get(HEAD_SIGNAL_ID);
+        INDArray signal = signals.get(HEAD_SIGNAL_ID);
         assertThat(signal, isA(ArraySignal.class));
         // And
         INDArray expected = Nd4j.zeros(2, 10);
@@ -260,7 +255,7 @@ class MacroActionsStateFunctionTest {
             expected.putScalar(i, 6, cosTarget);
             expected.putScalar(i, 7 + status, 1);
         }
-        assertThat(signal.toINDArray(), matrixCloseTo(expected, 1e-3));
+        assertThat(signal, matrixCloseTo(expected, 1e-3));
     }
 
     @ParameterizedTest(name = "[{index}] robot@{1},{2} R{0} cell@{3},{4}")
@@ -273,17 +268,17 @@ class MacroActionsStateFunctionTest {
                 .addContactsCell(cellLocation)
                 .robotLocation(robotLocation)
                 .build();
-        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        BehaviourState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().hasContact());
 
         // When ...
-        Map<String, Signal> signals = stateFunc.signals(state, state);
+        Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then ...
         assertThat(signals, hasKey("map"));
         assertThat(signals.get("map"), isA(ArraySignal.class));
-        INDArray signal = signals.get("map").toINDArray();
+        INDArray signal = signals.get("map");
         assertArrayEquals(new long[]{2, DLStateFunction.NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
         Angle cellDir = Angle.direction(robotLocation, cellLocation);
@@ -339,17 +334,17 @@ class MacroActionsStateFunctionTest {
                 .robotDir(directionDeg)
                 .addEchoCell(cellLocation)
                 .build();
-        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        BehaviourState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().echogenic());
 
         // When ...
-        Map<String, Signal> signals = stateFunc.signals(state, state);
+        Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then ...
         assertThat(signals, hasKey("map"));
         assertThat(signals.get("map"), isA(ArraySignal.class));
-        INDArray signal = signals.get("map").toINDArray();
+        INDArray signal = signals.get("map");
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
         Angle cellDir = Angle.direction(robotLocation, cellLocation);
@@ -405,17 +400,17 @@ class MacroActionsStateFunctionTest {
                 .robotDir(directionDeg)
                 .addEmptyCell(cellLocation)
                 .build();
-        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        BehaviourState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().empty());
 
         // When ...
-        Map<String, Signal> signals = stateFunc.signals(state, state);
+        Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then ...
         assertThat(signals, hasKey("map"));
         assertThat(signals.get("map"), isA(ArraySignal.class));
-        INDArray signal = signals.get("map").toINDArray();
+        INDArray signal = signals.get("map");
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
         Angle cellDir = Angle.direction(robotLocation, cellLocation);
@@ -471,18 +466,18 @@ class MacroActionsStateFunctionTest {
                 .robotDir(directionDeg)
                 .addMarker(MARKER0, cellLocation)
                 .build();
-        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        BehaviourState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
         //        WorldModel model = createModeller().updateForInference(createModelLabelMap(directionDeg, robotLocation, cellLocation));
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().echogenic());
 
         // When ...
-        Map<String, Signal> signals = stateFunc.signals(state, state);
+        Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then ...
         assertThat(signals, hasKey("map"));
         assertThat(signals.get("map"), isA(ArraySignal.class));
-        INDArray signal = signals.get("map").toINDArray();
+        INDArray signal = signals.get("map");
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
         Angle cellDir = Angle.direction(robotLocation, cellLocation);
@@ -542,15 +537,15 @@ class MacroActionsStateFunctionTest {
                 .frontSensor(frontSensor)
                 .rearSensor(rearSensor)
                 .build();
-        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        BehaviourState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         // When ...
-        Map<String, Signal> signals = stateFunc.signals(state, state);
+        Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then
         assertThat(signals, hasKey(PROXY_SIGNAL_ID));
         // And
-        Signal signal = signals.get(PROXY_SIGNAL_ID);
+        INDArray signal = signals.get(PROXY_SIGNAL_ID);
         assertThat(signal, isA(ArraySignal.class));
         // And
         INDArray expected = Nd4j.zeros(2, 4);
@@ -560,7 +555,7 @@ class MacroActionsStateFunctionTest {
             expected.putScalar(i, 2, canMoveForward ? 1 : 0);
             expected.putScalar(i, 3, canMoveBackward ? 1 : 0);
         }
-        assertThat(signal.toINDArray(), matrixCloseTo(expected, 1e-3));
+        assertThat(signal, matrixCloseTo(expected, 1e-3));
     }
 
     @ParameterizedTest
@@ -583,7 +578,7 @@ class MacroActionsStateFunctionTest {
                 .robotTarget(target);
         WorldModel model = builder.build();
         // And an env state
-        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        BehaviourState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
         // And expected signal
         INDArray expected = Nd4j.zeros(2, ROBOT_SIGNAL_SIZE);
         double linSpeed = (leftPps + rightPps) / 2 / DEFAULT_ROBOT_SPEC.maxSpeed();
@@ -610,14 +605,14 @@ class MacroActionsStateFunctionTest {
         }
 
         // When ...
-        Map<String, Signal> signals = stateFunc.signals(state, state);
+        Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then
         assertThat(signals, hasKey(ROBOT_SIGNAL_ID));
         // And
-        Signal signal = signals.get(ROBOT_SIGNAL_ID);
+        INDArray signal = signals.get(ROBOT_SIGNAL_ID);
         assertThat(signal, isA(ArraySignal.class));
         // And
-        assertThat(signal.toINDArray(), matrixCloseTo(expected, 1e-3));
+        assertThat(signal, matrixCloseTo(expected, 1e-3));
     }
 }

@@ -32,8 +32,6 @@ import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.mmarini.MapStream;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.IntSignal;
-import org.mmarini.rl.envs.Signal;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.ops.impl.transforms.custom.CumSum;
 import org.nd4j.linalg.api.rng.Random;
@@ -251,7 +249,7 @@ public record NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Fl
      * @return a map containing one sampled action signal for each policy
      * output
      */
-    public Map<String, Signal> chooseAction(Random random, Map<String, Signal> state) {
+    public Map<String, INDArray> chooseAction(Random random, Map<String, INDArray> state) {
         Stream<Tuple2<String, INDArray>> predictions = predictFromState(state);
         return chooseAction(random, toPolicy(predictions));
     }
@@ -263,10 +261,12 @@ public record NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Fl
      * @param policies the policy probability distributions
      * @return a map containing one action signal for each policy
      */
-    private Map<String, Signal> chooseAction(Random random, Stream<Tuple2<String, INDArray>> policies) {
+    private Map<String, INDArray> chooseAction(Random random, Stream<Tuple2<String, INDArray>> policies) {
         return policies.map(t -> {
                     int[] action = chooseAction(t._2, random);
-                    return t.setV2((Signal) IntSignal.create(new long[]{action.length, 1}, action));
+                    INDArray signal = Nd4j.createFromArray(action)
+                            .reshape(action.length, 1);
+                    return t.setV2(signal);
                 })
                 .collect(Tuple2.toMap());
     }
@@ -278,9 +278,9 @@ public record NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Fl
      * @return the input arrays ordered according to the network input
      * configuration
      */
-    private INDArray[] inputsFromSignals(Map<String, Signal> state) {
+    private INDArray[] inputsFromSignals(Map<String, INDArray> state) {
         return network.getConfiguration().getNetworkInputs().stream()
-                .map(id -> state.get(id).toINDArray())
+                .map(state::get)
                 .toArray(INDArray[]::new);
     }
 
@@ -305,7 +305,7 @@ public record NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Fl
      * @return a stream containing the predictions indexed by output-layer
      * identifier
      */
-    public Stream<Tuple2<String, INDArray>> predictFromState(Map<String, Signal> states) {
+    public Stream<Tuple2<String, INDArray>> predictFromState(Map<String, INDArray> states) {
         INDArray[] inputs = inputsFromSignals(states);
         return predict(inputs);
     }

@@ -29,8 +29,8 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.behaviours.BehaviourActionOld;
-import org.mmarini.wheelly.behaviours.BehaviourStateOld;
+import org.mmarini.wheelly.behaviours.BehaviourAction;
+import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -49,7 +49,8 @@ import static java.lang.String.format;
  * modelling objective functions and learning behaviours.
  * </p>
  */
-public interface RewardFunction<S, A> {
+@FunctionalInterface
+public interface RewardFunction {
 
     /**
      * Integrates and structures a collection of independent reward components into a single
@@ -62,10 +63,10 @@ public interface RewardFunction<S, A> {
      * @param objectives the {@link List} of specific {@code RewardFunction} goals to be evaluated
      * @return a composite {@code RewardFunction} instance wrapping the sequential routing loop
      */
-    private static <S, A> RewardFunction<S, A> composeObjective(List<RewardFunction<S, A>> objectives) {
+    private static RewardFunction composeObjective(List<RewardFunction> objectives) {
         return (state0, action, state1) -> {
             double value = 0;
-            for (RewardFunction<S, A> objective : objectives) {
+            for (RewardFunction objective : objectives) {
                 value = objective.reward(state0, action, state1);
                 if (value != 0) {
                     break;
@@ -87,16 +88,16 @@ public interface RewardFunction<S, A> {
      * @throws IOException              if data reading is disrupted or file access fails
      * @throws IllegalArgumentException if the configuration document root node is not an array structure
      */
-    static <S, A> RewardFunction<S, A> fromFile(File file) throws IOException {
-        JsonNode root = org.mmarini.yaml.Utils.fromFile(file);
+    static RewardFunction fromFile(File file) throws IOException {
+        JsonNode root = Utils.fromFile(file);
         if (!root.isArray()) {
             throw new IllegalArgumentException(format("Node %s must be an array (%s)",
                     root,
                     root.getNodeType().name()
             ));
         }
-        List<RewardFunction<S, A>> objectives = Locator.root().elements(root)
-                .map(locator -> Utils.<RewardFunction<S, A>>createObject(root, locator, new Object[0], new Class[0]))
+        List<RewardFunction> objectives = Locator.root().elements(root)
+                .map(locator -> Utils.<RewardFunction>createObject(root, locator, new Object[0], new Class[0]))
                 .toList();
         return composeObjective(objectives);
     }
@@ -104,10 +105,10 @@ public interface RewardFunction<S, A> {
     /**
      * Computes the performance scalar reward yielded by executing a specific behavioural action.
      *
-     * @param state  the initial pre-execution {@link BehaviourStateOld} profile snapshot
-     * @param action the chosen {@link BehaviourActionOld} dispatched to the platform subsystems
-     * @param state1 the resulting post-execution {@link BehaviourStateOld} profile snapshot
+     * @param state  the initial pre-execution {@link BehaviourState} profile snapshot
+     * @param action the chosen {@link BehaviourAction} dispatched to the platform subsystems
+     * @param state1 the resulting post-execution {@link BehaviourState} profile snapshot
      * @return the computed performance scalar reward value utilised for policy optimisation updates
      */
-    double reward(S state, A action, S state1);
+    double reward(BehaviourState state, BehaviourAction action, BehaviourState state1);
 }

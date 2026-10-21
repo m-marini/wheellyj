@@ -31,17 +31,36 @@ package org.mmarini.wheelly.gyms;
 import java.util.Map;
 
 /**
- * Returns the state and action specifications
+ * Defines the contract for components that expose structural tensor specifications for
+ * both environmental states and agent actions.
+ * <p>
+ * This interface is implemented by environment bridges, execution gyms, or agent structures
+ * to declare the expected multidimensional layouts of their interaction data. It provides
+ * the necessary structural meta-information required to validate and align network architectures
+ * with the target agent-environment loop bounds.
+ * </p>
  */
 public interface WithSignalsSpec {
 
     /**
-     * Returns the action's specification
+     * Returns the comprehensive dictionary mapping action identifiers to their dimensional layout specifications.
+     * <p>
+     * The returned configuration maps explicitly define the structural limits and geometric bounds
+     * of the tensors produced by the agent during policy evaluation steps.
+     * </p>
+     *
+     * @return A {@link Map} containing the structural action keys and their corresponding {@link SignalSpec} rules.
      */
     Map<String, SignalSpec> actionSpec();
 
     /**
-     * Returns the state's specification
+     * Returns the comprehensive dictionary mapping state identifiers to their dimensional layout specifications.
+     * <p>
+     * The returned configuration maps explicitly define the structural limits and geometric bounds
+     * of the telemetry vectors or environment matrices ingested by the agent as observations.
+     * </p>
+     *
+     * @return A {@link Map} containing the structural state keys and their corresponding {@link SignalSpec} rules.
      */
     Map<String, SignalSpec> stateSpec();
 

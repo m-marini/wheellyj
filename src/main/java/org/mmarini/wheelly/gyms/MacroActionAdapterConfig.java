@@ -29,7 +29,8 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.behaviours.MacroActionsStateOld;
+import org.mmarini.rl.envs.MacroActionsStateOld;
+import org.mmarini.rl.envs.StateFunctionOld;
 import org.mmarini.wheelly.behaviours.fsm.MacroActionConfig;
 import org.mmarini.wheelly.perception.WorldModelSpec;
 import org.mmarini.yaml.Locator;
@@ -49,11 +50,11 @@ import static org.mmarini.yaml.Utils.EMPTY_OBJECTS;
  * and functional builders to coordinate autonomous robotic navigation and adaptive behaviours.
  * </p>
  *
- * @param stateFunctionBuilder the functional builder mapping a {@link WorldModelSpec} to its corresponding {@link StateFunction}
+ * @param stateFunctionBuilder the functional builder mapping a {@link WorldModelSpec} to its corresponding {@link StateFunctionOld}
  * @param fsmConfig            the configuration parameters governing the underlying finite state machine macro-actions
  */
-public record DLMacroActionEnvConfig(
-        Function<WorldModelSpec, StateFunction<MacroActionsStateOld>> stateFunctionBuilder,
+public record MacroActionAdapterConfig(
+        Function<WorldModelSpec, StateFunctionOld<MacroActionsStateOld>> stateFunctionBuilder,
         MacroActionConfig fsmConfig
 ) {
     /**
@@ -74,22 +75,22 @@ public record DLMacroActionEnvConfig(
      * @return a fully populated configuration record instance
      * @throws NullPointerException if any parsed subcomponent evaluates to {@code null}
      */
-    public static DLMacroActionEnvConfig fromJson(JsonNode root, Locator locator) {
-        Function<WorldModelSpec, StateFunction<MacroActionsStateOld>> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
+    public static MacroActionAdapterConfig fromJson(JsonNode root, Locator locator) {
+        Function<WorldModelSpec, StateFunctionOld<MacroActionsStateOld>> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
                 EMPTY_OBJECTS, EMPTY_CLASSES);
         MacroActionConfig fsmConfig = MacroActionConfig.fromJson(root, locator);
-        return new DLMacroActionEnvConfig(
+        return new MacroActionAdapterConfig(
                 stateFuncBuilder, fsmConfig);
     }
 
     /**
      * Constructs a {@code DLMacroActionEnvConfig} validating that both parameters are non-null.
      *
-     * @param stateFunctionBuilder the functional builder mapping a {@link WorldModelSpec} to its corresponding {@link StateFunction}
+     * @param stateFunctionBuilder the functional builder mapping a {@link WorldModelSpec} to its corresponding {@link StateFunctionOld}
      * @param fsmConfig            the configuration parameters governing the underlying finite state machine macro-actions
      * @throws NullPointerException if either the {@code fsmConfig} or the {@code stateFunctionBuilder} is {@code null}
      */
-    public DLMacroActionEnvConfig {
+    public MacroActionAdapterConfig {
         requireNonNull(fsmConfig);
         requireNonNull(stateFunctionBuilder);
     }

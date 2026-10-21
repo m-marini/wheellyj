@@ -28,7 +28,9 @@
 
 package org.mmarini.wheelly.gyms;
 
-import org.mmarini.rl.envs.Signal;
+import org.mmarini.wheelly.behaviours.BehaviourAction;
+import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.util.List;
 import java.util.Map;
@@ -40,12 +42,12 @@ import java.util.Map;
  * transform continuous or discrete agent outputs into physical machine commands.
  * </p>
  */
-public interface ActionFunction<A, S> {
+public interface ActionFunction {
 
     /**
      * Decodes the target action signals into a sequential list of concrete robot commands.
      * <p>
-     * This method evaluates the raw multi-channel action signals relative to the provided
+     * This method evaluates the raw multichannel action signals relative to the provided
      * environmental contexts to synthesise the appropriate execution path.
      * </p>
      *
@@ -53,7 +55,7 @@ public interface ActionFunction<A, S> {
      * @param states  the sequential world contexts or states matching the action timeline
      * @return a reconstructed list of executable {@code RobotCommand} instructions
      */
-    List<A> commands(Map<String, Signal> actions, S... states);
+    List<BehaviourAction> commands(Map<String, INDArray> actions, BehaviourState... states);
 
     /**
      * Retrieves the structural specification defining the expected action signals.

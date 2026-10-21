@@ -30,11 +30,7 @@ package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -62,7 +58,7 @@ class MaskProcessorTest {
     @Test
     void createFormJsonTest() throws IOException {
         JsonNode root = Utils.fromText(YAML);
-        Map<String, SignalSpec> inSpec = Map.of(
+        Map<String, SignalSpecOld> inSpec = Map.of(
                 "a", new FloatSignalSpec(new long[]{2, 4}, -1, 1),
                 "mask", new IntSignalSpec(new long[]{2}, 2)
         );
@@ -143,16 +139,16 @@ class MaskProcessorTest {
 
     @Test
     void createSpecTest1() {
-        Map<String, SignalSpec> inSpec = Map.of(
+        Map<String, SignalSpecOld> inSpec = Map.of(
                 "a", new FloatSignalSpec(new long[]{2, 4}, -1, 1),
                 "mask", new FloatSignalSpec(new long[]{2}, -1, 1)
         );
-        Map<String, SignalSpec> spec = MaskProcessor.createSpec(inSpec, "out", "a");
+        Map<String, SignalSpecOld> spec = MaskProcessor.createSpec(inSpec, "out", "a");
         assertThat(spec, hasKey("a"));
         assertThat(spec, hasKey("mask"));
         assertThat(spec, hasKey("out"));
 
-        SignalSpec outSpec = spec.get("out");
+        SignalSpecOld outSpec = spec.get("out");
         assertThat(outSpec, isA(FloatSignalSpec.class));
         assertArrayEquals(new long[]{2, 4}, outSpec.shape());
         assertEquals(-1F, ((FloatSignalSpec) outSpec).minValue());
@@ -161,16 +157,16 @@ class MaskProcessorTest {
 
     @Test
     void createSpecTest2() {
-        Map<String, SignalSpec> inSpec = Map.of(
+        Map<String, SignalSpecOld> inSpec = Map.of(
                 "a", new FloatSignalSpec(new long[]{2, 4}, 1, 2),
                 "mask", new FloatSignalSpec(new long[]{2}, -1, 1)
         );
-        Map<String, SignalSpec> spec = MaskProcessor.createSpec(inSpec, "out", "a");
+        Map<String, SignalSpecOld> spec = MaskProcessor.createSpec(inSpec, "out", "a");
         assertThat(spec, hasKey("a"));
         assertThat(spec, hasKey("mask"));
         assertThat(spec, hasKey("out"));
 
-        SignalSpec outSpec = spec.get("out");
+        SignalSpecOld outSpec = spec.get("out");
         assertThat(outSpec, isA(FloatSignalSpec.class));
         assertArrayEquals(new long[]{2, 4}, outSpec.shape());
         assertEquals(0F, ((FloatSignalSpec) outSpec).minValue());
@@ -179,16 +175,16 @@ class MaskProcessorTest {
 
     @Test
     void createSpecTest3() {
-        Map<String, SignalSpec> inSpec = Map.of(
+        Map<String, SignalSpecOld> inSpec = Map.of(
                 "a", new FloatSignalSpec(new long[]{2, 4}, -2, -1),
                 "mask", new FloatSignalSpec(new long[]{2}, -1, 1)
         );
-        Map<String, SignalSpec> spec = MaskProcessor.createSpec(inSpec, "out", "a");
+        Map<String, SignalSpecOld> spec = MaskProcessor.createSpec(inSpec, "out", "a");
         assertThat(spec, hasKey("a"));
         assertThat(spec, hasKey("mask"));
         assertThat(spec, hasKey("out"));
 
-        SignalSpec outSpec = spec.get("out");
+        SignalSpecOld outSpec = spec.get("out");
         assertThat(outSpec, isA(FloatSignalSpec.class));
         assertArrayEquals(new long[]{2, 4}, outSpec.shape());
         assertEquals(-2F, ((FloatSignalSpec) outSpec).minValue());
@@ -197,16 +193,16 @@ class MaskProcessorTest {
 
     @Test
     void createSpecTest4() {
-        Map<String, SignalSpec> inSpec = Map.of(
+        Map<String, SignalSpecOld> inSpec = Map.of(
                 "a", new IntSignalSpec(new long[]{2, 4}, 3),
                 "mask", new FloatSignalSpec(new long[]{2}, -1, 1)
         );
-        Map<String, SignalSpec> spec = MaskProcessor.createSpec(inSpec, "out", "a");
+        Map<String, SignalSpecOld> spec = MaskProcessor.createSpec(inSpec, "out", "a");
         assertThat(spec, hasKey("a"));
         assertThat(spec, hasKey("mask"));
         assertThat(spec, hasKey("out"));
 
-        SignalSpec outSpec = spec.get("out");
+        SignalSpecOld outSpec = spec.get("out");
         assertThat(outSpec, isA(IntSignalSpec.class));
         assertArrayEquals(new long[]{2, 4}, outSpec.shape());
         assertEquals(3, ((IntSignalSpec) outSpec).numValues());

@@ -41,7 +41,7 @@ import org.deeplearning4j.nn.conf.preprocessor.CnnToFeedForwardPreProcessor;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.gyms.WithSignalsSpec;
+import org.mmarini.rl.envs.WithSignalsSpecOld;
 import org.mmarini.wheelly.utils.Utils;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
@@ -386,7 +386,7 @@ public class DLAgentBuilder {
      * @param root the spec document
      * @param env  the environment
      */
-    public static DLAgent create(JsonNode root, WithSignalsSpec env) throws IOException {
+    public static DLAgent create(JsonNode root, WithSignalsSpecOld env) throws IOException {
         Random random = Nd4j.getRandom();
         DLAgent agent = new DLAgentBuilder(root).build(random);
         agent.validate(env.stateSpec(), env.actionSpec());

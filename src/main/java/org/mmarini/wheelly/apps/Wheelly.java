@@ -193,7 +193,7 @@ public class Wheelly {
     private RobotApi robot;
     private RobotControllerApi controller;
     private WorldModeller perceptor;
-    private GymAdapter<MacroActionsStateOld, MacroAction> environment;
+    private GymAdapter environment;
     private BehaviourApi behaviuor;
     private Agent agent;
     private JFrame frame;
@@ -251,7 +251,7 @@ public class Wheelly {
         this.environment = AppYaml.adapterfromFile(config);
 
         logger.atInfo().log("Create reward function ...");
-        RewardFunction<MacroActionsStateOld, MacroAction> rewardFunc = AppYaml.rewardFromJson(config);
+        RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
 
         logger.atInfo().log("Creating agent ...");
         this.agent = Agent.fromFile(
@@ -448,7 +448,7 @@ public class Wheelly {
 
      */
 
-    private MacroAction decide(MacroActionsStateOld state) {
+    private BehaviourAction decide(BehaviourState state) {
         return active.get()
                 ? environment.decide(state)
                 : HALT_ACTION;
@@ -540,7 +540,7 @@ public class Wheelly {
      */
     private void onLearningToggle(ActionEvent actionEvent) {
         boolean learning = toolBar.learningButton().isSelected();
-        agent.learning(learning);
+        // TODO agent.learning(learning);
     }
 
     private void onMotionStatus(MotionStatus status) {

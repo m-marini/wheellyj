@@ -30,8 +30,8 @@ package org.mmarini.rl.agents;
 
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.SignalSpecOld;
+import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.util.Map;
 import java.util.Random;
@@ -96,7 +96,7 @@ public class MDP1Test {
         assertEquals(1, mdp.nextState(1, 0, random));
         assertEquals(0, mdp.nextState(1, 1, random));
 
-        Map<String, SignalSpec> spec = mdp.stateSpec();
+        Map<String, SignalSpecOld> spec = mdp.stateSpec();
         assertThat(spec, hasKey("state"));
         assertArrayEquals(new long[]{1, 2}, spec.get("state").shape());
         assertThat(spec.get("state"), isA(IntSignalSpec.class));
@@ -108,23 +108,23 @@ public class MDP1Test {
         assertThat(spec.get("action"), isA(IntSignalSpec.class));
         assertEquals(2, ((IntSignalSpec) spec.get("action")).numValues());
 
-        Map<String, Signal> signals = mdp.state(0);
+        Map<String, INDArray> signals = mdp.state(0);
         assertThat(signals, hasKey("state"));
-        assertThat(signals.get("state").toINDArray(), matrixCloseTo(new long[]{1, 2}, 1e-3,
+        assertThat(signals.get("state"), matrixCloseTo(new long[]{1, 2}, 1e-3,
                 1, 0));
         signals = mdp.state(1);
         assertThat(signals, hasKey("state"));
-        assertThat(signals.get("state").toINDArray(), matrixCloseTo(new long[]{1, 2}, 1e-3,
+        assertThat(signals.get("state"), matrixCloseTo(new long[]{1, 2}, 1e-3,
                 0, 1));
 
         signals = mdp.action(0);
         assertThat(signals, hasKey("action"));
-        assertThat(signals.get("action").toINDArray(), matrixCloseTo(new long[]{1, 1}, 1e-3,
+        assertThat(signals.get("action"), matrixCloseTo(new long[]{1, 1}, 1e-3,
                 0));
 
         signals = mdp.action(1);
         assertThat(signals, hasKey("action"));
-        assertThat(signals.get("action").toINDArray(), matrixCloseTo(new long[]{1, 1}, 1e-3,
+        assertThat(signals.get("action"), matrixCloseTo(new long[]{1, 1}, 1e-3,
                 1));
     }
 }

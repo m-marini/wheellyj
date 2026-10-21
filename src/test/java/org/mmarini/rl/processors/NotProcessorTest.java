@@ -30,11 +30,7 @@ package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -49,7 +45,7 @@ import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 
 class NotProcessorTest {
     public static final double EPSILON = 1e-6;
-    private static final Map<String, SignalSpec> IN_SPEC = Map.of(
+    private static final Map<String, SignalSpecOld> IN_SPEC = Map.of(
             "in", new FloatSignalSpec(new long[]{2, 2}, 0, 2)
     );
     private static final String YAML = """
@@ -85,10 +81,10 @@ class NotProcessorTest {
 
     @Test
     void createSpec() {
-        Map<String, SignalSpec> spec = NotProcessor.createSpec(IN_SPEC, "out", "in");
+        Map<String, SignalSpecOld> spec = NotProcessor.createSpec(IN_SPEC, "out", "in");
         assertThat(spec, hasKey("in"));
         assertThat(spec, hasKey("out"));
-        SignalSpec outSpec = spec.get("out");
+        SignalSpecOld outSpec = spec.get("out");
         assertThat(outSpec, isA(IntSignalSpec.class));
         assertArrayEquals(new long[]{2, 2}, outSpec.shape());
         assertEquals(2, ((IntSignalSpec) outSpec).numValues());

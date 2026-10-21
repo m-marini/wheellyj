@@ -30,9 +30,6 @@ package org.mmarini.rl.envs;
 
 import org.mmarini.Tuple2;
 import org.mmarini.Utils;
-import org.mmarini.wheelly.gyms.ActionFunction;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.wheelly.perception.GridMap;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.robots.HeadStatus;
@@ -68,8 +65,8 @@ import static java.util.Objects.requireNonNull;
  * @param numHeadRotations the total number of discrete sensor head rotations available
  * @param indicesMap       the ordered list mapping action indices to spatial target coordinates
  */
-public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, int numHeadRotations,
-                               List<Point2D> indicesMap) implements ActionFunction<RobotCommand, WorldModel> {
+public record DLActionFunction(Map<String, SignalSpecOld> spec, int numRotations, int numHeadRotations,
+                               List<Point2D> indicesMap) implements RLActionFunction<RobotCommand, WorldModel> {
     public static final String MOVE_ACTION_ID = "move";
     public static final String HEAD_ACTION_ID = "head";
     private static final Logger logger = LoggerFactory.getLogger(DLActionFunction.class);
@@ -90,7 +87,7 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
                                           List<Point2D> map) {
         // each target point can be reached moving forward or backward
         int numMoveActions = map.size() * 2 + numRotations + 1;
-        Map<String, SignalSpec> spec = Map.of(
+        Map<String, SignalSpecOld> spec = Map.of(
                 MOVE_ACTION_ID, new IntSignalSpec(new long[]{1}, numMoveActions),
                 HEAD_ACTION_ID, new IntSignalSpec(new long[]{1}, numHeadRotations)
         );
@@ -369,7 +366,7 @@ public record DLActionFunction(Map<String, SignalSpec> spec, int numRotations, i
      * @return the map containing named key entries coupled with their {@code SignalSpec}
      */
     @Override
-    public Map<String, SignalSpec> spec() {
+    public Map<String, SignalSpecOld> spec() {
         return spec;
     }
 

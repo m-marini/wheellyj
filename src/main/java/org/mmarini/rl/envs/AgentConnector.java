@@ -26,10 +26,16 @@
  *
  */
 
-package org.mmarini.wheelly.behaviours;
+package org.mmarini.rl.envs;
 
-import org.mmarini.wheelly.perception.WithWorldModel;
-import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.gyms.SignalSpec;
 
-public record WorldModelState(WorldModel worldModel) implements WithWorldModel, BehaviourStateOld {
+import java.util.Map;
+
+public interface AgentConnector {
+    Map<String, Signal> act(Map<String, Signal> signals);
+
+    AgentConnector observe(ExecutionResultOld result);
+
+    void validate(Map<String, SignalSpec> stringSignalSpecMap, Map<String, SignalSpec> stringSignalSpecMap1);
 }

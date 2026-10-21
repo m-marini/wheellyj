@@ -31,7 +31,7 @@ package org.mmarini.rl.processors;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -47,7 +47,7 @@ import static java.util.Objects.requireNonNull;
  * The processor processes the signals to produce new coding signals
  */
 public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
-                             Map<String, SignalSpec> spec,
+                             Map<String, SignalSpecOld> spec,
                              JsonNode json) implements UnaryOperator<Map<String, Signal>> {
 
     public static InputProcessor concat(List<InputProcessor> list) {
@@ -66,7 +66,7 @@ public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
         for (InputProcessor processor : list) {
             json.add(processor.json());
         }
-        Map<String, SignalSpec> spec1 = list.getLast().spec();
+        Map<String, SignalSpecOld> spec1 = list.getLast().spec();
 
         return new InputProcessor(encode1, spec1, json);
     }
@@ -78,7 +78,7 @@ public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
      * @param locator the processor array locator
      * @param spec    the input specification
      */
-    public static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> spec) {
+    public static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpecOld> spec) {
         List<InputProcessor> processors = new ArrayList<>();
         Class<?>[] classes = new Class[]{Map.class};
         List<Locator> processorLocators = locator.elements(root).toList();
@@ -96,7 +96,7 @@ public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
      * @param spec the input specification
      * @param name the name
      */
-    public static void validateAlreadyDefinedName(Map<String, SignalSpec> spec, String name) {
+    public static void validateAlreadyDefinedName(Map<String, SignalSpecOld> spec, String name) {
         // Verify for output name overlap
         if (spec.containsKey(name)) {
             throw new IllegalArgumentException(format("Signal \"%s\" already defined in signal specification",
@@ -110,7 +110,7 @@ public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
      * @param spec  the input specification
      * @param names the names
      */
-    public static void validateExistingNames(Map<String, SignalSpec> spec, Collection<String> names) {
+    public static void validateExistingNames(Map<String, SignalSpecOld> spec, Collection<String> names) {
         validateExistingNames(spec, names.toArray(String[]::new));
     }
 
@@ -120,7 +120,7 @@ public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
      * @param inSpec the input specification
      * @param names  the names
      */
-    public static void validateExistingNames(Map<String, SignalSpec> inSpec, String... names) {
+    public static void validateExistingNames(Map<String, SignalSpecOld> inSpec, String... names) {
         // Verify for missing input names
         List<String> missingNames = Arrays.stream(names)
                 .filter(Predicate.not(inSpec::containsKey))
@@ -138,7 +138,7 @@ public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
      * @param spec  inpus specification
      * @param names the names
      */
-    static void validateSameShape(Map<String, SignalSpec> spec, List<String> names) {
+    static void validateSameShape(Map<String, SignalSpecOld> spec, List<String> names) {
         long[] shape = spec.get(names.getFirst()).shape();
         List<String> wrongShapes = names.stream()
                 .filter(name -> !Arrays.equals(shape, spec.get(name).shape()))
@@ -160,7 +160,7 @@ public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
      * @param clazz the signal specificatin class
      * @param names the names
      */
-    static void validateTypes(Map<String, SignalSpec> spec, Class<? extends SignalSpec> clazz, List<String> names) {
+    static void validateTypes(Map<String, SignalSpecOld> spec, Class<? extends SignalSpecOld> clazz, List<String> names) {
         validateTypes(spec, clazz, names.stream());
     }
 
@@ -171,7 +171,7 @@ public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
      * @param clazz the signal specificatin class
      * @param names the names
      */
-    static void validateTypes(Map<String, SignalSpec> spec, Class<? extends SignalSpec> clazz, String... names) {
+    static void validateTypes(Map<String, SignalSpecOld> spec, Class<? extends SignalSpecOld> clazz, String... names) {
         // Verify for wrong input types
         validateTypes(spec, clazz, Arrays.stream(names));
     }
@@ -183,7 +183,7 @@ public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
      * @param clazz the signal specificatin class
      * @param names the names
      */
-    static void validateTypes(Map<String, SignalSpec> spec, Class<? extends SignalSpec> clazz, Stream<String> names) {
+    static void validateTypes(Map<String, SignalSpecOld> spec, Class<? extends SignalSpecOld> clazz, Stream<String> names) {
         // Verify for wrong input types
         List<String> wrongTypes = names.filter(name ->
                         !(spec.get(name).getClass().equals(clazz)))
@@ -205,7 +205,7 @@ public record InputProcessor(UnaryOperator<Map<String, Signal>> encode,
      * @param spec   the output spec
      * @param json   the json node
      */
-    public InputProcessor(UnaryOperator<Map<String, Signal>> encode, Map<String, SignalSpec> spec, JsonNode json) {
+    public InputProcessor(UnaryOperator<Map<String, Signal>> encode, Map<String, SignalSpecOld> spec, JsonNode json) {
         this.spec = requireNonNull(spec);
         this.encode = requireNonNull(encode);
         this.json = json;

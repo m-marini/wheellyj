@@ -31,9 +31,9 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mmarini.rl.envs.RewardFunctionOld;
+import org.mmarini.rl.envs.WorldModelState;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.behaviours.WorldModelState;
-import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WithWorldModel;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.wheelly.robots.RobotCommand;
@@ -66,7 +66,7 @@ class AvoidTest {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + AvoidContact.SCHEMA_NAME,
                 "class: " + AvoidContact.class.getName()));
-        RewardFunction<WithWorldModel, RobotCommand> f = AvoidContact.create(root, Locator.root());
+        RewardFunctionOld<WithWorldModel, RobotCommand> f = AvoidContact.create(root, Locator.root());
         WorldModelState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
         double result = f.reward(null, null, state);
@@ -88,7 +88,7 @@ class AvoidTest {
                 "$schema: " + AvoidContact.SCHEMA_NAME,
                 "class: " + AvoidContact.class.getName(),
                 "reward: -2"));
-        RewardFunction<WithWorldModel, RobotCommand> f = AvoidContact.create(root, Locator.root());
+        RewardFunctionOld<WithWorldModel, RobotCommand> f = AvoidContact.create(root, Locator.root());
         WorldModelState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
         double result = f.reward(null, null, state);

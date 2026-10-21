@@ -36,11 +36,11 @@ import io.reactivex.rxjava3.subjects.CompletableSubject;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.mmarini.Tuple2;
+import org.mmarini.rl.envs.ExecutionResultOld;
 import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
+import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.wheelly.batch.BatchAgent;
 import org.mmarini.wheelly.gyms.ExecutionResult;
-import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.wheelly.utils.WithShutdownCompletable;
 import org.mmarini.yaml.Locator;
@@ -125,7 +125,7 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
      * @param filePath           the file path for the agent save
      * @param concurrentTraining true if concurrent training
      */
-    public static DLAgent create(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, File filePath, boolean concurrentTraining) {
+    public static DLAgent create(Map<String, SignalSpecOld> stateSpec, Map<String, SignalSpecOld> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, File filePath, boolean concurrentTraining) {
         DLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, 0, concurrentTraining);
         agent.validate(stateSpec, actionSpec);
         return agent;
@@ -202,8 +202,7 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
      * It delegates the actual neural-network processing to NNMediator
      * </p>
      */
-    @Override
-    public Map<String, Signal> act(Map<String, Signal> state) {
+    public Map<String, INDArray> act(Map<String, INDArray> state) {
         return createDataGenerator(status.get().network()).chooseAction(random, state);
     }
 
@@ -326,7 +325,6 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
                 .put(BATCH_SIZE_ID, batchSize);
     }
 
-    @Override
     public void learning(boolean learning) {
         status.updateAndGet(s ->
                 s.learning(learning));
@@ -366,8 +364,7 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
      *
      * @param result the execution result
      */
-    @Override
-    public DLAgent observe(ExecutionResult result) {
+    public DLAgent observe(ExecutionResultOld result) {
         logger.atDebug().log("Observing result ...");
         DLAgentStatus st = status.updateAndGet(s -> s.observe(result));
         if (!st.shuttingDown()) {
@@ -390,6 +387,11 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
         }
         logger.atDebug().log("Observed result.");
         return this;
+    }
+
+    @Override
+    public void observe(ExecutionResult result) {
+
     }
 
     /**
@@ -427,7 +429,7 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
      *
      * @param state the state
      */
-    public Stream<Tuple2<String, INDArray>> predictFromState(Map<String, Signal> state) {
+    public Stream<Tuple2<String, INDArray>> predictFromState(Map<String, INDArray> state) {
         return createDataGenerator(network()).predictFromState(state);
     }
 
@@ -512,8 +514,7 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
      * @param stateSpec  the state specification
      * @param actionSpec the action specification
      */
-    @Override
-    public void validate(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec) {
+    public void validate(Map<String, SignalSpecOld> stateSpec, Map<String, SignalSpecOld> actionSpec) {
         ComputationGraph network = status.get().network();
         String missingLayers = network.getConfiguration().getNetworkInputs().stream()
                 .filter(id -> !stateSpec.containsKey(id))

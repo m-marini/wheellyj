@@ -32,11 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -70,7 +66,7 @@ class PartitionProcessorTest {
             "2.4999,2.5, 2,3",
     })
     void createEncoderTest(float x0, float x1, float y0, float y1) {
-        Map<String, SignalSpec> spec = Map.of(
+        Map<String, SignalSpecOld> spec = Map.of(
                 "a", new FloatSignalSpec(new long[]{2}, 1, 3)
         );
         UnaryOperator<Map<String, Signal>> encoder = PartitionProcessor.createEncoder(spec,
@@ -99,7 +95,7 @@ class PartitionProcessorTest {
             "2.4999,2.5, 2,3",
     })
     void createFromJsonTest(float x0, float x1, float y0, float y1) throws IOException {
-        Map<String, SignalSpec> spec = Map.of(
+        Map<String, SignalSpecOld> spec = Map.of(
                 "a", new FloatSignalSpec(new long[]{2}, 1, 3)
         );
 
@@ -129,7 +125,7 @@ class PartitionProcessorTest {
 
     @Test
     void createSpec1d() {
-        Map<String, SignalSpec> spec = PartitionProcessor.createSpec(Map.of(
+        Map<String, SignalSpecOld> spec = PartitionProcessor.createSpec(Map.of(
                 "a", new FloatSignalSpec(new long[]{1}, 0, 1)
         ), "p", "a", 3);
         assertThat(spec, hasKey("a"));
@@ -142,7 +138,7 @@ class PartitionProcessorTest {
 
     @Test
     void createSpec2d() {
-        Map<String, SignalSpec> spec = PartitionProcessor.createSpec(Map.of(
+        Map<String, SignalSpecOld> spec = PartitionProcessor.createSpec(Map.of(
                 "a", new FloatSignalSpec(new long[]{2}, 0, 1)
         ), "p", "a", 3);
         assertThat(spec, hasKey("a"));
@@ -162,7 +158,7 @@ class PartitionProcessorTest {
             "2.4999,2.5, 2,3",
     })
     void floatCreateClassifierTest(float x0, float x1, float y0, float y1) {
-        SignalSpec spec = new FloatSignalSpec(new long[]{2}, 1, 3);
+        SignalSpecOld spec = new FloatSignalSpec(new long[]{2}, 1, 3);
         UnaryOperator<INDArray> f = PartitionProcessor.createClassifier(spec, 4);
         INDArray result = f.apply(Nd4j.createFromArray(x0, x1).reshape(1, 2));
         assertThat(result, matrixCloseTo(new long[]{1, 2}, EPSILON, y0, y1));
@@ -176,7 +172,7 @@ class PartitionProcessorTest {
             "6,7, 6,7",
     })
     void intCreateClassifier1Test(float x0, float x1, float y0, float y1) {
-        SignalSpec spec = new IntSignalSpec(new long[]{2}, 8);
+        SignalSpecOld spec = new IntSignalSpec(new long[]{2}, 8);
         UnaryOperator<INDArray> f = PartitionProcessor.createClassifier(spec, 8);
         INDArray result = f.apply(Nd4j.createFromArray(x0, x1).reshape(1, 2));
         assertThat(result, matrixCloseTo(new long[]{1, 2}, EPSILON, y0, y1));
@@ -191,7 +187,7 @@ class PartitionProcessorTest {
             "1.4999,1.5, 2,3",
     })
     void intCreateClassifierTest(float x0, float x1, float y0, float y1) {
-        SignalSpec spec = new IntSignalSpec(new long[]{2}, 3);
+        SignalSpecOld spec = new IntSignalSpec(new long[]{2}, 3);
         UnaryOperator<INDArray> f = PartitionProcessor.createClassifier(spec, 4);
         INDArray result = f.apply(Nd4j.createFromArray(x0, x1).reshape(1, 2));
         assertThat(result, matrixCloseTo(new long[]{1, 2}, EPSILON, y0, y1));

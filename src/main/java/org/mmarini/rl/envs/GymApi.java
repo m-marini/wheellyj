@@ -26,17 +26,16 @@
  *
  */
 
-package org.mmarini.wheelly.gyms;
+package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.control.RobotControllerApi;
-import org.mmarini.wheelly.perception.DecisionMaker;
-import org.mmarini.wheelly.perception.WorldModel;
-import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.gyms.GymAdapter;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
+import java.util.Map;
 
 /**
  * Manages the interaction bridge between the underlying robot controller and the TD learning agent.
@@ -46,7 +45,7 @@ import java.io.File;
  * for autonomous robotic behaviors.
  * </p>
  */
-public interface GymApi extends GymConnector, DecisionMaker<WorldModel, RobotCommand>, WithSignalsSpec {
+public interface GymApi extends GymAdapter {
 
     /**
      * Parses and instantiates a concrete {@code EnvironmentApi} implementation from a JSON document configuration block.
@@ -93,10 +92,19 @@ public interface GymApi extends GymConnector, DecisionMaker<WorldModel, RobotCom
     }
 
     /**
+     * Sets the learning mode
+     *
+     * @param learning true if learning active
+     */
+    void learning(boolean learning);
+
+    /**
      * Registers or overrides the dynamic reward function responsible for calculating performance scalars
      * within the reinforcement learning execution loop.
      *
-     * @param rewardFunc the targeted {@link RewardFunction} component to attach to this environment context
+     * @param rewardFunc the targeted {@link RewardFunctionOld} component to attach to this environment context
      */
-    void setRewardFunc(RewardFunction rewardFunc);
+    void setRewardFunc(RewardFunctionOld rewardFunc);
+
+    void validate(Map<String, SignalSpecOld> stateSpec, Map<String, SignalSpecOld> actionSpec);
 }

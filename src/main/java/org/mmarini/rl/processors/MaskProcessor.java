@@ -30,11 +30,7 @@ package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.NotImplementedException;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -62,7 +58,7 @@ public interface MaskProcessor {
      * @param locator the spec locator
      * @param spec    the input spec
      */
-    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> spec) {
+    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpecOld> spec) {
         String outName = locator.path("name").getNode(root).asText();
         String inputName = locator.path("input").getNode(root).asText();
         String maskName = locator.path("mask").getNode(root).asText();
@@ -116,10 +112,10 @@ public interface MaskProcessor {
      * @param outName   the output name
      * @param inputName the input name
      */
-    static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> spec, String outName, String inputName) {
-        SignalSpec inputSpec = spec.get(inputName);
-        Map<String, SignalSpec> result = new HashMap<>(spec);
-        SignalSpec outSpec = switch (inputSpec) {
+    static Map<String, SignalSpecOld> createSpec(Map<String, SignalSpecOld> spec, String outName, String inputName) {
+        SignalSpecOld inputSpec = spec.get(inputName);
+        Map<String, SignalSpecOld> result = new HashMap<>(spec);
+        SignalSpecOld outSpec = switch (inputSpec) {
             case IntSignalSpec iSpec -> iSpec;
             case FloatSignalSpec fSpec -> new FloatSignalSpec(fSpec.shape(),
                     min(0, fSpec.minValue()),
@@ -158,7 +154,7 @@ public interface MaskProcessor {
      * @param inputName the input name
      * @param maskName  the mask name
      */
-    static void validate(Map<String, SignalSpec> spec, String outName, String inputName, String maskName) {
+    static void validate(Map<String, SignalSpecOld> spec, String outName, String inputName, String maskName) {
         validateAlreadyDefinedName(spec, outName);
         validateExistingNames(spec, inputName, maskName);
         long[] inputShape = spec.get(inputName).shape();

@@ -35,11 +35,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mmarini.TextTable;
 import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
+import org.mmarini.rl.envs.SignalSpecOld;
+import org.mmarini.rl.envs.WithSignalsSpecOld;
 import org.mmarini.wheelly.gyms.ExecutionResult;
-import org.mmarini.wheelly.gyms.SignalSpec;
-import org.mmarini.wheelly.gyms.WithSignalsSpec;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -119,8 +117,8 @@ public class MDPDLTest {
     /**
      * Logs the prediction comparison
      */
-    static void logComparison(Map<String, Signal> input, Map<String, INDArray> prediction0, Map<String, INDArray> prediction1, float avgReward0, float avgReward1) {
-        INDArray inputs = input.get(STATE_ID).toINDArray();
+    static void logComparison(Map<String, INDArray> input, Map<String, INDArray> prediction0, Map<String, INDArray> prediction1, float avgReward0, float avgReward1) {
+        INDArray inputs = input.get(STATE_ID);
         INDArray action0 = prediction0.get(ACTION_ID);
         INDArray critic0 = prediction0.get(CRITIC_ID);
         INDArray action1 = prediction1.get(ACTION_ID);
@@ -215,7 +213,7 @@ public class MDPDLTest {
     }
 
     DLAgent agent;
-    Map<String, Signal> allStates;
+    Map<String, INDArray> allStates;
     MDP mdp;
 
     {
@@ -227,25 +225,25 @@ public class MDPDLTest {
         MODEL_PATH.delete();
         mdp = MDP.sequence(2);
         INDArray[] arys = IntStream.range(0, mdp.numStates())
-                .mapToObj(i -> mdp.state(i).get(STATE_ID).toINDArray())
+                .mapToObj(i -> mdp.state(i).get(STATE_ID))
                 .toArray(INDArray[]::new);
-        this.allStates = Map.of(STATE_ID, new ArraySignal(Nd4j.vstack(arys)));
+        this.allStates = Map.of(STATE_ID, Nd4j.vstack(arys));
 
-        Map<String, SignalSpec> stateSpec = Map.of(
+        Map<String, SignalSpecOld> stateSpec = Map.of(
                 STATE_ID, new IntSignalSpec(new long[]{mdp.numStates()}, BATCH_SIZE)
         );
-        Map<String, SignalSpec> actionSpec = Map.of(
+        Map<String, SignalSpecOld> actionSpec = Map.of(
                 ACTION_ID, new IntSignalSpec(new long[]{1}, mdp.numActions())
         );
         JsonNode conf = Utils.fromText(AGENT_CONF_YAML);
-        WithSignalsSpec env = new WithSignalsSpec() {
+        WithSignalsSpecOld env = new WithSignalsSpecOld() {
             @Override
-            public Map<String, SignalSpec> actionSpec() {
+            public Map<String, SignalSpecOld> actionSpec() {
                 return actionSpec;
             }
 
             @Override
-            public Map<String, SignalSpec> stateSpec() {
+            public Map<String, SignalSpecOld> stateSpec() {
                 return stateSpec;
             }
         };
@@ -267,7 +265,7 @@ public class MDPDLTest {
         int s0 = 0;
         java.util.Random random = new java.util.Random(SEED);
 
-        ToIntFunction<Map<String, Signal>> fAction = state ->
+        ToIntFunction<Map<String, INDArray>> fAction = state ->
                 agent.act(state).get("action").getInt(0, 0);
 
         for (int j = 0; j < n; j++) {

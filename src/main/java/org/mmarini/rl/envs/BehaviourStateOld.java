@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.wheelly.behaviours;
+package org.mmarini.rl.envs;
 
 import org.mmarini.wheelly.perception.WithWorldModel;
 

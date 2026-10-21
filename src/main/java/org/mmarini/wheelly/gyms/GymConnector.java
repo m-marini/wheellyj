@@ -28,9 +28,9 @@
 
 package org.mmarini.wheelly.gyms;
 
+import org.mmarini.rl.envs.BehaviourActionOld;
+import org.mmarini.rl.envs.BehaviourStateOld;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.behaviours.BehaviourActionOld;
-import org.mmarini.wheelly.behaviours.BehaviourStateOld;
 import org.mmarini.wheelly.perception.PerceptionConnector;
 
 import java.util.Map;
@@ -55,9 +55,9 @@ public interface GymConnector {
     /**
      * Binds the core reinforcement learning decision-making agent to this environment lifecycle loop.
      *
-     * @param agent the {@link AgentConnector} instance representing the processing learning policy
+     * @param agent the {@link AdapterConnector} instance representing the processing learning policy
      */
-    void connect(AgentConnector agent);
+    void connect(AdapterConnector agent);
 
     /**
      * Computes the performance scalar reward yielded by executing a specific behavioural action.

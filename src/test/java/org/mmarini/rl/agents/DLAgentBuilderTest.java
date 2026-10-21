@@ -44,8 +44,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.rl.envs.FloatSignalSpec;
 import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.wheelly.gyms.SignalSpec;
-import org.mmarini.wheelly.gyms.WithSignalsSpec;
+import org.mmarini.rl.envs.SignalSpecOld;
+import org.mmarini.rl.envs.WithSignalsSpecOld;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
@@ -57,19 +57,19 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class DLAgentBuilderTest {
-    WithSignalsSpec env;
+    WithSignalsSpecOld env;
     private DLAgent agent;
 
     @BeforeEach
     void setUp() throws IOException {
-        this.env = new WithSignalsSpec() {
+        this.env = new WithSignalsSpecOld() {
             @Override
-            public Map<String, SignalSpec> actionSpec() {
+            public Map<String, SignalSpecOld> actionSpec() {
                 return Map.of();
             }
 
             @Override
-            public Map<String, SignalSpec> stateSpec() {
+            public Map<String, SignalSpecOld> stateSpec() {
                 return Map.of("map", new IntSignalSpec(new long[]{50, 51, 4}, 2),
                         "other", new FloatSignalSpec(new long[]{1}, -1, 1));
             }

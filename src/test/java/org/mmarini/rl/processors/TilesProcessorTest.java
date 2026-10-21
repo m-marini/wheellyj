@@ -32,11 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -63,7 +59,7 @@ class TilesProcessorTest {
               numTiles: 2
             """;
 
-    private static SignalSpec inputSpec() {
+    private static SignalSpecOld inputSpec() {
         return new FloatSignalSpec(new long[]{2}, 1, 3);
     }
 
@@ -201,10 +197,10 @@ class TilesProcessorTest {
 
     @Test
     void createSpecTest() {
-        Map<String, SignalSpec> spec = TilesProcessor.createSpec(Map.of("a", inputSpec()), "out", "a", 2);
+        Map<String, SignalSpecOld> spec = TilesProcessor.createSpec(Map.of("a", inputSpec()), "out", "a", 2);
         assertThat(spec, hasKey("a"));
         assertThat(spec, hasKey("out"));
-        SignalSpec outSpec = spec.get("out");
+        SignalSpecOld outSpec = spec.get("out");
         assertThat(outSpec, isA(IntSignalSpec.class));
         assertArrayEquals(new long[]{2, 11}, outSpec.shape());
         assertEquals(2, ((IntSignalSpec) outSpec).numValues());

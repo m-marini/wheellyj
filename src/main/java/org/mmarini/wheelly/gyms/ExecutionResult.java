@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.gyms;
 
-import org.mmarini.rl.envs.Signal;
+import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.util.Map;
 import java.util.StringJoiner;
@@ -38,8 +38,8 @@ import static java.util.Objects.requireNonNull;
 /**
  * The reinforcement learning execution step (SARS)
  */
-public record ExecutionResult(Map<String, Signal> state0, Map<String, Signal> actions, double reward,
-                              Map<String, Signal> state1) {
+public record ExecutionResult(Map<String, INDArray> state0, Map<String, INDArray> actions, double reward,
+                              Map<String, INDArray> state1) {
     /**
      * Creates an execution result
      *
@@ -48,11 +48,10 @@ public record ExecutionResult(Map<String, Signal> state0, Map<String, Signal> ac
      * @param reward  the reward
      * @param state0  the resulting state
      */
-    public ExecutionResult(Map<String, Signal> state0, Map<String, Signal> actions, double reward, Map<String, Signal> state1) {
-        this.state1 = requireNonNull(state1);
-        this.actions = requireNonNull(actions);
-        this.reward = reward;
-        this.state0 = requireNonNull(state0);
+    public ExecutionResult {
+        requireNonNull(state1);
+        requireNonNull(actions);
+        requireNonNull(state0);
     }
 
     @Override

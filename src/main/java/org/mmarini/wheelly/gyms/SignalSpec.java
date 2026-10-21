@@ -29,10 +29,11 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.IntSignalSpec;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -41,47 +42,82 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /**
+ * Defines the dimensional specification (shape) of a Reinforcement Learning (RL) signal.
+ * <p>
+ * This record is immutable and encapsulates the geometric configurations of telemetry signals
+ * within an agent-environment loop (e.g. states, actions, or rewards). Because this specification
+ * strictly characterises a single unbatched experience step rather than a multi-sample batch,
+ * the leading dimension (the first element of the shape array) is invariantly assigned a value of 1.
+ * </p>
  *
+ * @param shape The array of dimensions characterising the RL signal tensor. Must not be null,
+ *              must contain at least two elements, and its leading dimension must strictly
+ *              equal 1 to denote an individual environment step.
  */
-public abstract class SignalSpec {
+public record SignalSpec(long[] shape) {
 
     public static final String SIGNAL_SCHEMA_YML = "https://mmarini.org/wheelly/signal-schema";
+    public static final String SHAPE_ID = "shape";
 
-    private static SignalSpec create(JsonNode node, Locator locator) {
-        String type = locator.path("type").getNode(node).asText();
-        return switch (type) {
-            case "int" -> IntSignalSpec.create(node, locator);
-            case "float" -> FloatSignalSpec.create(node, locator);
-            default -> throw new IllegalArgumentException(format("Wrong type \"%s\"", type));
-        };
+    /**
+     * Creates a new {@code SignalSpec} instance with the specified dimensional shape.
+     * <p>
+     * This factory method provides a convenient shorthand for instantiating signal specifications
+     * without invoking the record constructor directly.
+     * </p>
+     *
+     * @param shape The array of dimensions characterising the RL signal tensor. Must not be null,
+     *              must contain at least two elements, and its leading dimension must strictly
+     *              equal 1 to denote an individual environment step.
+     * @return A newly instantiated {@code SignalSpec} reflecting the provided dimensional setup.
+     */
+    public static SignalSpec create(long... shape) {
+        return new SignalSpec(shape);
     }
 
-    public static long[] createShape(JsonNode node, Locator locator) {
-        return locator.path("shape").elements(node)
+    /**
+     * Initialises a {@code SignalSpec} instance by extracting dimensional bounds
+     * from a JSON node using the provided element locator.
+     *
+     * @param node    The source JSON node containing the shape metadata.
+     * @param locator The locator utility employed to map JSON nodes to long integers.
+     * @return A newly instantiated {@code SignalSpec} reflecting the extracted shape.
+     */
+    private static SignalSpec create(JsonNode node, Locator locator) {
+        long[] shape = locator.path(SHAPE_ID).elements(node)
                 .mapToLong(l -> l.getNode(node).asLong())
                 .toArray();
+        return new SignalSpec(shape);
     }
 
+    /**
+     * Parses a complete map of signal specifications from a JSON structure, verifying its layout
+     * against the target JSON schema specification.
+     *
+     * @param node    The root JSON configuration node containing multiple signal specs.
+     * @param locator The locator targeting the specific property container within the node.
+     * @return A {@link Map} linking signal name keys to their corresponding parsed {@code SignalSpec} values.
+     */
     public static Map<String, SignalSpec> createSignalSpecMap(JsonNode node, Locator locator) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(node), SIGNAL_SCHEMA_YML);
         return locator.propertyNames(node)
                 .mapValues((name, l) -> SignalSpec.create(node, l))
                 .toMap();
-        /*
-        return stream(locator.getNode(node).fieldNames())
-                .map(name -> Tuple2.of(name, SignalSpec.create(node, locator.path(name))))
-                .collect(Tuple2.toMap());
-
-         */
     }
 
     /**
-     * Validates for equals spec
+     * Validates that two distinct signal specification maps are structural and mathematical equivalents.
+     * <p>
+     * Checks bidirectional key completeness and verifies that identical keys match exactly
+     * in their dimensional shapes.
+     * </p>
      *
-     * @param spec1        first spec
-     * @param spec2        second spec
-     * @param description1 description of first spec
-     * @param description2 description of second spec
+     * @param spec1        The baseline dictionary map of specifications to compare against.
+     * @param spec2        The candidate dictionary map of specifications to evaluate.
+     * @param description1 Contextual structural text describing the source of the baseline specs.
+     * @param description2 Contextual structural text describing the source of the candidate specs.
+     * @throws IllegalArgumentException if keys are missing from either map or if dimensional entries
+     *                                  fail equality checks.
      */
     public static void validateEqualsSpec(Map<String, SignalSpec> spec1, Map<String, SignalSpec> spec2, String description1, String description2) {
         for (String key : spec2.keySet()) {
@@ -109,39 +145,62 @@ public abstract class SignalSpec {
         }
     }
 
-    private final long[] shape;
-
-    protected SignalSpec(long[] shape) {
-        this.shape = requireNonNull(shape);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        SignalSpec that = (SignalSpec) o;
-        return Arrays.equals(shape, that.shape);
-    }
-
-    @Override
-    public int hashCode() {
-        return Arrays.hashCode(shape);
-    }
-
     /**
-     * Returns the json node of spec
+     * Compact constructor for state validation.
+     * <p>
+     * Verifies that the tensor dimension array is non-null, possesses at least two structural
+     * axes to properly define the tensor layout, and adheres to the single-sample RL constraint
+     * where the batch/leading dimension is exactly 1.
+     * </p>
+     *
+     * @throws NullPointerException     if the {@code shape} array is null.
+     * @throws IllegalArgumentException if the {@code shape} array contains fewer than two elements
+     *                                  or if its leading dimension is not equal to 1.
      */
-    public abstract JsonNode json();
+    public SignalSpec {
+        requireNonNull(shape);
+        if (shape.length < 2) {
+            throw new IllegalArgumentException(format("Shape must be of length greater or equals 2: %s", shape.length));
+        }
+        if (shape[0] != 1) {
+            throw new IllegalArgumentException(format("Shape must be of length greater or equals 1: %s", shape[0]));
+        }
+    }
 
     /**
-     * Returns the shape of signal
+     * Serialises the signal specification into a structured JSON object.
+     *
+     * @return A {@link JsonNode} (specifically an {@link ObjectNode}) representing this specification.
+     */
+    public JsonNode json() {
+        ObjectNode spec = Utils.objectMapper.createObjectNode();
+        ArrayNode shapeNode = Utils.objectMapper.createArrayNode();
+        for (long i : shape()) {
+            shapeNode.add(i);
+        }
+        spec.set(SHAPE_ID, shapeNode);
+        return spec;
+    }
+
+    /**
+     * Returns a reference to the dimensional array of the signal.
+     *
+     * @return An array of {@code long} primitive values representing the shape,
+     * where the leading dimension is guaranteed to be 1.
      */
     public long[] shape() {
         return this.shape;
     }
 
     /**
-     * Returns the number of elements
+     * Calculates the total volume of elements within the signal by computing
+     * the product of its dimensions.
+     * <p>
+     * Since the leading dimension is always 1 (representing a single sample step),
+     * the total volume equates directly to the product of the remaining structural axes.
+     * </p>
+     *
+     * @return The total number of elements comprising the signal structure.
      */
     public long size() {
         return Arrays.stream(shape).reduce(1, (a, b) -> a * b);

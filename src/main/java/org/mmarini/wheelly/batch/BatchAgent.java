@@ -31,14 +31,14 @@ package org.mmarini.wheelly.batch;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.agents.RLDatasetIterator;
-import org.mmarini.wheelly.gyms.AgentConnector;
+import org.mmarini.wheelly.gyms.AdapterConnector;
 
 import java.util.Map;
 
 /**
  * Trains the agent by batch
  */
-public interface BatchAgent extends Agent, AgentConnector {
+public interface BatchAgent extends Agent, AdapterConnector {
 
     /**
      * Returns the scaling coefficients applied to the

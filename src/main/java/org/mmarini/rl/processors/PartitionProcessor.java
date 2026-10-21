@@ -29,11 +29,7 @@
 package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.ops.transforms.Transforms;
@@ -58,7 +54,7 @@ public interface PartitionProcessor {
      * @param locator the locator of environment
      * @param inSpec  the input specification
      */
-    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
+    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpecOld> inSpec) {
         String outName = locator.path("name").getNode(root).asText();
         String inName = locator.path("input").getNode(root).asText();
         int numTiles = locator.path("numTiles").getNode(root).asInt();
@@ -93,7 +89,7 @@ public interface PartitionProcessor {
      * @param inSpec    the input specification
      * @param numValues the number of output value
      */
-    static UnaryOperator<INDArray> createClassifier(SignalSpec inSpec, long numValues) {
+    static UnaryOperator<INDArray> createClassifier(SignalSpecOld inSpec, long numValues) {
         return switch (inSpec) {
             case FloatSignalSpec floatSpec -> {
                 float minValue = floatSpec.minValue();
@@ -125,7 +121,7 @@ public interface PartitionProcessor {
      * @param inName   the input name
      * @param numTiles the number of tiles
      */
-    static UnaryOperator<Map<String, Signal>> createEncoder(Map<String, SignalSpec> inSpec, String outName, String inName, int numTiles) {
+    static UnaryOperator<Map<String, Signal>> createEncoder(Map<String, SignalSpecOld> inSpec, String outName, String inName, int numTiles) {
         UnaryOperator<INDArray> part = createClassifier(inSpec.get(inName), numTiles);
         return in -> {
             Map<String, Signal> result = new HashMap<>(in);
@@ -143,8 +139,8 @@ public interface PartitionProcessor {
      * @param inName   the input name
      * @param numTiles the number of tiles
      */
-    static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> inSpec, String name, String inName, int numTiles) {
-        Map<String, SignalSpec> outSpec = new HashMap<>(inSpec);
+    static Map<String, SignalSpecOld> createSpec(Map<String, SignalSpecOld> inSpec, String name, String inName, int numTiles) {
+        Map<String, SignalSpecOld> outSpec = new HashMap<>(inSpec);
         IntSignalSpec spec = new IntSignalSpec(inSpec.get(inName).shape(), numTiles);
         outSpec.put(name, spec);
         return outSpec;
@@ -157,7 +153,7 @@ public interface PartitionProcessor {
      * @param outName the output name
      * @param inName  the input name
      */
-    static void validate(Map<String, SignalSpec> inSpec, String outName, String inName) {
+    static void validate(Map<String, SignalSpecOld> inSpec, String outName, String inName) {
         validateAlreadyDefinedName(inSpec, outName);
         validateExistingNames(inSpec, inName);
     }

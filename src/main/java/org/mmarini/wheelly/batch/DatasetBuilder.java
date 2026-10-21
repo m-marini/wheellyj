@@ -35,7 +35,7 @@ import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.DLActionFunction;
 import org.mmarini.rl.envs.DLEnvironment;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.behaviours.WorldModelState;
+import org.mmarini.rl.envs.WorldModelState;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModeller;
 import org.mmarini.wheelly.robots.RobotCommand;
@@ -110,7 +110,7 @@ public class DatasetBuilder {
                 .collect(Tuple2.toMap());
 
         // Reads the inference records and convert to signals, actin masks and rewards
-        DLActionFunction actionFunction = (DLActionFunction) env.actionFunction();
+        DLActionFunction actionFunction = null;// TODO (DLActionFunction) env.actionFunction();
         Tuple2<WorldModel, RobotCommand> record = null;
         WorldModelState s0 = null;
         RobotCommand commands = null;

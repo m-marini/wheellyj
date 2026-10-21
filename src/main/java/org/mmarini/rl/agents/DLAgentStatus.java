@@ -29,7 +29,7 @@
 package org.mmarini.rl.agents;
 
 import org.deeplearning4j.nn.graph.ComputationGraph;
-import org.mmarini.wheelly.gyms.ExecutionResult;
+import org.mmarini.rl.envs.ExecutionResultOld;
 
 import static java.util.Objects.requireNonNull;
 
@@ -119,7 +119,7 @@ public record DLAgentStatus(ComputationGraph network,
      *
      * @param result the observation
      */
-    public DLAgentStatus observe(ExecutionResult result) {
+    public DLAgentStatus observe(ExecutionResultOld result) {
         trajectoryBuffer.add(result);
         // Checks for training ready (not yet training and buffer full and learning activated
         if (!training && trajectoryBuffer.isFilled() && learning) {

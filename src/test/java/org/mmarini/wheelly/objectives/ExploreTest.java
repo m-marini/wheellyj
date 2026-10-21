@@ -31,9 +31,9 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mmarini.rl.envs.RewardFunctionOld;
+import org.mmarini.rl.envs.WorldModelState;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.behaviours.WorldModelState;
-import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -69,7 +69,7 @@ class ExploreTest {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + Explore.SCHEMA_NAME,
                 "class: " + Explore.class.getName()));
-        RewardFunction f = Explore.create(root, Locator.root());
+        RewardFunctionOld f = Explore.create(root, Locator.root());
         WorldModelState state0 = createState(knownCount0);
         WorldModelState state1 = createState(knownCount1);
 
@@ -92,7 +92,7 @@ class ExploreTest {
                 "$schema: " + Explore.SCHEMA_NAME,
                 "class: " + Explore.class.getName(),
                 "reward: 2"));
-        RewardFunction f = Explore.create(root, Locator.root());
+        RewardFunctionOld f = Explore.create(root, Locator.root());
         WorldModelState state0 = createState(knownCount0);
         WorldModelState state1 = createState(knownCount1);
 

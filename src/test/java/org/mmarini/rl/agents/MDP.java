@@ -29,11 +29,11 @@
 package org.mmarini.rl.agents;
 
 import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.IntSignal;
 import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
+import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.wheelly.gyms.ExecutionResult;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -81,7 +81,7 @@ public record MDP(double[][][] prob, double[][][] reward) {
                     prob[i][j][k] = j == i && k == (i + 1) % numStates
                             ? 1
                             : j != i && k == i
-                              ? 1 : 0;
+                            ? 1 : 0;
                 }
                 if (i == j) {
                     reward[i][j][(i + 1) % numStates] = 1;
@@ -96,15 +96,15 @@ public record MDP(double[][][] prob, double[][][] reward) {
      *
      * @param action the action index
      */
-    public Map<String, Signal> action(int action) {
-        return Map.of("action", IntSignal.create(new long[]{1, 1}, action));
+    public Map<String, INDArray> action(int action) {
+        return Map.of("action", Nd4j.createFromArray(action).reshape(1, 1));
     }
 
     /**
      *
      * Returns the action specification
      */
-    public Map<String, SignalSpec> actionSpec() {
+    public Map<String, SignalSpecOld> actionSpec() {
         return Map.of("action", new IntSignalSpec(new long[]{1, 1}, numActions()));
     }
 
@@ -116,13 +116,13 @@ public record MDP(double[][][] prob, double[][][] reward) {
      * @param actionFun the policy
      * @param random    the mdp random generator
      */
-    public Tuple2<Integer, ExecutionResult> interact(int state, ToIntFunction<Map<String, Signal>> actionFun, Random random) {
-        Map<String, Signal> s0Signal = state(state);
+    public Tuple2<Integer, ExecutionResult> interact(int state, ToIntFunction<Map<String, INDArray>> actionFun, Random random) {
+        Map<String, INDArray> s0Signal = state(state);
         int action = actionFun.applyAsInt(s0Signal);
-        Map<String, Signal> aSignal = action(action);
+        Map<String, INDArray> aSignal = action(action);
         int s1 = nextState(state, action, random);
         double reward = reward(state, action, s1);
-        Map<String, Signal> s1Signal = state(s1);
+        Map<String, INDArray> s1Signal = state(s1);
         return Tuple2.of(s1, new ExecutionResult(s0Signal, aSignal, reward, s1Signal));
     }
 
@@ -181,17 +181,18 @@ public record MDP(double[][][] prob, double[][][] reward) {
      *
      * @param state the state index
      */
-    public Map<String, Signal> state(int state) {
+    public Map<String, INDArray> state(int state) {
         int[] values = new int[numActions()];
         values[state] = 1;
-        return Map.of("state", IntSignal.create(new long[]{1, numStates()}, values));
+        INDArray ary = Nd4j.createFromArray(values).reshape(1, numStates());
+        return Map.of("state", ary);
     }
 
     /**
      *
      * Returns the state specification
      */
-    public Map<String, SignalSpec> stateSpec() {
+    public Map<String, SignalSpecOld> stateSpec() {
         return Map.of("state", new IntSignalSpec(new long[]{1, numStates()}, 2));
     }
 

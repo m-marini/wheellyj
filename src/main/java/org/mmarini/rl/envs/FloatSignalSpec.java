@@ -31,7 +31,6 @@ package org.mmarini.rl.envs;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -42,10 +41,10 @@ import java.util.StringJoiner;
 /**
  * The specification of float signal
  */
-public class FloatSignalSpec extends SignalSpec {
+public class FloatSignalSpec extends SignalSpecOld {
 
     public static FloatSignalSpec create(JsonNode node, Locator locator) {
-        long[] shape = SignalSpec.createShape(node, locator);
+        long[] shape = SignalSpecOld.createShape(node, locator);
         float min = (float) locator.path("minValue").getNode(node).asDouble();
         float max = (float) locator.path("maxValue").getNode(node).asDouble();
         return new FloatSignalSpec(shape, min, max);

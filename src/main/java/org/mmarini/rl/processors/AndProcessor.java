@@ -29,10 +29,10 @@
 package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -57,7 +57,7 @@ public interface AndProcessor {
      * @param locator the spec locator
      * @param inSpec  the input spec
      */
-    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
+    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpecOld> inSpec) {
         requireNonNull(root);
         requireNonNull(locator);
         String outName = locator.path("name").getNode(root).asText();
@@ -93,9 +93,9 @@ public interface AndProcessor {
      * @param outName the output name
      * @param inNames the input names
      */
-    static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> inSpec, String outName, List<String> inNames) {
+    static Map<String, SignalSpecOld> createSpec(Map<String, SignalSpecOld> inSpec, String outName, List<String> inNames) {
         IntSignalSpec newSpec = new IntSignalSpec(inSpec.get(inNames.getFirst()).shape(), 2);
-        Map<String, SignalSpec> result = new HashMap<>(inSpec);
+        Map<String, SignalSpecOld> result = new HashMap<>(inSpec);
         result.put(outName, newSpec);
         return result;
     }
@@ -107,7 +107,7 @@ public interface AndProcessor {
      * @param outName the output name
      * @param inNames input names
      */
-    static void validate(Map<String, SignalSpec> inSpec, String outName, List<String> inNames) {
+    static void validate(Map<String, SignalSpecOld> inSpec, String outName, List<String> inNames) {
         validateAlreadyDefinedName(inSpec, outName);
         validateExistingNames(inSpec, inNames);
         if (inNames.isEmpty()) {

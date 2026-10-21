@@ -46,13 +46,14 @@ import org.mmarini.rl.agents.DLAgent;
 import org.mmarini.rl.agents.DLListener;
 import org.mmarini.rl.agents.TrainingKpis;
 import org.mmarini.rl.envs.DLEnvironment;
+import org.mmarini.rl.envs.GymApi;
+import org.mmarini.rl.envs.RewardFunctionOld;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.batch.BatchAgent;
 import org.mmarini.wheelly.batch.BatchTrainer;
 import org.mmarini.wheelly.batch.ProgressInfo;
 import org.mmarini.wheelly.control.RobotControllerApi;
-import org.mmarini.wheelly.gyms.GymApi;
-import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.PerceptionConnector;
 import org.mmarini.wheelly.perception.WorldModeller;
 import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.wheelly.storage.serde.BinArrayFile;
@@ -207,7 +208,7 @@ public class BatchTraining {
         }
         environment.connect(modeller);
         // Load reward function
-        RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
+        RewardFunctionOld rewardFunc = (RewardFunctionOld) AppYaml.rewardFromJson(config);
         environment.setRewardFunc(rewardFunc);
 
         // Creates agent
@@ -215,7 +216,7 @@ public class BatchTraining {
         logger.atInfo().log("Creating agent ...");
         this.agent = (BatchAgent) Agent.fromFile(
                 new File(Locator.locate("agent").getNode(config).asText()));
-        environment.connect(agent);
+        environment.connect((PerceptionConnector) agent);
 
         kpisPanel.addActionColumns(environment.actionSpec()
                 .keySet().stream().sorted().toArray(String[]::new));

@@ -29,11 +29,7 @@
 package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.behaviours.BehaviourStateOld;
 import org.mmarini.wheelly.control.RobotStatus;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
-import org.mmarini.wheelly.gyms.StateFunction;
 import org.mmarini.wheelly.perception.*;
 import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
@@ -80,7 +76,7 @@ import static java.util.Objects.requireNonNull;
  * plus a channel for each recognised label.
  * </p>
  */
-public class DLStateFunction implements StateFunction {
+public class DLStateFunction implements StateFunctionOld {
     public static final int MAX_SENSOR_DIR = 135;
     public static final FloatSignalSpec SENSOR_SPEC = new FloatSignalSpec(new long[]{1}, -MAX_SENSOR_DIR, MAX_SENSOR_DIR);
     public static final String SENSOR_SIGNAL_ID = "sensor";
@@ -104,7 +100,7 @@ public class DLStateFunction implements StateFunction {
      * @param markers   the marker specification
      */
     public static DLStateFunction create(WorldModelSpec worldSpec, List<String> markers) {
-        Map<String, SignalSpec> spec = createSpec(worldSpec, markers.size());
+        Map<String, SignalSpecOld> spec = createSpec(worldSpec, markers.size());
         return new DLStateFunction(markers, spec);
     }
 
@@ -114,7 +110,7 @@ public class DLStateFunction implements StateFunction {
      * @param root    the root json doc
      * @param locator the locator
      */
-    public static Function<WorldModelSpec, StateFunction> create(JsonNode root, Locator locator) throws IOException {
+    public static Function<WorldModelSpec, StateFunctionOld> create(JsonNode root, Locator locator) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         List<String> markers = locator.path(MARKER_LABELS_ID).elements(root)
                 .map(l -> l.getNode(root).asText())
@@ -128,7 +124,7 @@ public class DLStateFunction implements StateFunction {
      * @param worldSpec  the world specification
      * @param numMarkers the number of recognised markers
      */
-    private static Map<String, SignalSpec> createSpec(WorldModelSpec worldSpec, int numMarkers) {
+    private static Map<String, SignalSpecOld> createSpec(WorldModelSpec worldSpec, int numMarkers) {
         long radarSize = worldSpec.robotMapSize();
         int numChannels = numMarkers + NUM_CELL_STATES;
         return Map.of(
@@ -139,7 +135,7 @@ public class DLStateFunction implements StateFunction {
     }
 
     private final List<String> markers;
-    private final Map<String, SignalSpec> spec;
+    private final Map<String, SignalSpecOld> spec;
 
     /**
      * Creates the state function
@@ -147,7 +143,7 @@ public class DLStateFunction implements StateFunction {
      * @param markers the marker specification
      * @param spec    the state specification
      */
-    public DLStateFunction(List<String> markers, Map<String, SignalSpec> spec) {
+    public DLStateFunction(List<String> markers, Map<String, SignalSpecOld> spec) {
         this.markers = requireNonNull(markers);
         this.spec = requireNonNull(spec);
         logger.atDebug().log("Created");
@@ -248,7 +244,7 @@ public class DLStateFunction implements StateFunction {
     }
 
     @Override
-    public Map<String, SignalSpec> spec() {
+    public Map<String, SignalSpecOld> spec() {
         return spec;
     }
 }

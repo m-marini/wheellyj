@@ -28,8 +28,8 @@
 
 package org.mmarini.wheelly.gyms;
 
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.behaviours.BehaviourStateOld;
+import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.nd4j.linalg.api.ndarray.INDArray;
 
 import java.util.Map;
 
@@ -42,16 +42,16 @@ import java.util.Map;
  * sub-signal tensors for reinforcement learning observations.
  * </p>
  */
-public interface StateFunction<T> {
+public interface StateFunction {
 
     /**
      * Extracts and processes the structural feature signals from a batch sequence
      * of environment state snapshots.
      *
-     * @param states a varargs array of current execution {@link BehaviourStateOld} profiles to decompose
-     * @return an unmodifiable {@link Map} pairing signal identifier keys to their extracted raw {@link Signal} vectors
+     * @param states a varargs array of current execution {@link BehaviourState} profiles to decompose
+     * @return an unmodifiable {@link Map} pairing signal identifier keys to their extracted raw vectors
      */
-    Map<String, Signal> signals(T... states);
+    Map<String, INDArray> signals(BehaviourState... states);
 
     /**
      * Exposes the full multi-input signal specification layout dictionary defining structural properties.

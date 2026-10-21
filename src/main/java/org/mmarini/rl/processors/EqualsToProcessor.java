@@ -29,10 +29,10 @@
 package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -55,7 +55,7 @@ public interface EqualsToProcessor {
      * @param locator the locator of environment
      * @param inSpec  the input specification
      */
-    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
+    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpecOld> inSpec) {
         String outName = locator.path("name").getNode(root).asText();
         String inName = locator.path("input").getNode(root).asText();
         double value = locator.path("value").getNode(root).asDouble();
@@ -83,14 +83,14 @@ public interface EqualsToProcessor {
      * @param outName the name of property
      * @param inName  the input name
      */
-    static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> inSpec, String outName, String inName) {
+    static Map<String, SignalSpecOld> createSpec(Map<String, SignalSpecOld> inSpec, String outName, String inName) {
         IntSignalSpec newSpec = new IntSignalSpec(inSpec.get(inName).shape(), 2);
-        Map<String, SignalSpec> outSpec = new HashMap<>(inSpec);
+        Map<String, SignalSpecOld> outSpec = new HashMap<>(inSpec);
         outSpec.put(outName, newSpec);
         return outSpec;
     }
 
-    static void validate(Map<String, SignalSpec> inSpec, String outName, String inName) {
+    static void validate(Map<String, SignalSpecOld> inSpec, String outName, String inName) {
         validateAlreadyDefinedName(inSpec, outName);
         validateExistingNames(inSpec, inName);
     }

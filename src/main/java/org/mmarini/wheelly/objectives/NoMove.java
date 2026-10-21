@@ -30,8 +30,8 @@ package org.mmarini.wheelly.objectives;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.rl.envs.RewardFunctionOld;
 import org.mmarini.wheelly.control.RobotStatus;
-import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WithWorldModel;
 import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.wheelly.utils.Angle;
@@ -54,7 +54,7 @@ public interface NoMove {
      * @param root    the root JSON document
      * @param locator the locator
      */
-    static RewardFunction<WithWorldModel, RobotCommand> create(JsonNode root, Locator locator) {
+    static RewardFunctionOld<WithWorldModel, RobotCommand> create(JsonNode root, Locator locator) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         float velocityThreshold = (float) locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
         double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
@@ -69,7 +69,7 @@ public interface NoMove {
      * @param sensorRange       the range of sensor direction
      * @param reward            the reward
      */
-    static RewardFunction<WithWorldModel, RobotCommand> noMove(float velocityThreshold, Angle sensorRange, double reward) {
+    static RewardFunctionOld<WithWorldModel, RobotCommand> noMove(float velocityThreshold, Angle sensorRange, double reward) {
         return (s0, a, s1) -> {
             RobotStatus status = s1.worldModel().robotStatus();
             if (abs(status.leftPps()) < velocityThreshold

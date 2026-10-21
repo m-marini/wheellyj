@@ -30,11 +30,7 @@ package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.NotImplementedException;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -60,7 +56,7 @@ public interface TilesProcessor {
      * @param spec     the signal specification
      * @param numTiles the number of tiles
      */
-    static long[] computeOutShape(SignalSpec spec, int numTiles) {
+    static long[] computeOutShape(SignalSpecOld spec, int numTiles) {
         int rank = spec.shape().length;
         long[] result = new long[rank + 1];
         System.arraycopy(spec.shape(), 0, result, 0, rank);
@@ -75,7 +71,7 @@ public interface TilesProcessor {
      * @param locator the locator of environment
      * @param inSpec  the input specification
      */
-    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
+    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpecOld> inSpec) {
         String outName = locator.path("name").getNode(root).asText();
         String input = locator.path("input").getNode(root).asText();
         int numTiles = locator.path("numTiles").getNode(root).asInt();
@@ -93,7 +89,7 @@ public interface TilesProcessor {
      * @param spec     the signal specification
      * @param numTiles the number of tiles
      */
-    static UnaryOperator<INDArray> createEncoder(SignalSpec spec, int numTiles) {
+    static UnaryOperator<INDArray> createEncoder(SignalSpecOld spec, int numTiles) {
         UnaryOperator<INDArray> part = createPartitioner(spec, numTiles);
         long stride = (long) NUM_TILING * numTiles + NUM_TILING - 1;
         return x0 -> {
@@ -147,7 +143,7 @@ public interface TilesProcessor {
      * @param spec     the input signal spec
      * @param numTiles the number of tiles
      */
-    static UnaryOperator<INDArray> createPartitioner(SignalSpec spec, int numTiles) {
+    static UnaryOperator<INDArray> createPartitioner(SignalSpecOld spec, int numTiles) {
         return switch (spec) {
             case FloatSignalSpec fSpec ->
                 // Creates the linear transformation of input to produce the tile index
@@ -167,7 +163,7 @@ public interface TilesProcessor {
      * @param spec      the input specification
      * @param numTiles  the number of tiles
      */
-    static UnaryOperator<Map<String, Signal>> createSignalEncoder(String outName, String inputName, SignalSpec spec, int numTiles) {
+    static UnaryOperator<Map<String, Signal>> createSignalEncoder(String outName, String inputName, SignalSpecOld spec, int numTiles) {
         UnaryOperator<INDArray> encoder = createEncoder(spec, numTiles);
         return in -> {
             Map<String, Signal> result = new HashMap<>(in);
@@ -184,8 +180,8 @@ public interface TilesProcessor {
      * @param inputName the input name
      * @param numTiles  the number of tiles
      */
-    static Map<String, SignalSpec> createSpec(Map<String, SignalSpec> spec, String outName, String inputName, int numTiles) {
-        Map<String, SignalSpec> result = new HashMap<>(spec);
+    static Map<String, SignalSpecOld> createSpec(Map<String, SignalSpecOld> spec, String outName, String inputName, int numTiles) {
+        Map<String, SignalSpecOld> result = new HashMap<>(spec);
         result.put(outName, new IntSignalSpec(computeOutShape(spec.get(inputName), numTiles), 2));
         return result;
     }
@@ -197,7 +193,7 @@ public interface TilesProcessor {
      * @param outName   the output name
      * @param inputName the input name
      */
-    static void validate(Map<String, SignalSpec> spec, String outName, String inputName) {
+    static void validate(Map<String, SignalSpecOld> spec, String outName, String inputName) {
         validateAlreadyDefinedName(spec, outName);
         validateExistingNames(spec, inputName);
     }

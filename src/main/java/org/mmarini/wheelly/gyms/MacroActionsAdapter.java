@@ -29,13 +29,15 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.IntSignalSpec;
+import org.mmarini.rl.envs.BehaviourStateOld;
 import org.mmarini.rl.envs.Signal;
+import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.wheelly.behaviours.*;
 import org.mmarini.wheelly.perception.WorldModelSpec;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,15 +58,14 @@ import static org.mmarini.yaml.Utils.EMPTY_OBJECTS;
  * and converting agent actions back into low-level robot commands.
  * </p>
  */
-public class MacroActionsAdapter implements GymAdapter<MacroActionsStateOld, MacroAction> {
+public class MacroActionsAdapter implements GymAdapter {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-macro-actions-schema-0.1";
     public static final String MOVE_ID = "move";
     public static final String HEAD_ID = "head";
     public static final String STATE_FUNCTION_ID = "stateFunction";
-
     public static final Map<String, SignalSpec> ACTION_SPEC = Map.of(
-            HEAD_ID, new IntSignalSpec(new long[]{1, 1}, HeadActionId.values().length),
-            MOVE_ID, new IntSignalSpec(new long[]{1, 1}, MoveActionId.values().length)
+            HEAD_ID, SignalSpec.create(1L, 1L),
+            MOVE_ID, SignalSpec.create(1L, 1L)
     );
     private static final Logger logger = LoggerFactory.getLogger(MacroActionsAdapter.class);
 
@@ -89,15 +90,15 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsStateOld, Mac
      */
     public static MacroActionsAdapter create(JsonNode root, Locator locator) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        Function<WorldModelSpec, StateFunction<MacroActionsStateOld>> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
+        Function<WorldModelSpec, StateFunction> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
                 EMPTY_OBJECTS, EMPTY_CLASSES);
         return new MacroActionsAdapter(stateFuncBuilder);
     }
 
-    private final Function<WorldModelSpec, StateFunction<MacroActionsStateOld>> stateFuncBuilder;
-    private StateFunction<MacroActionsStateOld> stateFunc;
-    private RewardFunction<MacroActionsStateOld, MacroAction> rewardFunc;
-    private AgentConnector agent;
+    private final Function<WorldModelSpec, StateFunction> stateFuncBuilder;
+    private StateFunction stateFunc;
+    private RewardFunction rewardFunc;
+    private AdapterConnector agent;
     private MacroActionStepState stepState;
     private DoubleConsumer onReward;
 
@@ -106,7 +107,7 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsStateOld, Mac
      *
      * @param stateFuncBuilder
      */
-    public MacroActionsAdapter(Function<WorldModelSpec, StateFunction<MacroActionsStateOld>> stateFuncBuilder) {
+    public MacroActionsAdapter(Function<WorldModelSpec, StateFunction> stateFuncBuilder) {
         this.stateFuncBuilder = stateFuncBuilder;
         logger.atDebug().log("Created");
     }
@@ -119,35 +120,35 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsStateOld, Mac
     /**
      * Returns the connected agent connector interface.
      *
-     * @return the active {@link AgentConnector} instance
+     * @return the active {@link AdapterConnector} instance
      */
-    public AgentConnector agent() {
+    public AdapterConnector agent() {
         return agent;
     }
 
     @Override
-    public void agent(AgentConnector agent) {
+    public void agent(AdapterConnector agent) {
         this.agent = agent;
     }
 
     @Override
-    public MacroAction decide(MacroActionsStateOld state) {
+    public BehaviourAction decide(BehaviourState state) {
         if (stateFunc == null) {
             throw new IllegalStateException("Missing state function");
         }
         if (rewardFunc == null) {
             throw new IllegalStateException("Missing reward function");
         }
-        Map<String, Signal> signals1 = state(state);
-        Map<String, Signal> actions = agent.act(signals1);
+        Map<String, INDArray> signals1 = state(state);
+        Map<String, INDArray> actions = agent.act(signals1);
 
-        MacroAction commands = decodeAction(actions);
+        BehaviourAction commands = decodeAction(actions);
 
         // Process observation if we have a recorded previous step
         MacroActionStepState stepState = this.stepState;
         if (stepState != null) {
             double reward = reward(stepState.prevState(), stepState.prevCommands(), state);
-            this.agent = agent.observe(new ExecutionResult(
+            agent.observe(new ExecutionResult(
                     stepState.signals0(), stepState.prevActions(), reward, signals1
             ));
             if (onReward != null) {
@@ -166,7 +167,7 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsStateOld, Mac
      * @param actions the map containing movement and heading signals
      * @return the decoded {@link MacroAction} wrapper
      */
-    private MacroAction decodeAction(Map<String, Signal> actions) {
+    private BehaviourAction decodeAction(Map<String, INDArray> actions) {
         int moveCode = actions.get(MOVE_ID).getInt(0, 0);
         MoveActionId moveId = MoveActionId.values()[moveCode];
         int headCode = actions.get(HEAD_ID).getInt(0, 0);
@@ -216,11 +217,11 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsStateOld, Mac
      * @param state1  the resulting environment state after the action execution
      * @return the calculated reward value, or {@code 0.0} if no reward function is configured
      */
-    public double reward(MacroActionsStateOld state0, MacroAction actions, MacroActionsStateOld state1) {
+    public double reward(BehaviourState state0, BehaviourAction actions, BehaviourState state1) {
         return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
-    public void rewardFunc(RewardFunction<MacroActionsStateOld, MacroAction> rewardFunc) {
+    public void rewardFunc(RewardFunction rewardFunc) {
         this.rewardFunc = rewardFunc;
     }
 
@@ -235,7 +236,7 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsStateOld, Mac
      * @return a map pairing signal identifiers with their processed {@link Signal} values
      * @throws NullPointerException if the provided model is null
      */
-    public Map<String, Signal> state(MacroActionsStateOld model) {
+    public Map<String, INDArray> state(BehaviourState... model) {
         requireNonNull(model);
         ensureConnected();
         return stateFunc.signals(model);
@@ -248,7 +249,7 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsStateOld, Mac
      * sensory data that the environment provides to the reinforcement learning agent.
      * </p>
      *
-     * @return a map pairing signal identifiers with their corresponding {@link SignalSpec}
+     * @return a map pairing signal identifiers with their corresponding {@link SignalSpecOld}
      */
     @Override
     public Map<String, SignalSpec> stateSpec() {
@@ -272,10 +273,10 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsStateOld, Mac
      * @param prevActions  the raw action signals generated by the agent for the step
      */
     private record MacroActionStepState(
-            MacroActionsStateOld prevState,
-            Map<String, Signal> signals0,
-            MacroAction prevCommands,
-            Map<String, Signal> prevActions
+            BehaviourState prevState,
+            Map<String, INDArray> signals0,
+            BehaviourAction prevCommands,
+            Map<String, INDArray> prevActions
     ) {
         /**
          * Creates an environment step state instance and validates that all properties are non-null.

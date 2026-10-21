@@ -28,15 +28,48 @@
 
 package org.mmarini.wheelly.gyms;
 
+import org.mmarini.wheelly.behaviours.BehaviourAction;
+import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.perception.DecisionMaker;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
 
-public interface GymAdapter<S, A> extends DecisionMaker<S, A>, WithSignalsSpec {
-    static <S, A> GymAdapter<S, A> fromFile(File file) throws Throwable {
+/**
+ * Defines the contract for an adaptation layer connecting execution environments to decision-making entities.
+ * <p>
+ * This interface bridges the gap between raw behavioral state telemetry and abstract agent actions
+ * by extending {@link DecisionMaker} and {@link WithSignalsSpec}. It operates within the core reinforcement
+ * learning framework, allowing uniform action selection protocols based on {@link BehaviourState} inputs
+ * and yielding structured {@link BehaviourAction} outputs.
+ * </p>
+ */
+public interface GymAdapter extends DecisionMaker<BehaviourState, BehaviourAction>, WithSignalsSpec {
+
+    /**
+     * Instantiates a {@code GymAdapter} instance by loading and parsing its definitions
+     * from an external configuration file.
+     * <p>
+     * This utility leverages dynamic object creation routines to construct the specific adapter layout
+     * defined in the target resource.
+     * </p>
+     *
+     * @param file The configuration file detailing the object instantiation metadata.
+     * @return A fully initialised {@code GymAdapter} instance matching the file specification.
+     * @throws Throwable if initialisation, file I/O, or reflection instantiation routines fail.
+     */
+    static GymAdapter fromFile(File file) throws Throwable {
         return Utils.createObject(file);
     }
 
-    void agent(AgentConnector agent);
+    /**
+     * Injects the adapter connector representing the processing agent layer.
+     * <p>
+     * Attaching the connector establishes the binding interface required to delegate
+     * observation conversions and final behaviour evaluations to the underlying target policy model.
+     * </p>
+     *
+     * @param agent The {@link AdapterConnector} module representing the interactive agent loop.
+     */
+    void agent(AdapterConnector agent);
 }

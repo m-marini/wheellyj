@@ -29,10 +29,11 @@
 package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.behaviours.BehaviourActionOld;
-import org.mmarini.wheelly.behaviours.BehaviourStateOld;
-import org.mmarini.wheelly.behaviours.WorldModelState;
-import org.mmarini.wheelly.gyms.*;
+import org.mmarini.wheelly.behaviours.BehaviourAction;
+import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.mmarini.wheelly.gyms.AdapterConnector;
+import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.wheelly.gyms.WithRewardCallback;
 import org.mmarini.wheelly.perception.PerceptionConnector;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModelSpec;
@@ -80,16 +81,16 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
      */
     public static DLEnvironment create(JsonNode root, Locator locator) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        ActionFunction actionFunction = Utils.createObject(root, locator.path(ACTION_FUNCTION_ID), new Object[]{}, new Class[]{});
-        Function<WorldModelSpec, StateFunction> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID), new Object[]{}, new Class[]{});
+        ActionFunctionOld actionFunction = Utils.createObject(root, locator.path(ACTION_FUNCTION_ID), new Object[]{}, new Class[]{});
+        Function<WorldModelSpec, StateFunctionOld> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID), new Object[]{}, new Class[]{});
         return new DLEnvironment(actionFunction, stateFuncBuilder);
     }
 
-    private final ActionFunction actionFunc;
-    private final Function<WorldModelSpec, StateFunction> stateFunctionBuilder;
+    private final ActionFunctionOld actionFunc;
+    private final Function<WorldModelSpec, StateFunctionOld> stateFunctionBuilder;
     private InferenceWriter inferenceWriter;
-    private StateFunction stateFunc;
-    private RewardFunction rewardFunc;
+    private StateFunctionOld<BehaviourStateOld> stateFunc;
+    private RewardFunctionOld rewardFunc;
     private AgentConnector agent;
     private WorldModelState prevState;
     private RobotCommand prevCommands;
@@ -104,7 +105,7 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
      * @param actionFunc           the action function
      * @param stateFunctionBuilder the state function
      */
-    public DLEnvironment(ActionFunction actionFunc, Function<WorldModelSpec, StateFunction> stateFunctionBuilder) {
+    public DLEnvironment(ActionFunctionOld actionFunc, Function<WorldModelSpec, StateFunctionOld> stateFunctionBuilder) {
         this.actionFunc = requireNonNull(actionFunc);
         this.stateFunctionBuilder = requireNonNull(stateFunctionBuilder);
         logger.atDebug().log("Created");
@@ -113,7 +114,7 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
     /**
      * Returns the action function
      */
-    public ActionFunction actionFunction() {
+    public ActionFunctionOld actionFunction() {
         return actionFunc;
     }
 
@@ -123,20 +124,10 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
     }
 
     @Override
-    public void connect(PerceptionConnector connector) {
-        requireNonNull(connector);
-        WorldModelSpec worldSpec = connector.worldModelSpec();
-        this.stateFunc = stateFunctionBuilder.apply(worldSpec);
+    public void agent(AdapterConnector agent) {
+
     }
 
-    @Override
-    public void connect(AgentConnector agent) {
-        requireNonNull(agent);
-        agent.validate(stateSpec(), actionSpec());
-        this.agent = agent;
-    }
-
-    @Override
     public RobotCommand decide(WorldModel model) {
         requireNonNull(model);
         requireNonNull(agent);
@@ -149,7 +140,7 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
 
         if (prevState != null) {
             double reward = reward(prevState, prevCommands, s1);
-            ExecutionResult result = new ExecutionResult(
+            ExecutionResultOld result = new ExecutionResultOld(
                     signals0, prevActions, reward, signals1
             );
             agent = agent.observe(result);
@@ -178,6 +169,28 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
         return commands;
     }
 
+    public void connect(PerceptionConnector connector) {
+        requireNonNull(connector);
+        WorldModelSpec worldSpec = connector.worldModelSpec();
+        this.stateFunc = stateFunctionBuilder.apply(worldSpec);
+    }
+
+    public void connect(AgentConnector agent) {
+        requireNonNull(agent);
+        agent.validate(stateSpec(), actionSpec());
+        this.agent = agent;
+    }
+
+    @Override
+    public BehaviourAction decide(BehaviourState state) {
+        return null;
+    }
+
+    @Override
+    public void learning(boolean learning) {
+
+    }
+
     /**
      * Configures the inference writer used to log execution data and session telemetry.
      * <p>
@@ -193,22 +206,30 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
     }
 
     @Override
+    public void setRewardFunc(RewardFunctionOld rewardFunc) {
+
+    }
+
+    @Override
+    public Map<String, SignalSpec> stateSpec() {
+        return Map.of();
+    }
+
+    public Map<String, SignalSpecOld> stateSpec1() {
+        requireNonNull(stateFunc);
+        return stateFunc.spec();
+    }
+
+    @Override
     public DLEnvironment onReward(DoubleConsumer callback) {
         onReward = onReward != null ? onReward.andThen(callback) : callback;
         return this;
     }
 
-    @Override
     public double reward(BehaviourStateOld state0, BehaviourActionOld actions, BehaviourStateOld state1) {
         return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
-    @Override
-    public void setRewardFunc(RewardFunction rewardFunc) {
-        this.rewardFunc = rewardFunc;
-    }
-
-    @Override
     public Map<String, Signal> state(BehaviourStateOld model) {
         requireNonNull(model);
         requireNonNull(stateFunc);
@@ -216,8 +237,7 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
     }
 
     @Override
-    public Map<String, SignalSpec> stateSpec() {
-        requireNonNull(stateFunc);
-        return stateFunc.spec();
+    public void validate(Map<String, SignalSpecOld> stateSpec, Map<String, SignalSpecOld> actionSpec) {
+
     }
 }

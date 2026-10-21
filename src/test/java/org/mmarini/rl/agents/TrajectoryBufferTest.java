@@ -31,9 +31,9 @@ package org.mmarini.rl.agents;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mmarini.rl.envs.ExecutionResultOld;
 import org.mmarini.rl.envs.IntSignal;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ExecutionResult;
 import org.nd4j.linalg.factory.Nd4j;
 
 import java.util.Map;
@@ -74,10 +74,10 @@ class TrajectoryBufferTest {
     static final Map<String, Signal> actions3 = Map.of(
             "B", IntSignal.create(new long[]{1, 3}, 41, 42, 43)
     );
-    static final ExecutionResult result0 = new ExecutionResult(state0, actions0, 1, state1);
-    static final ExecutionResult result1 = new ExecutionResult(state1, actions1, 2, state2);
-    static final ExecutionResult result2 = new ExecutionResult(state2, actions2, 3, state3);
-    static final ExecutionResult result3 = new ExecutionResult(state3, actions3, 4, state4);
+    static final ExecutionResultOld result0 = new ExecutionResultOld(state0, actions0, 1, state1);
+    static final ExecutionResultOld result1 = new ExecutionResultOld(state1, actions1, 2, state2);
+    static final ExecutionResultOld result2 = new ExecutionResultOld(state2, actions2, 3, state3);
+    static final ExecutionResultOld result3 = new ExecutionResultOld(state3, actions3, 4, state4);
 
     TrajectoryBuffer buffer;
 

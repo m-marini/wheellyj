@@ -38,12 +38,7 @@ import org.deeplearning4j.nn.weights.WeightInit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.rl.envs.IntSignal;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.ExecutionResult;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.*;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -122,7 +117,7 @@ class DLAgentTest {
                 .build();
     }
 
-    static ExecutionResult createResult(double reward) {
+    static ExecutionResultOld createResult(double reward) {
         Map<String, Signal> s0 = Map.of(
                 MAP_SIGNAL_ID, new ArraySignal(Nd4j.rand(1, NUM_CHANNELS, GRID_SIZE, GRID_SIZE))
         );
@@ -133,15 +128,15 @@ class DLAgentTest {
                 MOVE_ACTION_ID, IntSignal.create(Nd4j.getRandom().nextInt(NUM_MOVEMENT_COMMANDS)),
                 HEAD_ACTION_ID, IntSignal.create(Nd4j.getRandom().nextInt(NUM_SENSOR_COMMANDS))
         );
-        return new ExecutionResult(s0, actions, reward, s1);
+        return new ExecutionResultOld(s0, actions, reward, s1);
     }
 
     private DLAgent agent;
 
     @BeforeEach
     void setUp() throws IOException {
-        Map<String, SignalSpec> stateSpec = Map.of(MAP_SIGNAL_ID, new IntSignalSpec(new long[]{NUM_CHANNELS, GRID_SIZE, GRID_SIZE}, NUM_SAMPLES));
-        Map<String, SignalSpec> actionSpec = Map.of(
+        Map<String, SignalSpecOld> stateSpec = Map.of(MAP_SIGNAL_ID, new IntSignalSpec(new long[]{NUM_CHANNELS, GRID_SIZE, GRID_SIZE}, NUM_SAMPLES));
+        Map<String, SignalSpecOld> actionSpec = Map.of(
                 MOVE_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_MOVEMENT_COMMANDS),
                 HEAD_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS)
         );
@@ -163,25 +158,25 @@ class DLAgentTest {
     @Test
     void testAct() {
         // Given an input state signals
-        Map<String, Signal> states = Map.of(
-                MAP_SIGNAL_ID, new ArraySignal(Nd4j.rand(2, NUM_CHANNELS, GRID_SIZE, GRID_SIZE))
+        Map<String, INDArray> states = Map.of(
+                MAP_SIGNAL_ID, Nd4j.rand(2, NUM_CHANNELS, GRID_SIZE, GRID_SIZE)
         );
 
         // When act
-        Map<String, Signal> actions = agent.act(states);
+        Map<String, INDArray> actions = agent.act(states);
 
         // Then the output actions states ...
         assertThat(actions, hasKey(MOVE_ACTION_ID));
         assertThat(actions, hasKey(HEAD_ACTION_ID));
 
-        INDArray moveAry = actions.get(MOVE_ACTION_ID).toINDArray();
+        INDArray moveAry = actions.get(MOVE_ACTION_ID);
         assertThat(moveAry, matrixShape(2, 1));
         assertThat(moveAry.getInt(0), greaterThanOrEqualTo(0));
         assertThat(moveAry.getInt(0), lessThan(NUM_MOVEMENT_COMMANDS));
         assertThat(moveAry.getInt(1), greaterThanOrEqualTo(0));
         assertThat(moveAry.getInt(1), lessThan(NUM_MOVEMENT_COMMANDS));
 
-        INDArray sensorAry = actions.get(HEAD_ACTION_ID).toINDArray();
+        INDArray sensorAry = actions.get(HEAD_ACTION_ID);
         assertThat(sensorAry, matrixShape(2, 1));
         assertThat(sensorAry.getInt(0), greaterThanOrEqualTo(0));
         assertThat(sensorAry.getInt(0), lessThan(NUM_SENSOR_COMMANDS));
@@ -201,8 +196,8 @@ class DLAgentTest {
 
     @Test
     void testMissingAction() {
-        Map<String, SignalSpec> stateSpec = Map.of(MAP_SIGNAL_ID, new IntSignalSpec(new long[]{NUM_CHANNELS, GRID_SIZE, GRID_SIZE}, NUM_SAMPLES));
-        Map<String, SignalSpec> actionSpec = Map.of(
+        Map<String, SignalSpecOld> stateSpec = Map.of(MAP_SIGNAL_ID, new IntSignalSpec(new long[]{NUM_CHANNELS, GRID_SIZE, GRID_SIZE}, NUM_SAMPLES));
+        Map<String, SignalSpecOld> actionSpec = Map.of(
                 MOVE_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_MOVEMENT_COMMANDS),
                 HEAD_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS),
                 "missing1", new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS),
@@ -220,8 +215,8 @@ class DLAgentTest {
 
     @Test
     void testMissingState() {
-        Map<String, SignalSpec> stateSpec = Map.of();
-        Map<String, SignalSpec> actionSpec = Map.of(
+        Map<String, SignalSpecOld> stateSpec = Map.of();
+        Map<String, SignalSpecOld> actionSpec = Map.of(
                 MOVE_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_MOVEMENT_COMMANDS),
                 HEAD_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS)
         );

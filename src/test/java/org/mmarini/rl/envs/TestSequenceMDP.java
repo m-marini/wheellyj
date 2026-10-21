@@ -30,7 +30,6 @@ package org.mmarini.rl.envs;
 
 import org.mmarini.MapStream;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.gyms.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -160,7 +159,7 @@ public record TestSequenceMDP(int[][] nextState, double[][] reward) {
     /**
      * Returns the action specification
      */
-    public Map<String, SignalSpec> actionSpec() {
+    public Map<String, SignalSpecOld> actionSpec() {
         return Map.of("action", new IntSignalSpec(new long[]{1}, numActions()));
     }
 
@@ -194,10 +193,10 @@ public record TestSequenceMDP(int[][] nextState, double[][] reward) {
      * @param state  the initial state
      * @param action the action
      */
-    public ExecutionResult result(int state, int action) {
+    public ExecutionResultOld result(int state, int action) {
         int next = next(state, action);
         double reward = reward(state, action);
-        return new ExecutionResult(state(state), action(action), reward, state(next));
+        return new ExecutionResultOld(state(state), action(action), reward, state(next));
     }
 
     /**
@@ -213,7 +212,7 @@ public record TestSequenceMDP(int[][] nextState, double[][] reward) {
     /**
      * Returns signal specification
      */
-    public Map<String, SignalSpec> signalSpec() {
+    public Map<String, SignalSpecOld> signalSpec() {
         return Map.of("input", new IntSignalSpec(new long[numStates()], 2));
     }
 
@@ -234,13 +233,13 @@ public record TestSequenceMDP(int[][] nextState, double[][] reward) {
      * @param initialState the initial state
      * @param actions      the actions
      */
-    public List<ExecutionResult> trajectory(int initialState, int... actions) {
-        List<ExecutionResult> result = new ArrayList<>();
+    public List<ExecutionResultOld> trajectory(int initialState, int... actions) {
+        List<ExecutionResultOld> result = new ArrayList<>();
         int state = initialState;
         for (int action : actions) {
             int next = next(state, action);
             double reward = reward(state, action);
-            result.add(new ExecutionResult(state(state), action(action), reward, state(next)));
+            result.add(new ExecutionResultOld(state(state), action(action), reward, state(next)));
             state = next;
         }
         return result;
@@ -254,14 +253,14 @@ public record TestSequenceMDP(int[][] nextState, double[][] reward) {
      * @param initialState the initial state
      * @param act          the action function
      */
-    public List<ExecutionResult> trajectory(int numStep, int initialState, IntUnaryOperator act) {
-        List<ExecutionResult> result = new ArrayList<>();
+    public List<ExecutionResultOld> trajectory(int numStep, int initialState, IntUnaryOperator act) {
+        List<ExecutionResultOld> result = new ArrayList<>();
         int state = initialState;
         for (int i = 0; i < numStep; i++) {
             int action = act.applyAsInt(state);
             int next = next(state, action);
             double reward = reward(state, action);
-            result.add(new ExecutionResult(state(state), action(action), reward, state(next)));
+            result.add(new ExecutionResultOld(state(state), action(action), reward, state(next)));
             state = next;
         }
         return result;

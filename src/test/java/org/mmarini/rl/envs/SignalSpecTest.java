@@ -30,7 +30,6 @@ package org.mmarini.rl.envs;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.yaml.Locator;
 
 import java.io.IOException;
@@ -61,14 +60,14 @@ class SignalSpecTest {
     void load() throws IOException {
         JsonNode node = fromText(YAML);
 
-        Map<String, SignalSpec> spec = SignalSpec.createSignalSpecMap(node, Locator.root());
+        Map<String, SignalSpecOld> spec = SignalSpecOld.createSignalSpecMap(node, Locator.root());
 
-        SignalSpec a = spec.get("a");
+        SignalSpecOld a = spec.get("a");
         assertThat(a, isA(IntSignalSpec.class));
         assertEquals(2, ((IntSignalSpec) a).numValues());
         assertArrayEquals(new long[]{1, 2}, a.shape());
 
-        SignalSpec b = spec.get("b");
+        SignalSpecOld b = spec.get("b");
         assertThat(b, isA(FloatSignalSpec.class));
         assertEquals(0f, ((FloatSignalSpec) b).minValue());
         assertEquals(1f, ((FloatSignalSpec) b).maxValue());

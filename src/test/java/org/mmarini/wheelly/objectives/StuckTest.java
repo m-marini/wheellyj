@@ -31,9 +31,9 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mmarini.rl.envs.RewardFunctionOld;
+import org.mmarini.rl.envs.WorldModelState;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.behaviours.WorldModelState;
-import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -79,7 +79,7 @@ class StuckTest {
                 "distance2: 1.1",
                 "distance3: 1.5",
                 "sensorRange: 20"));
-        RewardFunction f = Stuck.create(root, Locator.root());
+        RewardFunctionOld f = Stuck.create(root, Locator.root());
         WorldModelState env = createEnvironment(sensorDir, distance);
         double result = f.reward(null, null, env);
         assertThat(result, closeTo(expected, 1e-3));
@@ -110,7 +110,7 @@ class StuckTest {
         double x3 = 1.1;
         double x4 = 1.5;
         int directionRange = 20;
-        RewardFunction f = Stuck.stuck(x1, x2, x3, x4, directionRange);
+        RewardFunctionOld f = Stuck.stuck(x1, x2, x3, x4, directionRange);
         WorldModelState state = createEnvironment(sensorDir, distance);
 
         double result = f.reward(state, null, state);

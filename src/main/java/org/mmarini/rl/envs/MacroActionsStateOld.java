@@ -26,8 +26,10 @@
  *
  */
 
-package org.mmarini.wheelly.behaviours;
+package org.mmarini.rl.envs;
 
+import org.mmarini.wheelly.behaviours.HeadActionId;
+import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.perception.WithWorldModel;
 import org.mmarini.wheelly.perception.WorldModel;
 

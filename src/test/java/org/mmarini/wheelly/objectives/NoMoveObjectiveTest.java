@@ -31,9 +31,9 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mmarini.rl.envs.RewardFunctionOld;
+import org.mmarini.rl.envs.WorldModelState;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.behaviours.WorldModelState;
-import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -72,7 +72,7 @@ class NoMoveObjectiveTest {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + NoMove.SCHEMA_NAME,
                 "class: " + NoMove.class.getName()));
-        RewardFunction f = NoMove.create(root, Locator.root());
+        RewardFunctionOld f = NoMove.create(root, Locator.root());
         WorldModelState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.reward(null, null, state);
@@ -101,7 +101,7 @@ class NoMoveObjectiveTest {
                 "$schema: " + NoMove.SCHEMA_NAME,
                 "class: " + NoMove.class.getName(),
                 "reward: 2"));
-        RewardFunction f = NoMove.create(root, Locator.root());
+        RewardFunctionOld f = NoMove.create(root, Locator.root());
         WorldModelState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.reward(null, null, state);
@@ -133,7 +133,7 @@ class NoMoveObjectiveTest {
                 "class: " + NoMove.class.getName(),
                 "sensorRange: 1",
                 "reward: 2"));
-        RewardFunction f = NoMove.create(root, Locator.root());
+        RewardFunctionOld f = NoMove.create(root, Locator.root());
         WorldModelState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.reward(null, null, state);

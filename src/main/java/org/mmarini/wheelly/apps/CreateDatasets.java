@@ -38,13 +38,13 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.rl.agents.Agent;
 import org.mmarini.rl.envs.DLEnvironment;
+import org.mmarini.rl.envs.GymApi;
+import org.mmarini.rl.envs.RewardFunctionOld;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.batch.BatchAgent;
 import org.mmarini.wheelly.batch.DatasetBuilder;
 import org.mmarini.wheelly.batch.ProgressInfo;
 import org.mmarini.wheelly.control.RobotControllerApi;
-import org.mmarini.wheelly.gyms.GymApi;
-import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModeller;
 import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.wheelly.storage.serde.InferenceFileReader;
@@ -183,7 +183,7 @@ public class CreateDatasets {
         }
         environment.connect(modeller);
         // Load reward function
-        RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
+        RewardFunctionOld rewardFunc = (RewardFunctionOld) AppYaml.rewardFromJson(config);
         environment.setRewardFunc(rewardFunc);
 
         // Creates agent
@@ -191,7 +191,7 @@ public class CreateDatasets {
                 Locator.locate(AGENT_ID)
                         .getNode(config)
                         .asText()));
-        environment.connect(agent);
+        // TODO environment.connect(agent);
 
         // Creates random number generator
         Random random = Nd4j.getRandomFactory().getNewRandomInstance();

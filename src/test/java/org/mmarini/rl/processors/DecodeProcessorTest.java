@@ -32,11 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.IntSignal;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -68,7 +64,7 @@ class DecodeProcessorTest {
     @Test
     void computeDecodedSizeTest() {
         List<String> inNames = List.of("a", "b", "c");
-        Map<String, SignalSpec> inSpec = Map.of(
+        Map<String, SignalSpecOld> inSpec = Map.of(
                 "a", new IntSignalSpec(new long[]{2}, 3),
                 "b", new IntSignalSpec(new long[]{2}, 2),
                 "c", new IntSignalSpec(new long[]{2}, 2)
@@ -79,7 +75,7 @@ class DecodeProcessorTest {
 
     @Test
     void computeStridesTest() {
-        Map<String, SignalSpec> inSpec = Map.of(
+        Map<String, SignalSpecOld> inSpec = Map.of(
                 "a", new IntSignalSpec(new long[]{1}, 3),
                 "b", new IntSignalSpec(new long[]{1}, 2),
                 "c", new IntSignalSpec(new long[]{1}, 2)
@@ -105,7 +101,7 @@ class DecodeProcessorTest {
     })
     void createEncoderTest(int a, int b, int c, float y) {
         // Given ...
-        Map<String, SignalSpec> inSpec = Map.of(
+        Map<String, SignalSpecOld> inSpec = Map.of(
                 "a", new IntSignalSpec(new long[]{1}, 3),
                 "b", new IntSignalSpec(new long[]{1}, 2),
                 "c", new IntSignalSpec(new long[]{1}, 2)
@@ -140,7 +136,7 @@ class DecodeProcessorTest {
     })
     void createFromJson(int a, int b, int c, float y) throws IOException {
         JsonNode root = Utils.fromText(YAML);
-        Map<String, SignalSpec> inSpec = Map.of(
+        Map<String, SignalSpecOld> inSpec = Map.of(
                 "a", new IntSignalSpec(new long[]{1}, 3),
                 "b", new IntSignalSpec(new long[]{1}, 2),
                 "c", new IntSignalSpec(new long[]{1}, 2)
@@ -174,15 +170,15 @@ class DecodeProcessorTest {
     @Test
     void createSpecTest() {
         List<String> inNames = List.of("a", "b", "c");
-        Map<String, SignalSpec> inSpec = Map.of(
+        Map<String, SignalSpecOld> inSpec = Map.of(
                 "a", new IntSignalSpec(new long[]{2}, 3),
                 "b", new IntSignalSpec(new long[]{2}, 2),
                 "c", new IntSignalSpec(new long[]{2}, 2)
         );
-        Map<String, SignalSpec> spec = DecodeProcessor.createSpec("out", inNames, inSpec);
+        Map<String, SignalSpecOld> spec = DecodeProcessor.createSpec("out", inNames, inSpec);
 
         assertThat(spec, hasKey("out"));
-        SignalSpec outSpec = spec.get("out");
+        SignalSpecOld outSpec = spec.get("out");
         assertThat(outSpec, isA(IntSignalSpec.class));
         assertArrayEquals(new long[]{2}, outSpec.shape());
         assertEquals(12, ((IntSignalSpec) outSpec).numValues());

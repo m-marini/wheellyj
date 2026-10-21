@@ -29,10 +29,10 @@
 package org.mmarini.rl.processors;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.rl.envs.ArraySignal;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -67,7 +67,7 @@ public interface DecodeProcessor {
      * @param inNames the input names
      * @param inSpec  the input specification
      */
-    static int computeDecodedSize(List<String> inNames, Map<String, SignalSpec> inSpec) {
+    static int computeDecodedSize(List<String> inNames, Map<String, SignalSpecOld> inSpec) {
         return inNames.stream()
                 .map(inSpec::get)
                 .mapToInt(spec ->
@@ -85,7 +85,7 @@ public interface DecodeProcessor {
      * @param names  the input names
      * @param inSpec the input spec
      */
-    static int[] computeStrides(List<String> names, Map<String, SignalSpec> inSpec) {
+    static int[] computeStrides(List<String> names, Map<String, SignalSpecOld> inSpec) {
         int[] sizes = names.stream()
                 .map(inSpec::get)
                 .mapToInt(spec -> ((IntSignalSpec) spec).numValues())
@@ -105,7 +105,7 @@ public interface DecodeProcessor {
      * @param locator the locator of environment
      * @param inSpec  the input specification
      */
-    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpec> inSpec) {
+    static InputProcessor create(JsonNode root, Locator locator, Map<String, SignalSpecOld> inSpec) {
         String outName = locator.path("name").getNode(root).asText();
         List<String> inNames = locator.path("inputs")
                 .elements(root)
@@ -146,7 +146,7 @@ public interface DecodeProcessor {
      * @param inputSignals the input signals
      * @param inSpec       the input spec
      */
-    static UnaryOperator<Map<String, Signal>> createEncoder(String outName, List<String> inputSignals, Map<String, SignalSpec> inSpec) {
+    static UnaryOperator<Map<String, Signal>> createEncoder(String outName, List<String> inputSignals, Map<String, SignalSpecOld> inSpec) {
         Function<INDArray[], INDArray> decoder = createDecoder(computeStrides(inputSignals, inSpec));
         return x -> {
             // prepare inputs
@@ -170,11 +170,11 @@ public interface DecodeProcessor {
      * @param inNames the input names
      * @param inSpec  the input specification
      */
-    static Map<String, SignalSpec> createSpec(String outName, List<String> inNames, Map<String, SignalSpec> inSpec) {
-        Map<String, SignalSpec> outSpec = new HashMap<>(inSpec);
+    static Map<String, SignalSpecOld> createSpec(String outName, List<String> inNames, Map<String, SignalSpecOld> inSpec) {
+        Map<String, SignalSpecOld> outSpec = new HashMap<>(inSpec);
         int numValues = computeDecodedSize(inNames, inSpec);
         long[] shape = inSpec.get(inNames.getFirst()).shape();
-        SignalSpec featuresSpec = new IntSignalSpec(shape, numValues);
+        SignalSpecOld featuresSpec = new IntSignalSpec(shape, numValues);
         outSpec.put(outName, featuresSpec);
         return outSpec;
     }
@@ -186,7 +186,7 @@ public interface DecodeProcessor {
      * @param inNames the input names
      * @param inSpec  the input specification
      */
-    static void validate(String outName, List<String> inNames, Map<String, SignalSpec> inSpec) {
+    static void validate(String outName, List<String> inNames, Map<String, SignalSpecOld> inSpec) {
         validateAlreadyDefinedName(inSpec, outName);
         validateExistingNames(inSpec, inNames);
         validateTypes(inSpec, IntSignalSpec.class, inNames);

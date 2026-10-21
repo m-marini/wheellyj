@@ -32,11 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ArraySignal;
-import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.rl.envs.*;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -83,10 +79,10 @@ class FeaturesProcessorTest {
         assertEquals(FeaturesProcessor.class.getName(), json.path(0).path("class").asText());
         assertEquals("a", json.path(0).path("input").asText());
 
-        Map<String, SignalSpec> spec = proc.spec();
+        Map<String, SignalSpecOld> spec = proc.spec();
         assertThat(spec, hasKey("a"));
         assertThat(spec, hasKey("out"));
-        SignalSpec outSpec = spec.get("out");
+        SignalSpecOld outSpec = spec.get("out");
         assertThat(outSpec, isA(IntSignalSpec.class));
         assertArrayEquals(new long[]{2, 4}, outSpec.shape());
         assertEquals(2, ((IntSignalSpec) outSpec).numValues());
@@ -131,10 +127,10 @@ class FeaturesProcessorTest {
 
     @Test
     void createSpecTest() {
-        Map<String, SignalSpec> spec = FeaturesProcessor.createSpec("out", "a", Map.of("a", inputSpec()));
+        Map<String, SignalSpecOld> spec = FeaturesProcessor.createSpec("out", "a", Map.of("a", inputSpec()));
         assertThat(spec, hasKey("a"));
         assertThat(spec, hasKey("out"));
-        SignalSpec outSpec = spec.get("out");
+        SignalSpecOld outSpec = spec.get("out");
         assertThat(outSpec, isA(IntSignalSpec.class));
         assertArrayEquals(new long[]{2, 4}, outSpec.shape());
         assertEquals(2, ((IntSignalSpec) outSpec).numValues());

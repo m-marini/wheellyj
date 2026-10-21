@@ -29,12 +29,12 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.FloatSignalSpec;
-import org.mmarini.rl.envs.IntSignalSpec;
+import org.mmarini.rl.envs.ArraySignal;
+import org.mmarini.rl.envs.MacroActionsStateOld;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.behaviours.BehaviourStateOld;
+import org.mmarini.rl.envs.SignalSpecOld;
+import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.behaviours.HeadActionId;
-import org.mmarini.wheelly.behaviours.MacroActionsStateOld;
 import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.perception.*;
@@ -67,7 +67,7 @@ import static org.mmarini.wheelly.utils.Utils.cm2m;
  * web camera visuals, concurrent finite state machine actions, and an occupancy grid map grid.
  * </p>
  */
-public class MacroActionsStateFunction implements StateFunction<MacroActionsStateOld> {
+public class MacroActionsStateFunction implements StateFunction {
 
     /**
      * Identifier key for the grid map multidimensional signal.
@@ -148,7 +148,7 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      * @param markers   the explicit list of unique optical marker labels
      * @return a newly initialised {@link MacroActionsStateFunction} instance
      */
-    public static MacroActionsStateFunction create(WorldModelSpec worldSpec, List<String> markers) {
+    public static MacroActionsStateFunction create(WorldModelSpec worldSpec, List<Integer> markers) {
         Map<String, SignalSpec> spec = createSpec(worldSpec, markers.size());
         return new MacroActionsStateFunction(markers, spec);
     }
@@ -161,10 +161,10 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      * @return a functional lambda mapper waiting to build the state engine from a {@link WorldModelSpec}
      * @throws IOException if schema validation rules fail or data reading is disrupted
      */
-    public static Function<WorldModelSpec, StateFunction<MacroActionsStateOld>> create(JsonNode root, Locator locator) throws IOException {
+    public static Function<WorldModelSpec, StateFunction> create(JsonNode root, Locator locator) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        List<String> markers = locator.path(MARKER_LABELS_ID).elements(root)
-                .map(l -> l.getNode(root).asText())
+        List<Integer> markers = locator.path(MARKER_LABELS_ID).elements(root)
+                .map(l -> l.getNode(root).asInt())
                 .toList();
         return spec -> MacroActionsStateFunction.create(spec, markers);
     }
@@ -174,22 +174,22 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      *
      * @param worldSpec  the structural world layout specification profile
      * @param numMarkers the number of recognised optical markers configured in the system
-     * @return a {@link Map} pairing signal keys to their respective {@link SignalSpec} structures
+     * @return a {@link Map} pairing signal keys to their respective {@link SignalSpecOld} structures
      */
     private static Map<String, SignalSpec> createSpec(WorldModelSpec worldSpec, int numMarkers) {
         long radarSize = worldSpec.robotMapSize();
         int numChannels = numMarkers + NUM_CELL_STATES;
         return Map.of(
-                ROBOT_SIGNAL_ID, new FloatSignalSpec(new long[]{ROBOT_SIGNAL_SIZE}, -1f, 1f),
-                PROXY_SIGNAL_ID, new FloatSignalSpec(new long[]{PROXY_SIGNAL_SIZE}, 0, 1f),
-                HEAD_SIGNAL_ID, new FloatSignalSpec(new long[]{HEAD_SIGNAL_SIZE}, -1f, 1f),
-                CAMERA_SIGNAL_ID, new FloatSignalSpec(new long[]{CAMERA_SIGNAL_BASE_SIZE + numMarkers}, -1f, 1f),
-                FSM_SIGNAL_ID, new IntSignalSpec(new long[]{FSM_SIGNAL_SIZE}, 2),
-                MAP_SIGNAL_ID, new IntSignalSpec(new long[]{numChannels, radarSize, radarSize}, 2)
+                ROBOT_SIGNAL_ID, SignalSpec.create(1, ROBOT_SIGNAL_SIZE),
+                PROXY_SIGNAL_ID, SignalSpec.create(1, PROXY_SIGNAL_SIZE),
+                HEAD_SIGNAL_ID, SignalSpec.create(1, HEAD_SIGNAL_SIZE),
+                CAMERA_SIGNAL_ID, SignalSpec.create(CAMERA_SIGNAL_BASE_SIZE + numMarkers),
+                FSM_SIGNAL_ID, SignalSpec.create(1, FSM_SIGNAL_SIZE),
+                MAP_SIGNAL_ID, SignalSpec.create(1, numChannels, radarSize, radarSize)
         );
     }
 
-    private final List<String> markers;
+    private final List<Integer> markers;
     private final Map<String, SignalSpec> spec;
 
     /**
@@ -198,7 +198,7 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      * @param markers the explicit list of visual target marker tags
      * @param spec    the fully detailed multi-input signal specification layout
      */
-    public MacroActionsStateFunction(List<String> markers, Map<String, SignalSpec> spec) {
+    public MacroActionsStateFunction(List<Integer> markers, Map<String, SignalSpec> spec) {
         this.markers = requireNonNull(markers);
         this.spec = requireNonNull(spec);
         logger.atDebug().log("Created");
@@ -215,7 +215,7 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to optical features
      */
-    private INDArray cameraSignal(BehaviourStateOld[] states) {
+    private INDArray cameraSignal(BehaviourState... states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, CAMERA_SIGNAL_BASE_SIZE + markers.size()).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
@@ -251,11 +251,11 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      * @return a 2D float {@link INDArray} matrix mapping state batches to active FSM action flags
      * @throws IllegalArgumentException if any state element within the batch is not an instance of {@link MacroActionsStateOld}
      */
-    private INDArray fsmSignal(MacroActionsStateOld[] states) {
+    private INDArray fsmSignal(BehaviourState... states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, MoveActionId.values().length + HeadActionId.values().length).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
-            MacroActionsStateOld state = states[i];
+            BehaviourState state = states[i];
             int moveActionIdx = state.moveActionId().ordinal();
             int headActionIdx = state.headActionId().ordinal();
 
@@ -277,7 +277,7 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to sensor head features
      */
-    private INDArray headSignal(MacroActionsStateOld[] states) {
+    private INDArray headSignal(BehaviourState... states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, HEAD_SIGNAL_SIZE).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
@@ -322,7 +322,7 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      * @param states a varargs array of current execution environment states
      * @return a 4D float {@link INDArray} matrix with dimensions {@code [batchSize, channels, width, height]}
      */
-    INDArray mapSignals(MacroActionsStateOld... states) {
+    INDArray mapSignals(BehaviourState... states) {
         int n = states.length;
         long numMarkers = markers.size();
         long numChannels = NUM_CELL_STATES + numMarkers;
@@ -359,8 +359,8 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
                 }
             }
             for (int i = 0; i < markers.size(); i++) {
-                String label = markers.get(i);
-                FiducialMarker marker = markerMap.get(label);
+                int markerId = markers.get(i);
+                FiducialMarker marker = markerMap.get(markerId);
                 if (marker != null) {
                     Point2D location = marker.location();
                     Angle cellMapDir = Angle.direction(robotLocation, location).sub(mapDir);
@@ -389,7 +389,7 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to proximity and contact features
      */
-    private INDArray proxySignal(MacroActionsStateOld[] states) {
+    private INDArray proxySignal(BehaviourState... states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, PROXY_SIGNAL_SIZE).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
@@ -422,7 +422,7 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      * @param states a varargs array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to chassis kinematic features
      */
-    private INDArray robotSignal(MacroActionsStateOld... states) {
+    private INDArray robotSignal(BehaviourState... states) {
         int n = states.length;
         INDArray signals = Nd4j.zeros(n, 12).castTo(DataType.FLOAT);
         for (int i = 0; i < n; i++) {
@@ -479,14 +479,14 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      * @return a {@link Map} pairing signal identifier keys to their respective encapsulated {@link Signal} vectors
      */
     @Override
-    public Map<String, Signal> signals(MacroActionsStateOld... states) {
+    public Map<String, INDArray> signals(BehaviourState... states) {
         return Map.of(
-                ROBOT_SIGNAL_ID, new ArraySignal(robotSignal(states)),
-                PROXY_SIGNAL_ID, new ArraySignal(proxySignal(states)),
-                HEAD_SIGNAL_ID, new ArraySignal(headSignal(states)),
-                CAMERA_SIGNAL_ID, new ArraySignal(cameraSignal(states)),
-                FSM_SIGNAL_ID, new ArraySignal(fsmSignal(states)),
-                MAP_SIGNAL_ID, new ArraySignal(mapSignals(states)));
+                ROBOT_SIGNAL_ID, robotSignal(states),
+                PROXY_SIGNAL_ID, proxySignal(states),
+                HEAD_SIGNAL_ID, headSignal(states),
+                CAMERA_SIGNAL_ID, cameraSignal(states),
+                FSM_SIGNAL_ID, fsmSignal(states),
+                MAP_SIGNAL_ID, mapSignals(states));
     }
 
     /**
@@ -497,7 +497,7 @@ public class MacroActionsStateFunction implements StateFunction<MacroActionsStat
      * strict compatibility with the reinforcement learning environment configuration.
      * </p>
      *
-     * @return a {@link Map} pairing signal identifier keys to their respective {@link SignalSpec} structures
+     * @return a {@link Map} pairing signal identifier keys to their respective {@link SignalSpecOld} structures
      */
     @Override
     public Map<String, SignalSpec> spec() {

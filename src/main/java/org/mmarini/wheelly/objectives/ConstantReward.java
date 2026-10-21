@@ -30,7 +30,7 @@ package org.mmarini.wheelly.objectives;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.rl.envs.RewardFunctionOld;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
@@ -40,7 +40,7 @@ import org.mmarini.yaml.Locator;
 public interface ConstantReward {
     String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-constant-schema-0.1";
 
-    static RewardFunction constantReward(double reward) {
+    static RewardFunctionOld constantReward(double reward) {
         return (s0, a, s1) -> reward;
     }
 
@@ -50,7 +50,7 @@ public interface ConstantReward {
      * @param root    the root json document
      * @param locator the locator
      */
-    static RewardFunction create(JsonNode root, Locator locator) {
+    static RewardFunctionOld create(JsonNode root, Locator locator) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double reward = locator.path("reward").getNode(root).asDouble();
         return constantReward(reward);

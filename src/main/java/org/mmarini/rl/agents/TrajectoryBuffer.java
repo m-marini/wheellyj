@@ -29,8 +29,8 @@
 package org.mmarini.rl.agents;
 
 import org.mmarini.MapStream;
+import org.mmarini.rl.envs.ExecutionResultOld;
 import org.mmarini.rl.envs.Signal;
-import org.mmarini.wheelly.gyms.ExecutionResult;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -135,7 +135,7 @@ public class TrajectoryBuffer implements AutoCloseable {
      *
      * @param result the result
      */
-    public TrajectoryBuffer add(ExecutionResult result) {
+    public TrajectoryBuffer add(ExecutionResultOld result) {
         if (states == null) {
             init(result);
         }
@@ -220,7 +220,7 @@ public class TrajectoryBuffer implements AutoCloseable {
     /**
      * Initialises the buffer with the result
      */
-    private void init(ExecutionResult result) {
+    private void init(ExecutionResultOld result) {
         int bfrSize = bufferSize();
         states = MapStream.of(result.state0())
                 .mapValues(signals -> createBuffer(bfrSize + 1, signals))

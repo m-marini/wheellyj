@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.robots;
 
-import org.mmarini.wheelly.behaviours.BehaviourActionOld;
+import org.mmarini.rl.envs.BehaviourActionOld;
 
 import java.awt.geom.Point2D;
 
