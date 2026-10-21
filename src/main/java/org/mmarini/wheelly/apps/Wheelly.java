@@ -266,7 +266,7 @@ public class Wheelly {
         controller.connectRobot(robot);
 
         worldModeller.setRobotSpec(robot.robotSpec());
-        worldModeller.connectController(controller);
+        // TODO worldModeller.connectController(controller);
 
         environment.agent(agent);
         if (environment instanceof MacroActionsAdapter adapter) {

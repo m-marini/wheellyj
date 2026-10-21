@@ -104,8 +104,9 @@ import java.io.File;
  * </code>
  * </p>
  */
-public interface RobotControllerApi extends RobotControllerConnector,
-        WithRobotStatusCallback, WithErrorFlowable, WithControllerFlowable, WithShutdownCompletable {
+public interface RobotControllerApi extends Controller,
+        WithRobotStatusCallback, WithErrorFlowable, WithControllerStatusFlowable, WithControllerReadyFlowable,
+        WithShutdownCompletable {
     /**
      * Returns the robot controller from configuration JSON
      *

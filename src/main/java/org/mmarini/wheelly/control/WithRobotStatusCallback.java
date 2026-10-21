@@ -30,9 +30,25 @@ package org.mmarini.wheelly.control;
 
 import java.util.function.Consumer;
 
+/**
+ * Defines the contract for components that support the registration of robot status callbacks.
+ * <p>
+ * This interface provides a standardized mechanism to attach asynchronous event listeners
+ * capable of intercepting incoming robot telemetry. It decouples the raw telemetry providers
+ * from downstream processing units, such as logging utilities, safety supervisors, or state trackers.
+ * </p>
+ */
 public interface WithRobotStatusCallback {
+
     /**
-     * Adds the robot status callback
+     * Registers a callback consumer to be invoked whenever a fresh robot status update is available.
+     * <p>
+     * The attached callback listener reactively ingests the latest {@link RobotStatus} snapshot,
+     * allowing upper architectural layers to track continuous changes in position, sensors,
+     * and subsystem metrics.
+     * </p>
+     *
+     * @param callback The consumer routine that handles the incoming {@link RobotStatus} telemetry data.
      */
     void addOnRobotStatus(Consumer<RobotStatus> callback);
 }

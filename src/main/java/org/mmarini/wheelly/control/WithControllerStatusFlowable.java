@@ -30,9 +30,26 @@ package org.mmarini.wheelly.control;
 
 import io.reactivex.rxjava3.core.Flowable;
 
-public interface WithControllerFlowable {
+/**
+ * Defines the reactive data-stream API for extracting the comprehensive robot controller status.
+ * <p>
+ * This interface bridges the robot control infrastructure with asynchronous consumer layers,
+ * leveraging RxJava {@link Flowable} streams to continuously publish operational telemetry,
+ * connection states, and structural diagnostics of the underlying controller.
+ * </p>
+ */
+public interface WithControllerStatusFlowable {
+
     /**
-     * Returns the stream of controller status
+     * Returns a reactive stream publishing the operational status updates of the robot controller.
+     * <p>
+     * The emitted data tokens encapsulate the holistic state of the control connector, allowing
+     * upstream components to reactively monitor subsystem availability, sensor telemetry, and
+     * actuation feedback loops.
+     * </p>
+     *
+     * @return A {@link Flowable} emitting sequential {@link RobotControllerStatusApi} snapshots
+     * reflecting the live controller configuration and state changes.
      */
     Flowable<RobotControllerStatusApi> readControllerStatus();
 }

@@ -192,7 +192,7 @@ public class BatchTraining {
         // Creates modeller
         WorldModeller modeller = AppYaml.modellerFromJson(config);
         modeller.setRobotSpec(robot.robotSpec());
-        modeller.connectController(controller);
+        // TODO modeller.connectController(controller);
 
         // Creates environment
         GymApi env = AppYaml.envFromJson(config);

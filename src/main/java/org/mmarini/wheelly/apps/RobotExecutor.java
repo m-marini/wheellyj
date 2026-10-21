@@ -282,7 +282,7 @@ public class RobotExecutor {
         logger.atInfo().log("Creating world modeller ...");
         this.modeller = AppYaml.modellerFromJson(config);
         modeller.setRobotSpec(robot.robotSpec());
-        modeller.connectController(controller);
+        // TODO modeller.connectController(controller);
         modeller.setDecisionMaker(this::onDecisionProcess);
 
         logger.atInfo().log("Creating agent ...");
