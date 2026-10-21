@@ -43,6 +43,7 @@ import org.mmarini.rl.agents.NNRLTrainingDataGenerator;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.wheelly.gyms.ExecutionResult;
+import org.mmarini.wheelly.gyms.SignalSpec;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -139,10 +140,10 @@ class RLAgentTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        Map<String, SignalSpecOld> stateSpec = Map.of(MAP_SIGNAL_ID, new IntSignalSpec(new long[]{NUM_CHANNELS, GRID_SIZE, GRID_SIZE}, NUM_SAMPLES));
-        Map<String, SignalSpecOld> actionSpec = Map.of(
-                MOVE_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_MOVEMENT_COMMANDS),
-                HEAD_ACTION_ID, new IntSignalSpec(new long[]{1, 1}, NUM_SENSOR_COMMANDS)
+        Map<String, SignalSpec> stateSpec = Map.of(MAP_SIGNAL_ID, SignalSpec.create(1, NUM_CHANNELS, GRID_SIZE, GRID_SIZE));
+        Map<String, SignalSpec> actionSpec = Map.of(
+                MOVE_ACTION_ID, SignalSpec.create(1, 1),
+                HEAD_ACTION_ID, SignalSpec.create(1, 1)
         );
         ComputationGraphConfiguration conf = build();
         // logger.atDebug().log("yaml network {}", conf.toYaml());
@@ -248,7 +249,7 @@ class RLAgentTest {
     @Test
     void testSaveAndLoad() throws IOException {
         agent.save();
-        DLAgent newAgent = DLAgent.fromFile(FILE, Nd4j.getRandom());
+        RLAgent newAgent = RLAgent.fromFile(FILE, Nd4j.getRandom());
         assertThat(newAgent.network().getConfiguration().getNetworkInputs(),
                 hasItems(agent.network().getConfiguration().getNetworkInputs().toArray(String[]::new)));
         assertThat(newAgent.network().getConfiguration().getNetworkOutputs(),

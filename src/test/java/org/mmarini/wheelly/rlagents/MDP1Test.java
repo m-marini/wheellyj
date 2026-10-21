@@ -26,19 +26,19 @@
  *
  */
 
-package org.mmarini.rl.agents;
+package org.mmarini.wheelly.rlagents;
 
 import org.junit.jupiter.api.Test;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.SignalSpecOld;
+import org.mmarini.wheelly.gyms.SignalSpec;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.factory.Nd4j;
 
 import java.util.Map;
 import java.util.Random;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasKey;
-import static org.hamcrest.Matchers.isA;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
@@ -96,17 +96,13 @@ public class MDP1Test {
         assertEquals(1, mdp.nextState(1, 0, random));
         assertEquals(0, mdp.nextState(1, 1, random));
 
-        Map<String, SignalSpecOld> spec = mdp.stateSpec();
+        Map<String, SignalSpec> spec = mdp.stateSpec();
         assertThat(spec, hasKey("state"));
         assertArrayEquals(new long[]{1, 2}, spec.get("state").shape());
-        assertThat(spec.get("state"), isA(IntSignalSpec.class));
-        assertEquals(2, ((IntSignalSpec) spec.get("state")).numValues());
 
         spec = mdp.actionSpec();
         assertThat(spec, hasKey("action"));
         assertArrayEquals(new long[]{1, 1}, spec.get("action").shape());
-        assertThat(spec.get("action"), isA(IntSignalSpec.class));
-        assertEquals(2, ((IntSignalSpec) spec.get("action")).numValues());
 
         Map<String, INDArray> signals = mdp.state(0);
         assertThat(signals, hasKey("state"));
@@ -119,12 +115,10 @@ public class MDP1Test {
 
         signals = mdp.action(0);
         assertThat(signals, hasKey("action"));
-        assertThat(signals.get("action"), matrixCloseTo(new long[]{1, 1}, 1e-3,
-                0));
+        assertThat(signals.get("action"), matrixCloseTo(Nd4j.zeros(1, 1).castTo(DataType.INT32), 1e-3));
 
         signals = mdp.action(1);
         assertThat(signals, hasKey("action"));
-        assertThat(signals.get("action"), matrixCloseTo(new long[]{1, 1}, 1e-3,
-                1));
+        assertThat(signals.get("action"), matrixCloseTo(Nd4j.ones(1, 1).castTo(DataType.INT32), 1e-3));
     }
 }

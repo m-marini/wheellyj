@@ -1,13 +1,13 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/dl-agent-schema-0.1
+$id: https://mmarini.org/wheelly/rl-agent-schema-0.1
 title: Agent
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/dl-agent-schema-0.1
+    const: https://mmarini.org/wheelly/rl-agent-schema-0.1
   class:
-    const: org.mmarini.rl.agents.DLAgent
+    const: org.mmarini.wheelly.rlagents.RLAgent
   alphas:
     type: object
     additionalProperties:

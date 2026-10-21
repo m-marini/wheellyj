@@ -33,13 +33,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
-import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.wheelly.batch.BatchAgent;
 import org.mmarini.wheelly.gyms.ExecutionResult;
+import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.wheelly.utils.WithShutdownCompletable;
 import org.mmarini.yaml.Locator;
@@ -83,7 +81,7 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
     public static final String ALPHAS_ID = "alphas";
     public static final String BETA_ID = "beta";
     private static final Logger logger = LoggerFactory.getLogger(RLAgent.class);
-    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/dl-agent-schema-0.1";
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/rl-agent-schema-0.1";
 
     /**
      * Returns the agent
@@ -124,7 +122,7 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      * @param filePath           the file path for the agent save
      * @param concurrentTraining true if concurrent training
      */
-    public static RLAgent create(Map<String, SignalSpecOld> stateSpec, Map<String, SignalSpecOld> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, File filePath, boolean concurrentTraining) {
+    public static RLAgent create(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, File filePath, boolean concurrentTraining) {
         RLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, 0, concurrentTraining);
         agent.validate(stateSpec, actionSpec);
         return agent;
@@ -507,7 +505,7 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      * @param stateSpec  the state specification
      * @param actionSpec the action specification
      */
-    public void validate(Map<String, SignalSpecOld> stateSpec, Map<String, SignalSpecOld> actionSpec) {
+    public void validate(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec) {
         ComputationGraph network = status.get().network();
         String missingLayers = network.getConfiguration().getNetworkInputs().stream()
                 .filter(id -> !stateSpec.containsKey(id))
@@ -526,16 +524,6 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
                 .orElse(null);
         if (missingLayers != null) {
             throw new IllegalArgumentException(format("Missing output layers [%s]", missingLayers));
-        }
-        // Check action size
-        for (String id : actionSpec.keySet()) {
-            long numNetOut = ((OutputLayer) network.getLayer(id).conf().getLayer()).getNOut();
-            long numActions = ((IntSignalSpec) actionSpec.get(id)).numValues();
-            if (numNetOut != numActions) {
-                throw new IllegalArgumentException(
-                        format("Unmatched number of actions of \"%s\": %d expected %d", id, numNetOut, numActions)
-                );
-            }
         }
     }
 

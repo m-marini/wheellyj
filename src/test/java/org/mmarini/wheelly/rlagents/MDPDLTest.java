@@ -26,7 +26,7 @@
  *
  */
 
-package org.mmarini.rl.agents;
+package org.mmarini.wheelly.rlagents;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,10 +34,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mmarini.TextTable;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.SignalSpecOld;
-import org.mmarini.rl.envs.WithSignalsSpecOld;
 import org.mmarini.wheelly.gyms.ExecutionResult;
+import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.wheelly.gyms.WithSignalsSpec;
 import org.mmarini.yaml.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
@@ -67,8 +66,8 @@ public class MDPDLTest {
     public static final int BATCH_SIZE = 16;
     public static final String AGENT_CONF_YAML = """
             ---
-            $schema: https://mmarini.org/wheelly/dl-agent-builder-schema-2.0
-            class: org.mmarini.rl.agents.DLAgentBuilder
+            $schema: https://mmarini.org/wheelly/rl-agent-builder-schema-2.0
+            class: org.mmarini.wheelly.rlagents.RLAgentBuilder
             numEpochs: 4
             trajectorySize: 64
             batchSize: 16
@@ -212,7 +211,7 @@ public class MDPDLTest {
         }
     }
 
-    DLAgent agent;
+    RLAgent agent;
     Map<String, INDArray> allStates;
     MDP mdp;
 
@@ -229,25 +228,25 @@ public class MDPDLTest {
                 .toArray(INDArray[]::new);
         this.allStates = Map.of(STATE_ID, Nd4j.vstack(arys));
 
-        Map<String, SignalSpecOld> stateSpec = Map.of(
-                STATE_ID, new IntSignalSpec(new long[]{mdp.numStates()}, BATCH_SIZE)
+        Map<String, SignalSpec> stateSpec = Map.of(
+                STATE_ID, SignalSpec.create(1, mdp.numStates())
         );
-        Map<String, SignalSpecOld> actionSpec = Map.of(
-                ACTION_ID, new IntSignalSpec(new long[]{1}, mdp.numActions())
+        Map<String, SignalSpec> actionSpec = Map.of(
+                ACTION_ID, SignalSpec.create(1, 1)
         );
         JsonNode conf = Utils.fromText(AGENT_CONF_YAML);
-        WithSignalsSpecOld env = new WithSignalsSpecOld() {
+        WithSignalsSpec env = new WithSignalsSpec() {
             @Override
-            public Map<String, SignalSpecOld> actionSpec() {
+            public Map<String, SignalSpec> actionSpec() {
                 return actionSpec;
             }
 
             @Override
-            public Map<String, SignalSpecOld> stateSpec() {
+            public Map<String, SignalSpec> stateSpec() {
                 return stateSpec;
             }
         };
-        agent = DLAgentBuilder.create(conf, env);
+        agent = RLAgentBuilder.create(conf, env);
     }
 
 

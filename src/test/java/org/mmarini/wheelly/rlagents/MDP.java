@@ -26,12 +26,12 @@
  *
  */
 
-package org.mmarini.rl.agents;
+package org.mmarini.wheelly.rlagents;
 
 import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.IntSignalSpec;
-import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.wheelly.gyms.ExecutionResult;
+import org.mmarini.wheelly.gyms.SignalSpec;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
@@ -104,8 +104,8 @@ public record MDP(double[][][] prob, double[][][] reward) {
      *
      * Returns the action specification
      */
-    public Map<String, SignalSpecOld> actionSpec() {
-        return Map.of("action", new IntSignalSpec(new long[]{1, 1}, numActions()));
+    public Map<String, SignalSpec> actionSpec() {
+        return Map.of("action", SignalSpec.create(1, 1));
     }
 
     /**
@@ -184,7 +184,7 @@ public record MDP(double[][][] prob, double[][][] reward) {
     public Map<String, INDArray> state(int state) {
         int[] values = new int[numActions()];
         values[state] = 1;
-        INDArray ary = Nd4j.createFromArray(values).reshape(1, numStates());
+        INDArray ary = Nd4j.createFromArray(values).reshape(1, numStates()).castTo(DataType.FLOAT);
         return Map.of("state", ary);
     }
 
@@ -192,8 +192,8 @@ public record MDP(double[][][] prob, double[][][] reward) {
      *
      * Returns the state specification
      */
-    public Map<String, SignalSpecOld> stateSpec() {
-        return Map.of("state", new IntSignalSpec(new long[]{1, numStates()}, 2));
+    public Map<String, SignalSpec> stateSpec() {
+        return Map.of("state", SignalSpec.create(1, numStates()));
     }
 
     public static class Builder {
