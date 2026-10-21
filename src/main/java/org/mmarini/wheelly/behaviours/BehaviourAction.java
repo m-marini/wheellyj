@@ -38,4 +38,7 @@ package org.mmarini.wheelly.behaviours;
  * </p>
  */
 public interface BehaviourAction {
+    HeadActionId headActionId();
+
+    MoveActionId moveActionId();
 }

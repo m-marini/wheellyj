@@ -34,9 +34,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.wheelly.behaviours.BehaviourMacroAction;
 import org.mmarini.wheelly.behaviours.HeadActionId;
-import org.mmarini.wheelly.behaviours.MacroActionsState;
+import org.mmarini.wheelly.behaviours.MacroAction;
+import org.mmarini.wheelly.behaviours.MacroActionsStateOld;
 import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.perception.GridMap;
 import org.mmarini.wheelly.perception.GridTopology;
@@ -77,7 +77,7 @@ class MacroActionsStateFunctionTest {
                 .flatMap(moveActionId ->
                         Arrays.stream(HeadActionId.values()).map(
                                 headActionId ->
-                                        Arguments.of(new BehaviourMacroAction(moveActionId, headActionId))
+                                        Arguments.of(new MacroAction(moveActionId, headActionId))
                         )
                 );
     }
@@ -153,7 +153,7 @@ class MacroActionsStateFunctionTest {
                 .updateLidarTime()
                 .addTime(1)
                 .build();
-        MacroActionsState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         // When ...
         Map<String, Signal> signals = stateFunc.signals(state, state);
@@ -183,12 +183,12 @@ class MacroActionsStateFunctionTest {
 
     @ParameterizedTest
     @MethodSource("dataFsmSignals")
-    void testFsmSignal(BehaviourMacroAction agentAction) {
+    void testFsmSignal(MacroAction agentAction) {
         // Given
         WorldModel model = builder.build();
-        MoveActionId moveActionId = agentAction.moveId();
-        HeadActionId headActionId = agentAction.headId();
-        MacroActionsState state = new MacroActionsState(model, moveActionId, headActionId);
+        MoveActionId moveActionId = agentAction.moveActionId();
+        HeadActionId headActionId = agentAction.headActionId();
+        MacroActionsStateOld state = new MacroActionsStateOld(model, moveActionId, headActionId);
 
         // When ...
         Map<String, Signal> signals = stateFunc.signals(state, state);
@@ -226,7 +226,7 @@ class MacroActionsStateFunctionTest {
                 .frontDistance(frontDistance * 0.01)
                 .rearDistance(rearDistance * 0.01)
                 .build();
-        MacroActionsState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         // When ...
         Map<String, Signal> signals = stateFunc.signals(state, state);
@@ -271,7 +271,7 @@ class MacroActionsStateFunctionTest {
                 .addContactsCell(cellLocation)
                 .robotLocation(robotLocation)
                 .build();
-        MacroActionsState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().hasContact());
 
@@ -337,7 +337,7 @@ class MacroActionsStateFunctionTest {
                 .robotDir(directionDeg)
                 .addEchoCell(cellLocation)
                 .build();
-        MacroActionsState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().echogenic());
 
@@ -403,7 +403,7 @@ class MacroActionsStateFunctionTest {
                 .robotDir(directionDeg)
                 .addEmptyCell(cellLocation)
                 .build();
-        MacroActionsState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().empty());
 
@@ -469,7 +469,7 @@ class MacroActionsStateFunctionTest {
                 .robotDir(directionDeg)
                 .addMarker(MARKER0, cellLocation)
                 .build();
-        MacroActionsState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
         //        WorldModel model = createModeller().updateForInference(createModelLabelMap(directionDeg, robotLocation, cellLocation));
 
         assertTrue(model.radarMap().cell(cellLocation).orElseThrow().echogenic());
@@ -540,7 +540,7 @@ class MacroActionsStateFunctionTest {
                 .frontSensor(frontSensor)
                 .rearSensor(rearSensor)
                 .build();
-        MacroActionsState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
 
         // When ...
         Map<String, Signal> signals = stateFunc.signals(state, state);
@@ -581,7 +581,7 @@ class MacroActionsStateFunctionTest {
                 .robotTarget(target);
         WorldModel model = builder.build();
         // And an env state
-        MacroActionsState state = new MacroActionsState(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
+        MacroActionsStateOld state = new MacroActionsStateOld(model, HALT_ACTION, LOOK_STRAIGHT_ACTION);
         // And expected signal
         INDArray expected = Nd4j.zeros(2, ROBOT_SIGNAL_SIZE);
         double linSpeed = (leftPps + rightPps) / 2 / DEFAULT_ROBOT_SPEC.maxSpeed();

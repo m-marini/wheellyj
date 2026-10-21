@@ -54,7 +54,7 @@ import static org.mmarini.yaml.Utils.EMPTY_OBJECTS;
  * and converting agent actions back into low-level robot commands.
  * </p>
  */
-public class MacroActionsAdapter implements GymAdapter<MacroActionsState, BehaviourMacroAction> {
+public class MacroActionsAdapter implements GymAdapter<MacroActionsStateOld, MacroAction> {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-macro-actions-schema-0.1";
     public static final String MOVE_ID = "move";
     public static final String HEAD_ID = "head";
@@ -87,14 +87,14 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
      */
     public static MacroActionsAdapter create(JsonNode root, Locator locator) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        Function<WorldModelSpec, StateFunction<MacroActionsState>> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
+        Function<WorldModelSpec, StateFunction<MacroActionsStateOld>> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
                 EMPTY_OBJECTS, EMPTY_CLASSES);
         return new MacroActionsAdapter(stateFuncBuilder);
     }
 
-    private final Function<WorldModelSpec, StateFunction<MacroActionsState>> stateFuncBuilder;
-    private StateFunction<MacroActionsState> stateFunc;
-    private RewardFunction<MacroActionsState, BehaviourMacroAction> rewardFunc;
+    private final Function<WorldModelSpec, StateFunction<MacroActionsStateOld>> stateFuncBuilder;
+    private StateFunction<MacroActionsStateOld> stateFunc;
+    private RewardFunction<MacroActionsStateOld, MacroAction> rewardFunc;
     private AgentConnector agent;
     private MacroActionStepState stepState;
     private DoubleConsumer onReward;
@@ -104,7 +104,7 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
      *
      * @param stateFuncBuilder
      */
-    public MacroActionsAdapter(Function<WorldModelSpec, StateFunction<MacroActionsState>> stateFuncBuilder) {
+    public MacroActionsAdapter(Function<WorldModelSpec, StateFunction<MacroActionsStateOld>> stateFuncBuilder) {
         this.stateFuncBuilder = stateFuncBuilder;
         logger.atDebug().log("Created");
     }
@@ -129,7 +129,7 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
     }
 
     @Override
-    public BehaviourMacroAction decide(MacroActionsState state) {
+    public MacroAction decide(MacroActionsStateOld state) {
         if (stateFunc == null) {
             throw new IllegalStateException("Missing state function");
         }
@@ -139,7 +139,7 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
         Map<String, Signal> signals1 = state(state);
         Map<String, Signal> actions = agent.act(signals1);
 
-        BehaviourMacroAction commands = decodeAction(actions);
+        MacroAction commands = decodeAction(actions);
 
         // Process observation if we have a recorded previous step
         MacroActionStepState stepState = this.stepState;
@@ -162,14 +162,14 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
      * Decodes raw action signals into discrete agent execution command IDs.
      *
      * @param actions the map containing movement and heading signals
-     * @return the decoded {@link BehaviourMacroAction} wrapper
+     * @return the decoded {@link MacroAction} wrapper
      */
-    private BehaviourMacroAction decodeAction(Map<String, Signal> actions) {
+    private MacroAction decodeAction(Map<String, Signal> actions) {
         int moveCode = actions.get(MOVE_ID).getInt(0, 0);
         MoveActionId moveId = MoveActionId.values()[moveCode];
         int headCode = actions.get(HEAD_ID).getInt(0, 0);
         HeadActionId headId = HeadActionId.values()[headCode];
-        return new BehaviourMacroAction(moveId, headId);
+        return new MacroAction(moveId, headId);
     }
 
     /**
@@ -214,11 +214,11 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
      * @param state1  the resulting environment state after the action execution
      * @return the calculated reward value, or {@code 0.0} if no reward function is configured
      */
-    public double reward(MacroActionsState state0, BehaviourMacroAction actions, MacroActionsState state1) {
+    public double reward(MacroActionsStateOld state0, MacroAction actions, MacroActionsStateOld state1) {
         return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
-    public void rewardFunc(RewardFunction<MacroActionsState, BehaviourMacroAction> rewardFunc) {
+    public void rewardFunc(RewardFunction<MacroActionsStateOld, MacroAction> rewardFunc) {
         this.rewardFunc = rewardFunc;
     }
 
@@ -229,11 +229,11 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
      * to generate a map of input signals ready for reinforcement learning agent consumption.
      * </p>
      *
-     * @param model the current {@link BehaviourState} context to extract signals from
+     * @param model the current {@link BehaviourStateOld} context to extract signals from
      * @return a map pairing signal identifiers with their processed {@link Signal} values
      * @throws NullPointerException if the provided model is null
      */
-    public Map<String, Signal> state(MacroActionsState model) {
+    public Map<String, Signal> state(MacroActionsStateOld model) {
         requireNonNull(model);
         ensureConnected();
         return stateFunc.signals(model);
@@ -270,9 +270,9 @@ public class MacroActionsAdapter implements GymAdapter<MacroActionsState, Behavi
      * @param prevActions  the raw action signals generated by the agent for the step
      */
     private record MacroActionStepState(
-            MacroActionsState prevState,
+            MacroActionsStateOld prevState,
             Map<String, Signal> signals0,
-            BehaviourMacroAction prevCommands,
+            MacroAction prevCommands,
             Map<String, Signal> prevActions
     ) {
         /**

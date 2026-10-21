@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.behaviours.MacroActionsState;
+import org.mmarini.wheelly.behaviours.MacroActionsStateOld;
 import org.mmarini.wheelly.behaviours.fsm.MacroActionConfig;
 import org.mmarini.wheelly.perception.WorldModelSpec;
 import org.mmarini.yaml.Locator;
@@ -53,7 +53,7 @@ import static org.mmarini.yaml.Utils.EMPTY_OBJECTS;
  * @param fsmConfig            the configuration parameters governing the underlying finite state machine macro-actions
  */
 public record DLMacroActionEnvConfig(
-        Function<WorldModelSpec, StateFunction<MacroActionsState>> stateFunctionBuilder,
+        Function<WorldModelSpec, StateFunction<MacroActionsStateOld>> stateFunctionBuilder,
         MacroActionConfig fsmConfig
 ) {
     /**
@@ -75,7 +75,7 @@ public record DLMacroActionEnvConfig(
      * @throws NullPointerException if any parsed subcomponent evaluates to {@code null}
      */
     public static DLMacroActionEnvConfig fromJson(JsonNode root, Locator locator) {
-        Function<WorldModelSpec, StateFunction<MacroActionsState>> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
+        Function<WorldModelSpec, StateFunction<MacroActionsStateOld>> stateFuncBuilder = Utils.createObject(root, locator.path(STATE_FUNCTION_ID),
                 EMPTY_OBJECTS, EMPTY_CLASSES);
         MacroActionConfig fsmConfig = MacroActionConfig.fromJson(root, locator);
         return new DLMacroActionEnvConfig(

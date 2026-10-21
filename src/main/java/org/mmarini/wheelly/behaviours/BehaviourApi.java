@@ -31,6 +31,7 @@ package org.mmarini.wheelly.behaviours;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.perception.DecisionMaker;
+import org.mmarini.wheelly.perception.WithDecisionMaker;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.yaml.Locator;
@@ -46,7 +47,7 @@ import java.io.File;
  * for autonomous robotic behaviors.
  * </p>
  */
-public interface BehaviourApi extends DecisionMaker<WorldModel, RobotCommand> {
+public interface BehaviourApi extends DecisionMaker<WorldModel, RobotCommand>, WithDecisionMaker<BehaviourState, BehaviourAction> {
 
     /**
      * Parses and instantiates a concrete {@code EnvironmentApi} implementation from a JSON document configuration block.
@@ -91,6 +92,4 @@ public interface BehaviourApi extends DecisionMaker<WorldModel, RobotCommand> {
     static BehaviourApi fromFile(File file) throws Throwable {
         return Utils.createObject(file);
     }
-
-    void decisionMaker(DecisionMaker<MacroActionsState, BehaviourMacroAction> decisionMaker);
 }

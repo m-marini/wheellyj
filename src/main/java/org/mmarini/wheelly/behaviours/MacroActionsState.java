@@ -28,7 +28,6 @@
 
 package org.mmarini.wheelly.behaviours;
 
-import org.mmarini.wheelly.perception.WithWorldModel;
 import org.mmarini.wheelly.perception.WorldModel;
 
 import static java.util.Objects.requireNonNull;
@@ -47,7 +46,7 @@ import static java.util.Objects.requireNonNull;
  * @param headActionId the active {@link HeadActionId} tracking the concurrent high-level sensor head macro-action
  */
 public record MacroActionsState(WorldModel worldModel, MoveActionId moveActionId,
-                                HeadActionId headActionId) implements BehaviourState, WithWorldModel {
+                                HeadActionId headActionId) implements BehaviourState {
 
     /**
      * Constructs a {@code MacroEnvState} validating that all parameters are non-null.

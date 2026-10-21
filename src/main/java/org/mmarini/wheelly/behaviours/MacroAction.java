@@ -40,22 +40,22 @@ import static java.util.Objects.requireNonNull;
  * and immutable state transition tracking to stabilise the robot's physical behaviour.
  * </p>
  *
- * @param moveId the unique identifier for the base locomotion and alignment action branch
- * @param headId the unique identifier for the high-level semantic perception head action branch
+ * @param moveActionId the unique identifier for the base locomotion and alignment action branch
+ * @param headActionId the unique identifier for the high-level semantic perception head action branch
  */
-public record BehaviourMacroAction(MoveActionId moveId, HeadActionId headId) implements BehaviourAction {
+public record MacroAction(MoveActionId moveActionId, HeadActionId headActionId) implements BehaviourAction {
 
     /**
      * Constructs an {@code AgentAction} record instance, validating that both action identifiers
      * are strictly non-null.
      *
-     * @param moveId the unique identifier for the base locomotion branch; must not be null
-     * @param headId the unique identifier for the perception head branch; must not be null
-     * @throws NullPointerException if either {@code moveId} or {@code headId} is null
+     * @param moveActionId the unique identifier for the base locomotion branch; must not be null
+     * @param headActionId the unique identifier for the perception head branch; must not be null
+     * @throws NullPointerException if either {@code moveActionId} or {@code headActionId} is null
      */
-    public BehaviourMacroAction(MoveActionId moveId, HeadActionId headId) {
-        this.moveId = requireNonNull(moveId);
-        this.headId = requireNonNull(headId);
+    public MacroAction(MoveActionId moveActionId, HeadActionId headActionId) {
+        this.moveActionId = requireNonNull(moveActionId);
+        this.headActionId = requireNonNull(headActionId);
     }
 
     /**
@@ -64,12 +64,12 @@ public record BehaviourMacroAction(MoveActionId moveId, HeadActionId headId) imp
      *
      * @param headId the new unique identifier for the perception head branch; must not be null
      * @return an {@code AgentAction} instance with the updated head identifier
-     * @throws NullPointerException if the provided {@code headId} is null
+     * @throws NullPointerException if the provided {@code headActionId} is null
      */
-    public BehaviourMacroAction headId(HeadActionId headId) {
-        return Objects.equals(headId, this.headId)
+    public MacroAction headId(HeadActionId headId) {
+        return Objects.equals(headId, this.headActionId)
                 ? this
-                : new BehaviourMacroAction(moveId, headId);
+                : new MacroAction(moveActionId, headId);
     }
 
     /**
@@ -78,11 +78,11 @@ public record BehaviourMacroAction(MoveActionId moveId, HeadActionId headId) imp
      *
      * @param moveId the new unique identifier for the base locomotion branch; must not be null
      * @return an {@code AgentAction} instance with the updated movement identifier
-     * @throws NullPointerException if the provided {@code moveId} is null
+     * @throws NullPointerException if the provided {@code moveActionId} is null
      */
-    public BehaviourMacroAction moveId(MoveActionId moveId) {
-        return Objects.equals(moveId, this.moveId)
+    public MacroAction moveId(MoveActionId moveId) {
+        return Objects.equals(moveId, this.moveActionId)
                 ? this
-                : new BehaviourMacroAction(moveId, headId);
+                : new MacroAction(moveId, headActionId);
     }
 }

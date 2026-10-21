@@ -57,7 +57,7 @@ import static java.util.Objects.requireNonNull;
  * and converting agent actions back into low-level robot commands.
  * </p>
  */
-public class MacroActionsBehaviour implements BehaviourApi, FSMContext, BehaviourState {
+public class MacroActionsBehaviour implements BehaviourApi, FSMContext {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/behave-macro-actions-schema-0.1";
     public static final String SEED_ID = "seed";
     private static final Logger logger = LoggerFactory.getLogger(MacroActionsBehaviour.class);
@@ -92,7 +92,7 @@ public class MacroActionsBehaviour implements BehaviourApi, FSMContext, Behaviou
     private final MotionMacroActionState motionState;
     private final HeadMacroActionState headState;
     private WorldModel currentWorldModel;
-    private DecisionMaker<MacroActionsState, BehaviourMacroAction> decisionMaker;
+    private DecisionMaker<BehaviourState, BehaviourAction> decisionMaker;
 
     /**
      * Creates the deep learning environment
@@ -132,16 +132,17 @@ public class MacroActionsBehaviour implements BehaviourApi, FSMContext, Behaviou
                 || motionState.expired()
                 || motionState.completed()) {
             // Generates a new macro action from inference engine
-            BehaviourMacroAction nextAction = decisionMaker.decide(new MacroActionsState(state, motionState.currentAction(), headState.currentAction()));
-            headState.init(this, nextAction.headId());
-            motionState.init(this, nextAction.moveId());
+            BehaviourAction nextAction = decisionMaker.decide(new MacroActionsState(state, motionState.currentAction(), headState.currentAction()));
+            headState.init(this, nextAction.headActionId());
+            motionState.init(this, nextAction.moveActionId());
         }
         MotionStatus motionCmd = motionState.tick(this);
         HeadStatus headCmd = headState.tick(this);
         return new RobotCommand(motionCmd, headCmd);
     }
 
-    public void decisionMaker(DecisionMaker<MacroActionsState, BehaviourMacroAction> decisionMaker) {
+    @Override
+    public void decisionMaker(DecisionMaker<BehaviourState, BehaviourAction> decisionMaker) {
         this.decisionMaker = requireNonNull(decisionMaker);
     }
 

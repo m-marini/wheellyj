@@ -31,5 +31,5 @@ package org.mmarini.wheelly.behaviours;
 import org.mmarini.wheelly.perception.WithWorldModel;
 import org.mmarini.wheelly.perception.WorldModel;
 
-public record WorldModelState(WorldModel worldModel) implements WithWorldModel, BehaviourState {
+public record WorldModelState(WorldModel worldModel) implements WithWorldModel, BehaviourStateOld {
 }

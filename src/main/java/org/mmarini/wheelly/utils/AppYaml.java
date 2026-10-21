@@ -30,7 +30,7 @@ package org.mmarini.wheelly.utils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.behaviours.BehaviourApi;
-import org.mmarini.wheelly.behaviours.BehaviourMacroAction;
+import org.mmarini.wheelly.behaviours.MacroAction;
 import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.gyms.GymAdapter;
 import org.mmarini.wheelly.gyms.GymApi;
@@ -44,7 +44,7 @@ import java.io.IOException;
 
 public interface AppYaml {
 
-    static <S, A> GymAdapter<S, BehaviourMacroAction> adapterfromFile(JsonNode config) throws Throwable {
+    static <S, A> GymAdapter<S, MacroAction> adapterfromFile(JsonNode config) throws Throwable {
         return GymAdapter.fromFile(new File(config.path("environment").asText()));
     }
 

@@ -29,8 +29,8 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.behaviours.BehaviourAction;
-import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.mmarini.wheelly.behaviours.BehaviourActionOld;
+import org.mmarini.wheelly.behaviours.BehaviourStateOld;
 import org.mmarini.wheelly.behaviours.WorldModelState;
 import org.mmarini.wheelly.perception.PerceptionConnector;
 import org.mmarini.wheelly.perception.WorldModel;
@@ -198,7 +198,7 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
     }
 
     @Override
-    public double reward(BehaviourState state0, BehaviourAction actions, BehaviourState state1) {
+    public double reward(BehaviourStateOld state0, BehaviourActionOld actions, BehaviourStateOld state1) {
         return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
@@ -208,7 +208,7 @@ public class DLEnvironment implements GymApi, WithRewardCallback {
     }
 
     @Override
-    public Map<String, Signal> state(BehaviourState model) {
+    public Map<String, Signal> state(BehaviourStateOld model) {
         requireNonNull(model);
         requireNonNull(stateFunc);
         return stateFunc.signals(model);

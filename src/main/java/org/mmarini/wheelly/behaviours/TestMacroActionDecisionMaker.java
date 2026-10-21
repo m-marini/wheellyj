@@ -48,15 +48,15 @@ import static org.mmarini.wheelly.behaviours.MoveActionId.*;
  * full panoramic field sweeps and targeted area explorations to evaluate state telemetry synchronisation.
  * </p>
  */
-public class TestMacroActionDecisionMaker implements DecisionMaker<MacroActionsState, BehaviourMacroAction> {
+public class TestMacroActionDecisionMaker implements DecisionMaker<BehaviourState, BehaviourAction> {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-test-macro-actions-schema-0.1";
-    public static final BehaviourMacroAction HALT_STRAIGHT_ACTION = new BehaviourMacroAction(HALT_ACTION, LOOK_STRAIGHT_ACTION);
-    public static final BehaviourMacroAction CONTINUE_ACTION = new BehaviourMacroAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
+    public static final MacroAction HALT_STRAIGHT_ACTION = new MacroAction(HALT_ACTION, LOOK_STRAIGHT_ACTION);
+    public static final MacroAction CONTINUE_ACTION = new MacroAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
     public static final String ACTION_ID = "action";
-    public static final BehaviourMacroAction HALT_SCAN_ACTION = new BehaviourMacroAction(HALT_ACTION, SCAN_ACTION);
+    public static final MacroAction HALT_SCAN_ACTION = new MacroAction(HALT_ACTION, SCAN_ACTION);
     public static final String FULL_SCAN_ID = "fullScan";
-    public static final BehaviourMacroAction TURN_RIGHT_SCAN = new BehaviourMacroAction(TURN_RIGHT_SCAN_ACTION, LOOK_FACE_AT_OBSTACLE_ACTION);
-    public static final BehaviourMacroAction EXPLORE_ACTION = new BehaviourMacroAction(EXPLORE_UNKNOWN_AREA, LOOK_STRAIGHT_ACTION);
+    public static final MacroAction TURN_RIGHT_SCAN = new MacroAction(TURN_RIGHT_SCAN_ACTION, LOOK_FACE_AT_OBSTACLE_ACTION);
+    public static final MacroAction EXPLORE_ACTION = new MacroAction(EXPLORE_UNKNOWN_AREA, LOOK_STRAIGHT_ACTION);
     public static final String EXPLORE_ID = "explore";
 
     /**
@@ -92,7 +92,7 @@ public class TestMacroActionDecisionMaker implements DecisionMaker<MacroActionsS
         return new TestMacroActionDecisionMaker(action);
     }
 
-    private final Supplier<BehaviourMacroAction> actionFunction;
+    private final Supplier<MacroAction> actionFunction;
     private int ct;
 
     /**
@@ -112,19 +112,19 @@ public class TestMacroActionDecisionMaker implements DecisionMaker<MacroActionsS
     /**
      * Fetches the next scripted or deterministic action instruction mapping this testing routine cycle.
      *
-     * @return the computed {@link BehaviourMacroAction} dispatched by the current active testing routine
+     * @return the computed {@link MacroAction} dispatched by the current active testing routine
      */
     @Override
-    public BehaviourMacroAction decide(MacroActionsState state) {
+    public BehaviourAction decide(BehaviourState state) {
         return actionFunction.get();
     }
 
     /**
      * Executes a deterministic exploration script loop modulated across a 160-tick execution cycle.
      *
-     * @return the sequential {@link BehaviourMacroAction} assigned for the current step interval
+     * @return the sequential {@link MacroAction} assigned for the current step interval
      */
-    private BehaviourMacroAction explore() {
+    private MacroAction explore() {
         return switch (ct = (ct + 1) % 160) {
             case 1, 41, 81, 121 -> HALT_SCAN_ACTION;
             case 21, 61, 101 -> TURN_RIGHT_SCAN;
@@ -136,9 +136,9 @@ public class TestMacroActionDecisionMaker implements DecisionMaker<MacroActionsS
     /**
      * Executes a periodic scanning sequence script modulated across a 40-tick execution cycle.
      *
-     * @return the sequential {@link BehaviourMacroAction} assigned for the current step interval
+     * @return the sequential {@link MacroAction} assigned for the current step interval
      */
-    private BehaviourMacroAction fullScan() {
+    private MacroAction fullScan() {
         return switch (ct = (ct + 1) % 40) {
             case 1 -> HALT_SCAN_ACTION;
             case 21 -> TURN_RIGHT_SCAN;
@@ -151,7 +151,7 @@ public class TestMacroActionDecisionMaker implements DecisionMaker<MacroActionsS
      *
      * @return the default constant {@link #HALT_STRAIGHT_ACTION}
      */
-    private BehaviourMacroAction haltStraight() {
+    private MacroAction haltStraight() {
         return HALT_STRAIGHT_ACTION;
     }
 }

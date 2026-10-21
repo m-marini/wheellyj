@@ -29,8 +29,8 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.behaviours.BehaviourAction;
-import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.mmarini.wheelly.behaviours.BehaviourActionOld;
+import org.mmarini.wheelly.behaviours.BehaviourStateOld;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -104,9 +104,9 @@ public interface RewardFunction<S, A> {
     /**
      * Computes the performance scalar reward yielded by executing a specific behavioural action.
      *
-     * @param state  the initial pre-execution {@link BehaviourState} profile snapshot
-     * @param action the chosen {@link BehaviourAction} dispatched to the platform subsystems
-     * @param state1 the resulting post-execution {@link BehaviourState} profile snapshot
+     * @param state  the initial pre-execution {@link BehaviourStateOld} profile snapshot
+     * @param action the chosen {@link BehaviourActionOld} dispatched to the platform subsystems
+     * @param state1 the resulting post-execution {@link BehaviourStateOld} profile snapshot
      * @return the computed performance scalar reward value utilised for policy optimisation updates
      */
     double reward(S state, A action, S state1);

@@ -174,12 +174,12 @@ class MacroActionsBehaviourTest {
         this.markerBehaviour = new MacroActionsBehaviour(DEFAULT_MACRO_ACTION_CONFIG, new Random(SEED));
         markerBehaviour.connect(mockModeller);
         markerBehaviour.decisionMaker(state ->
-                new BehaviourMacroAction(TRACK_MARKER, LOOK_FACE_AT_MARKER_ACTION)
+                new MacroAction(TRACK_MARKER, LOOK_FACE_AT_MARKER_ACTION)
         );
 
         this.exploreBehaviour = new MacroActionsBehaviour(DEFAULT_MACRO_ACTION_CONFIG, new Random(SEED));
         exploreBehaviour.decisionMaker(state ->
-                new BehaviourMacroAction(EXPLORE_UNKNOWN_AREA, LOOK_FACE_AT_OBSTACLE_ACTION));
+                new MacroAction(EXPLORE_UNKNOWN_AREA, LOOK_FACE_AT_OBSTACLE_ACTION));
         exploreBehaviour.connect(mockModeller);
     }
 

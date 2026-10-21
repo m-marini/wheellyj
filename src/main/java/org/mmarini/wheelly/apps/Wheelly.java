@@ -99,7 +99,7 @@ import static org.mmarini.yaml.Utils.fromFile;
 public class Wheelly {
     public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-3.0";
     public static final int LAYOUT_INTERVAL = 300;
-    public static final BehaviourMacroAction HALT_ACTION = new BehaviourMacroAction(MoveActionId.HALT_ACTION, HeadActionId.LOOK_STRAIGHT_ACTION);
+    public static final MacroAction HALT_ACTION = new MacroAction(MoveActionId.HALT_ACTION, HeadActionId.LOOK_STRAIGHT_ACTION);
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
 
     static {
@@ -192,8 +192,8 @@ public class Wheelly {
     private List<JFrame> allFrames;
     private RobotApi robot;
     private RobotControllerApi controller;
-    private WorldModeller worldModeller;
-    private GymAdapter<MacroActionsState, BehaviourMacroAction> environment;
+    private WorldModeller perceptor;
+    private GymAdapter<MacroActionsStateOld, MacroAction> environment;
     private BehaviourApi behaviuor;
     private Agent agent;
     private JFrame frame;
@@ -242,7 +242,7 @@ public class Wheelly {
         this.controller = AppYaml.controllerFromJson(config);
 
         logger.atInfo().log("Creating world modeller ...");
-        this.worldModeller = AppYaml.modellerFromJson(config);
+        this.perceptor = AppYaml.modellerFromJson(config);
 
         logger.atInfo().log("Creating behaviour ...");
         this.behaviuor = AppYaml.behaviourFromJson(config);
@@ -251,7 +251,7 @@ public class Wheelly {
         this.environment = AppYaml.adapterfromFile(config);
 
         logger.atInfo().log("Create reward function ...");
-        RewardFunction<MacroActionsState, BehaviourMacroAction> rewardFunc = AppYaml.rewardFromJson(config);
+        RewardFunction<MacroActionsStateOld, MacroAction> rewardFunc = AppYaml.rewardFromJson(config);
 
         logger.atInfo().log("Creating agent ...");
         this.agent = Agent.fromFile(
@@ -265,13 +265,15 @@ public class Wheelly {
 
         controller.connectRobot(robot);
 
-        worldModeller.setRobotSpec(robot.robotSpec());
-        worldModeller.connectController(controller);
+        perceptor.setRobotSpec(robot.robotSpec());
+        perceptor.connectController(controller);
+
+        perceptor.decisionMaker(behaviuor);
 
         environment.agent(agent);
         if (environment instanceof MacroActionsAdapter adapter) {
             // TODO worldModeller.setDecisionMaker(adapter);
-            adapter.worldModelSpec(worldModeller.worldModelSpec());
+            adapter.worldModelSpec(perceptor.worldModelSpec());
             adapter.rewardFunc(rewardFunc);
         }
 
@@ -343,7 +345,7 @@ public class Wheelly {
                 .observeOn(Schedulers.io())
                 .subscribe(this::onShutdownCompleted);
 
-        worldModeller.onDecision(this::onWorldModellerDecision);
+        perceptor.onDecision(this::onWorldModellerDecision);
         for (JFrame allFrame : allFrames) {
             allFrame.addWindowListener(new WindowAdapter() {
                 @Override
@@ -446,7 +448,7 @@ public class Wheelly {
 
      */
 
-    private BehaviourMacroAction decide(MacroActionsState state) {
+    private MacroAction decide(MacroActionsStateOld state) {
         return active.get()
                 ? environment.decide(state)
                 : HALT_ACTION;
@@ -486,7 +488,7 @@ public class Wheelly {
      * @param actionEvent the event
      */
     private void onClearMapButton(ActionEvent actionEvent) {
-        worldModeller.clearRadarMap();
+        perceptor.clearRadarMap();
     }
 
     private void onControllerShutdown() {

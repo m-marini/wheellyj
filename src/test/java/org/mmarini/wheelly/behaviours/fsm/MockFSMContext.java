@@ -28,10 +28,8 @@
 
 package org.mmarini.wheelly.behaviours.fsm;
 
-import io.reactivex.rxjava3.core.Single;
-import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.mmarini.wheelly.behaviours.BehaviourMacroAction;
 import org.mmarini.wheelly.behaviours.HeadActionId;
+import org.mmarini.wheelly.behaviours.MacroAction;
 import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
@@ -39,7 +37,6 @@ import org.mmarini.wheelly.perception.WorldModelBuilder;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.behaviours.HeadActionId.CONTINUE_HEAD_ACTION;
@@ -61,12 +58,6 @@ public class MockFSMContext implements FSMContext {
         this.path = path;
     }
 
-    private Single<List<Point2D>> path() {
-        return Single.just(path)
-                .subscribeOn(Schedulers.io())
-                .delay(PATH_TIME, TimeUnit.MILLISECONDS);
-    }
-
     @Override
     public WorldModel worldModel() {
         return model;
@@ -75,17 +66,17 @@ public class MockFSMContext implements FSMContext {
     public static class EnvFSMContextBuilder {
 
         private final List<MockFSMContext> contexts;
-        private BehaviourMacroAction agentAction;
+        private MacroAction agentAction;
         private List<Point2D> path;
         private WorldModelBuilder builder;
 
         protected EnvFSMContextBuilder(List<MockFSMContext> contexts) {
             this.contexts = requireNonNull(contexts);
-            this.agentAction = new BehaviourMacroAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
+            this.agentAction = new MacroAction(CONTINUE_MOVE_ACTION, CONTINUE_HEAD_ACTION);
             this.path = List.of();
         }
 
-        public EnvFSMContextBuilder action(BehaviourMacroAction agentAction) {
+        public EnvFSMContextBuilder action(MacroAction agentAction) {
             this.agentAction = requireNonNull(agentAction);
             return this;
         }
@@ -101,7 +92,7 @@ public class MockFSMContext implements FSMContext {
         }
 
         public EnvFSMContextBuilder action(MoveActionId moveActionId, HeadActionId headActionId) {
-            return action(new BehaviourMacroAction(moveActionId, headActionId));
+            return action(new MacroAction(moveActionId, headActionId));
         }
 
         public EnvFSMContextBuilder add() {
@@ -113,7 +104,7 @@ public class MockFSMContext implements FSMContext {
             return world(builder).add();
         }
 
-        public EnvFSMContextBuilder add(BehaviourMacroAction action, WorldModelBuilder builder) {
+        public EnvFSMContextBuilder add(MacroAction action, WorldModelBuilder builder) {
             return action(action).world(builder).add();
         }
 

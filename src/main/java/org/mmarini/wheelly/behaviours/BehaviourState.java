@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.behaviours;
 
-import org.mmarini.wheelly.perception.WithWorldModel;
+import org.mmarini.wheelly.perception.WorldModel;
 
 /**
  * Defines the contract for an immutable snapshot of the reinforcement learning
@@ -39,5 +39,11 @@ import org.mmarini.wheelly.perception.WithWorldModel;
  * and behavioural modelling.
  * </p>
  */
-public interface BehaviourState extends WithWorldModel {
+public interface BehaviourState {
+    HeadActionId headActionId();
+
+    MoveActionId moveActionId();
+
+    WorldModel worldModel();
+
 }
