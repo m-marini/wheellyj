@@ -49,7 +49,10 @@ import org.mmarini.wheelly.behaviours.*;
 import org.mmarini.wheelly.control.RobotController;
 import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.control.RobotStatus;
-import org.mmarini.wheelly.gyms.*;
+import org.mmarini.wheelly.gyms.GymAdapter;
+import org.mmarini.wheelly.gyms.MacroActionsAdapter;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.gyms.WithRewardCallback;
 import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.GridMap;
@@ -267,7 +270,7 @@ public class Wheelly {
 
         environment.agent(agent);
         if (environment instanceof MacroActionsAdapter adapter) {
-            worldModeller.setDecisionMaker(adapter);
+            // TODO worldModeller.setDecisionMaker(adapter);
             adapter.worldModelSpec(worldModeller.worldModelSpec());
             adapter.rewardFunc(rewardFunc);
         }
@@ -288,11 +291,14 @@ public class Wheelly {
         if (inference != null) {
             this.modelDumper = InferenceFileWriter.fromFile(
                     new File(this.args.getString("inference")));
+            /* TODO
             switch (environment) {
                 case DLEnvironment env -> env.inferenceWriter(modelDumper);
                 default -> {
                 }
             }
+
+             */
         }
 
         if (!(robot instanceof SimRobot)) {
@@ -337,7 +343,7 @@ public class Wheelly {
                 .observeOn(Schedulers.io())
                 .subscribe(this::onShutdownCompleted);
 
-        worldModeller.onDecision(this::onWorldModellerDecision);
+        // TODO worldModeller.onDecision(this::onWorldModellerDecision);
         for (JFrame allFrame : allFrames) {
             allFrame.addWindowListener(new WindowAdapter() {
                 @Override
@@ -680,11 +686,14 @@ public class Wheelly {
 
         // Dumps world model
         if (modelDumper != null) {
+            /* TODO
             try {
                 modelDumper.write(worldModel, inferenceResult._2);
             } catch (IOException e) {
                 logger.atError().setCause(e).log("Error dumping model");
             }
+
+             */
         }
 
         long robotClock = robotStatus.robotTime();
