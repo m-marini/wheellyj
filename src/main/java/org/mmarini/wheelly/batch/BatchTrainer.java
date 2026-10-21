@@ -31,8 +31,8 @@ package org.mmarini.wheelly.batch;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.mmarini.rl.agents.RLDatasetIterator;
-import org.mmarini.rl.agents.TrainingKpis;
+import org.mmarini.wheelly.rlagents.RLDatasetIterator;
+import org.mmarini.wheelly.rlagents.TrainingKpis;
 import org.mmarini.wheelly.storage.serde.BinArrayFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,13 +138,13 @@ public class BatchTrainer {
                 return s.datasetIterator(datasetIterator);
             });
             // Train agent
-            BatchAgent trained = agent.train(datasetIterator, numEpochs);
+            agent.train(datasetIterator, numEpochs);
             // Save agent
-            trained.save();
+            agent.save();
             // Completes the progress info flow
             progressInfo.onComplete();
             // Sets the trained agent into the batch status
-            return this.status.updateAndGet(s -> s.agent(trained)).agent();
+            return this.status.updateAndGet(s -> s.agent(agent)).agent();
         }
     }
 }

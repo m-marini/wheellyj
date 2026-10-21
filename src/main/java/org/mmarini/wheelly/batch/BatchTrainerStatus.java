@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.batch;
 
-import org.mmarini.rl.agents.RLDatasetIterator;
+import org.mmarini.wheelly.rlagents.RLDatasetIterator;
 
 import java.util.Objects;
 
@@ -47,10 +47,8 @@ public record BatchTrainerStatus(BatchAgent agent, RLDatasetIterator datasetIter
      * @param datasetIterator dataset iterator
      * @param stop            true if stop requested
      */
-    public BatchTrainerStatus(BatchAgent agent, RLDatasetIterator datasetIterator, boolean stop) {
-        this.agent = requireNonNull(agent);
-        this.datasetIterator = datasetIterator;
-        this.stop = stop;
+    public BatchTrainerStatus {
+        requireNonNull(agent);
     }
 
     /**

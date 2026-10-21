@@ -39,7 +39,7 @@ import org.mmarini.Tuple2;
 import org.mmarini.rl.envs.ExecutionResultOld;
 import org.mmarini.rl.envs.IntSignalSpec;
 import org.mmarini.rl.envs.SignalSpecOld;
-import org.mmarini.wheelly.batch.BatchAgent;
+import org.mmarini.wheelly.batch.BatchAgentOld;
 import org.mmarini.wheelly.gyms.ExecutionResult;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.wheelly.utils.WithShutdownCompletable;
@@ -74,7 +74,7 @@ import static java.util.Objects.requireNonNull;
  * and model update.
  * </p>
  */
-public class DLAgent implements BatchAgent, WithShutdownCompletable {
+public class DLAgent implements BatchAgentOld, Agent, WithShutdownCompletable {
     public static final String NUM_EPOCHS_ID = "numEpochs";
     public static final String TRAJECTORY_SIZE_ID = "trajectorySize";
     public static final String MODEL_FILENAME = "model.zip";
@@ -495,12 +495,11 @@ public class DLAgent implements BatchAgent, WithShutdownCompletable {
     }
 
     @Override
-    public DLAgent train(RLDatasetIterator datasetIterator, int numEpochs) {
+    public void train(RLDatasetIterator datasetIterator, int numEpochs) {
         ComputationGraph network = status.get().network();
         network.fit(datasetIterator, numEpochs);
         float avgReward = datasetIterator.avgReward();
         status.updateAndGet(s -> s.averageReward(avgReward));
-        return this;
     }
 
     @Override

@@ -1,0 +1,542 @@
+/*
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
+package org.mmarini.wheelly.rlagents;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.rxjava3.subjects.CompletableSubject;
+import org.deeplearning4j.nn.conf.layers.OutputLayer;
+import org.deeplearning4j.nn.graph.ComputationGraph;
+import org.mmarini.Tuple2;
+import org.mmarini.rl.envs.IntSignalSpec;
+import org.mmarini.rl.envs.SignalSpecOld;
+import org.mmarini.wheelly.batch.BatchAgent;
+import org.mmarini.wheelly.gyms.ExecutionResult;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
+import org.mmarini.wheelly.utils.WithShutdownCompletable;
+import org.mmarini.yaml.Locator;
+import org.mmarini.yaml.Utils;
+import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.api.rng.Random;
+import org.nd4j.linalg.factory.Nd4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
+
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
+
+/**
+ * The DLAgent class is the main Deep Learning Reinforcement Learning agent.
+ * It implements a Temporal Difference Actor-Critic algorithm using a DeepLearning4J
+ *
+ * <p>
+ * It does not implement all the neural-network calculations itself,
+ * but coordinates the environment interaction, experience collection, data preparation, training,
+ * and model update.
+ * </p>
+ */
+public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
+    public static final String NUM_EPOCHS_ID = "numEpochs";
+    public static final String TRAJECTORY_SIZE_ID = "trajectorySize";
+    public static final String MODEL_FILENAME = "model.zip";
+    public static final String AGENT_FILENAME = "agent.yml";
+    public static final String BATCH_SIZE_ID = "batchSize";
+    public static final String AVG_REWARD_ID = "avgReward";
+    public static final String ALPHAS_ID = "alphas";
+    public static final String BETA_ID = "beta";
+    private static final Logger logger = LoggerFactory.getLogger(RLAgent.class);
+    private static final String SCHEMA_NAME = "https://mmarini.org/wheelly/dl-agent-schema-0.1";
+
+    /**
+     * Returns the agent
+     *
+     * @param filePath           the file path for agent save
+     * @param network            the neural network
+     * @param random             the random number generator
+     * @param numEpochs          the number of epochs to train
+     * @param batchSize          the mini batch size
+     * @param alphas             the policy change factors
+     * @param beta               the average reward factor
+     * @param avgReward          the average reward
+     * @param concurrentTraining true if concurrent training
+     */
+    protected static RLAgent create(File filePath, ComputationGraph network, Random random, int numEpochs,
+                                    int trajectorySize, int batchSize,
+                                    Map<String, Float> alphas, float beta, float avgReward,
+                                    boolean concurrentTraining) {
+        TrajectoryBuffer trajectoryBuffer = new TrajectoryBuffer(trajectorySize);
+        AtomicReference<RLAgentStatus> status = new AtomicReference<>(new RLAgentStatus(network, null,
+                trajectoryBuffer, null, false, avgReward, false, true));
+        return new RLAgent(filePath, random, numEpochs, batchSize, beta, alphas, concurrentTraining,
+                status, new ArrayList<>(), new ArrayList<>());
+    }
+
+    /**
+     * Returns the agent
+     *
+     * @param stateSpec          the state specification
+     * @param actionSpec         the action specification
+     * @param network            the network
+     * @param random             the random number generator
+     * @param numEpochs          the number of epochs to train
+     * @param numSteps           the minimum length of training trajectory
+     * @param batchSize          the mini batch size
+     * @param alphas             the policy change factors
+     * @param beta               the average rewards factor
+     * @param filePath           the file path for the agent save
+     * @param concurrentTraining true if concurrent training
+     */
+    public static RLAgent create(Map<String, SignalSpecOld> stateSpec, Map<String, SignalSpecOld> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, File filePath, boolean concurrentTraining) {
+        RLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, 0, concurrentTraining);
+        agent.validate(stateSpec, actionSpec);
+        return agent;
+    }
+
+    /**
+     * Returns the agent from the file path
+     *
+     * @param filePath the file path
+     * @param random   the random number generator seed
+     * @throws IOException in case of error
+     */
+    public static RLAgent fromFile(File filePath, Random random) throws IOException {
+        JsonNode json = Utils.fromFile(new File(filePath, AGENT_FILENAME));
+        WheellyJsonSchemas.instance().validateOrThrow(json, SCHEMA_NAME);
+        ComputationGraph network = ComputationGraph.load(new File(filePath, MODEL_FILENAME), true);
+        int numEpochs = Locator.locate(NUM_EPOCHS_ID).getNode(json).asInt();
+        int trajectorySize1 = Locator.locate(TRAJECTORY_SIZE_ID).getNode(json).asInt();
+        int batchSize = Locator.locate(BATCH_SIZE_ID).getNode(json).asInt();
+        Map<String, Float> alphas = Locator.locate(ALPHAS_ID).propertyNames(json)
+                .mapValues(locator -> (float) locator.getNode(json).asDouble())
+                .toMap();
+        float beta = (float) Locator.locate(BETA_ID).getNode(json).asDouble();
+        float avgReward = (float) Locator.locate(AVG_REWARD_ID).getNode(json).asDouble();
+        return create(filePath, network, random, numEpochs, trajectorySize1, batchSize, alphas, beta, avgReward, false);
+    }
+
+    private final File filePath;
+    private final Random random;
+    private final int numEpochs;
+    private final int batchSize;
+    private final Map<String, Float> alphas;
+    private final float beta;
+    private final boolean concurrentTraining;
+    private final AtomicReference<RLAgentStatus> status;
+    private final List<Consumer<TrainingKpis>> onKpis;
+    private final List<Consumer<INDArray>> onRewards;
+    private final CompletableSubject shutdownProcessor;
+
+    /**
+     * Creates the agent
+     *
+     * @param filePath           the file path for agent save
+     * @param random             the random number generator
+     * @param numEpochs          the number of epochs to train
+     * @param batchSize          the mini batch size
+     * @param beta               the average reward factor
+     * @param alphas             the policy action factors
+     * @param concurrentTraining true if concurrent training
+     * @param status             the agent status
+     * @param onKpis             the KPIS callback list
+     * @param onRewards          the rewards callback list
+     */
+    protected RLAgent(File filePath, Random random, int numEpochs, int batchSize,
+                      float beta, Map<String, Float> alphas, boolean concurrentTraining,
+                      AtomicReference<RLAgentStatus> status, List<Consumer<TrainingKpis>> onKpis,
+                      List<Consumer<INDArray>> onRewards) {
+        this.filePath = requireNonNull(filePath);
+        this.random = requireNonNull(random);
+        this.numEpochs = numEpochs;
+        this.batchSize = batchSize;
+        this.beta = beta;
+        this.alphas = alphas;
+        this.concurrentTraining = concurrentTraining;
+        this.status = requireNonNull(status);
+        this.onKpis = onKpis;
+        this.onRewards = onRewards;
+        this.shutdownProcessor = CompletableSubject.create();
+    }
+
+    /**
+     * Chooses an action.
+     * <p>
+     * It delegates the actual neural-network processing to NNMediator
+     * </p>
+     */
+    public Map<String, INDArray> act(Map<String, INDArray> state) {
+        return createDataGenerator(status.get().network()).chooseAction(random, state);
+    }
+
+    @Override
+    public Map<String, Float> alphas() {
+        return alphas;
+    }
+
+    @Override
+    public float avgReward() {
+        return status.get().averageReward();
+    }
+
+    /**
+     * Before saving, backup() can rename the existing files to timestamped backups.
+     */
+    @Override
+    public void backup() {
+        if (filePath != null) {
+            String suffix = format("-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS", Calendar.getInstance());
+            File ymlFile = new File(filePath, AGENT_FILENAME);
+            if (ymlFile.exists() && ymlFile.canWrite()) {
+                // rename the file to back up
+                File backupYamlFile = new File(ymlFile.getParentFile(), "agent" + suffix + ".yml");
+                ymlFile.renameTo(backupYamlFile);
+                logger.atInfo().log("Backup yaml file {}", backupYamlFile);
+            }
+            File modelFile = new File(filePath, MODEL_FILENAME);
+            if (modelFile.exists() && modelFile.canWrite()) {
+                File backupBinFile = new File(modelFile.getParentFile(), "model" + suffix + ".zip");
+                modelFile.renameTo(backupBinFile);
+                logger.atInfo().log("Backup bin file {}", backupBinFile);
+            }
+            save();
+        }
+    }
+
+    @Override
+    public int batchSize() {
+        return batchSize;
+    }
+
+    @Override
+    public float beta() {
+        return beta;
+    }
+
+    /**
+     * Invokes registered kpis callbacks
+     *
+     * @param kpis the KPIS
+     */
+    private void callOnKpis(TrainingKpis kpis) {
+        for (Consumer<TrainingKpis> callback : onKpis) {
+            callback.accept(kpis);
+        }
+    }
+
+    /**
+     * Invokes registered rewards callbacks
+     *
+     * @param rewards the rewards
+     */
+    private void callOnRewards(INDArray rewards) {
+        for (Consumer<INDArray> callback : onRewards) {
+            callback.accept(rewards);
+        }
+    }
+
+    @Override
+    public void close() {
+        RLAgentStatus st = status.updateAndGet(s -> s.shuttingDown(true));
+        logger.atInfo().log("Closing agent ...");
+        if (!st.training()) {
+            onShutdownCompletion();
+        }
+    }
+
+    /**
+     * Sets the concurrent training flag
+     *
+     * @param concurrentTraining true if concurrent training
+     */
+    public RLAgent concurrentTraining(boolean concurrentTraining) {
+        return this.concurrentTraining != concurrentTraining
+                ? new RLAgent(filePath, random, numEpochs, batchSize, beta, alphas, concurrentTraining, status, onKpis, onRewards)
+                : this;
+    }
+
+    /**
+     * Returns the NN mediator
+     *
+     * @param network the network
+     */
+    NNRLTrainingDataGenerator createDataGenerator(ComputationGraph network) {
+        return new NNRLTrainingDataGenerator(network, alphas, beta);
+    }
+
+    @Override
+    public RLAgent init() {
+        // TODO recreate an initial network
+        return this;
+    }
+
+    /**
+     * Returns the JSON agent configuration
+     */
+    private JsonNode json() {
+        RLAgentStatus st = status.get();
+        ObjectNode jsonNode = Utils.objectMapper.createObjectNode()
+                .put("$schema", SCHEMA_NAME)
+                .put("class", RLAgent.class.getCanonicalName());
+        ObjectNode alphasJson = Utils.objectMapper.createObjectNode();
+        alphas.forEach(alphasJson::put);
+        jsonNode.set(ALPHAS_ID, alphasJson);
+        return jsonNode.put(BETA_ID, beta)
+                .put(AVG_REWARD_ID, st.averageReward())
+                .put(NUM_EPOCHS_ID, numEpochs)
+                .put(TRAJECTORY_SIZE_ID, st.trajectoryBuffer().bufferSize())
+                .put(BATCH_SIZE_ID, batchSize);
+    }
+
+    public void learning(boolean learning) {
+        status.updateAndGet(s ->
+                s.learning(learning));
+    }
+
+    /**
+     *
+     * Returns the network
+     */
+    public ComputationGraph network() {
+        return status.get().network();
+    }
+
+    @Override
+    public int numEpochs() {
+        return numEpochs;
+    }
+
+    /**
+     * It is the central part of the learning loop.
+     * <p>
+     * It receives the result of one interaction with the environment.<br/>
+     * The result is passed to the current DLAgentStatus to adds the result to the TrajectoryBuffer.<br/>
+     * When the buffer becomes full and learning is enabled, DLAgentStatus.observe() creates a Trajectory and
+     * a cloned trainingNetwork<br/>
+     * The DLAgent then starts training.
+     * </p>
+     * <p></p>
+     * The class supports two modes
+     * <ul>
+     *     <li>Synchronous training is executed directly and the agent waits until training is completed</li>
+     *     <li>Concurrent training is executed asynchronously allowing the agent to continue interacting
+     *     with the environment while the training computation runs</li>
+     * </ul>
+     *
+     * </p>
+     *
+     * @param result the execution result
+     */
+    @Override
+    public void observe(ExecutionResult result) {
+        logger.atDebug().log("Observing result ...");
+        RLAgentStatus st = status.updateAndGet(s -> s.observe(result));
+        if (!st.shuttingDown()) {
+            // Shutdown not requested
+            ComputationGraph trainingNetwork = st.trainingNetwork();
+            if (trainingNetwork != null) {
+                Trajectory trajectory = st.trajectory();
+                callOnRewards(trajectory.rewards());
+                if (concurrentTraining) {
+                    Completable.fromRunnable(() -> train(trainingNetwork, trajectory))
+                            .subscribeOn(Schedulers.computation())
+                            .subscribe();
+
+                } else {
+                    train(trainingNetwork, trajectory);
+                }
+            } else {
+                logger.atDebug().log("Trajectory size {}", st.trajectoryBuffer().size());
+            }
+        }
+        logger.atDebug().log("Observed result.");
+    }
+
+    /**
+     * Adds the kpis callback function
+     *
+     * @param callback the callback function
+     */
+    public RLAgent onKpis(Consumer<TrainingKpis> callback) {
+        this.onKpis.add(callback);
+        return this;
+    }
+
+    /**
+     * Adds the reward callback function
+     *
+     * @param callback the callback function
+     */
+    public RLAgent onRewards(Consumer<INDArray> callback) {
+        this.onRewards.add(callback);
+        return this;
+    }
+
+    /**
+     * Handle the shutdown completion
+     */
+    private void onShutdownCompletion() {
+        save();
+        status.get().close();
+        shutdownProcessor.onComplete();
+        logger.atInfo().log("Agent closed.");
+    }
+
+    /**
+     * Predicts the outputs from the state
+     *
+     * @param state the state
+     */
+    public Stream<Tuple2<String, INDArray>> predictFromState(Map<String, INDArray> state) {
+        return createDataGenerator(network()).predictFromState(state);
+    }
+
+    @Override
+    public Completable readShutdown() {
+        return shutdownProcessor;
+    }
+
+    @Override
+    public void save() {
+        try {
+            RLAgentStatus st = status.get();
+            logger.atInfo().log("Saving model into \"{}\" ...", filePath);
+            filePath.mkdirs();
+            JsonNode yaml = json();
+            File agentFile = new File(filePath, AGENT_FILENAME);
+            agentFile.delete();
+            Utils.objectMapper.writerWithDefaultPrettyPrinter().writeValue(agentFile, yaml);
+            File modelFile = new File(filePath, MODEL_FILENAME);
+            modelFile.delete();
+            st.network().save(modelFile, true);
+            logger.atInfo().log("Saved model into \"{}\"", filePath);
+        } catch (IOException e) {
+            logger.atError().setCause(e).log("Error saving model in {}", filePath);
+        }
+    }
+
+    /**
+     *
+     * Returns the agent status
+     */
+    RLAgentStatus status() {
+        return status.get();
+    }
+
+    /**
+     * Trains the network and store the result
+     *
+     * @param trainingNetwork the training network
+     * @param trajectory      the trajectory
+     */
+    private void train(ComputationGraph trainingNetwork, Trajectory trajectory) {
+        logger.atInfo().log("Training network ...");
+
+        double avg;
+        try (TrajectoryDatasetIterator iterator =
+                     TrajectoryDatasetIterator.create(trainingNetwork, trajectory, batchSize,
+                             status.get().averageReward(), alphas, beta,
+                             () -> status.get().shuttingDown())) {
+            iterator.onKpis(this::callOnKpis);
+            trainingNetwork.clearLayersStates();
+            Nd4j.getMemoryManager().invokeGc();
+            trainingNetwork.fit(iterator, numEpochs);
+            avg = iterator.avgReward();
+        }
+
+        logger.atInfo().log("Trained network");
+        RLAgentStatus st = status.updateAndGet(s ->
+                s.trained(trainingNetwork, (float) avg));
+        if (st.shuttingDown()) {
+            onShutdownCompletion();
+        }
+    }
+
+    @Override
+    public void train(RLDatasetIterator datasetIterator, int numEpochs) {
+        ComputationGraph network = status.get().network();
+        network.fit(datasetIterator, numEpochs);
+        float avgReward = datasetIterator.avgReward();
+        status.updateAndGet(s -> s.averageReward(avgReward));
+    }
+
+    @Override
+    public long trajectorySize() {
+        return status.get().trajectoryBuffer().bufferSize();
+    }
+
+    /**
+     * Validates the agent
+     *
+     * @param stateSpec  the state specification
+     * @param actionSpec the action specification
+     */
+    public void validate(Map<String, SignalSpecOld> stateSpec, Map<String, SignalSpecOld> actionSpec) {
+        ComputationGraph network = status.get().network();
+        String missingLayers = network.getConfiguration().getNetworkInputs().stream()
+                .filter(id -> !stateSpec.containsKey(id))
+                .sorted()
+                .reduce((a, b) -> a + ", " + b)
+                .orElse(null);
+        if (missingLayers != null) {
+            throw new IllegalArgumentException(format("Missing input layers [%s]", missingLayers));
+        }
+        List<String> networkOutputs = network.getConfiguration().getNetworkOutputs();
+        missingLayers = actionSpec.keySet()
+                .stream()
+                .filter(id -> !networkOutputs.contains(id))
+                .sorted()
+                .reduce((a, b) -> a + ", " + b)
+                .orElse(null);
+        if (missingLayers != null) {
+            throw new IllegalArgumentException(format("Missing output layers [%s]", missingLayers));
+        }
+        // Check action size
+        for (String id : actionSpec.keySet()) {
+            long numNetOut = ((OutputLayer) network.getLayer(id).conf().getLayer()).getNOut();
+            long numActions = ((IntSignalSpec) actionSpec.get(id)).numValues();
+            if (numNetOut != numActions) {
+                throw new IllegalArgumentException(
+                        format("Unmatched number of actions of \"%s\": %d expected %d", id, numNetOut, numActions)
+                );
+            }
+        }
+    }
+
+}

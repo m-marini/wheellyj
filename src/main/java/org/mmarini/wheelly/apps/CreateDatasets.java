@@ -41,7 +41,7 @@ import org.mmarini.rl.envs.DLEnvironment;
 import org.mmarini.rl.envs.GymApi;
 import org.mmarini.rl.envs.RewardFunctionOld;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.batch.BatchAgent;
+import org.mmarini.wheelly.batch.BatchAgentOld;
 import org.mmarini.wheelly.batch.DatasetBuilder;
 import org.mmarini.wheelly.batch.ProgressInfo;
 import org.mmarini.wheelly.control.RobotControllerApi;
@@ -187,7 +187,7 @@ public class CreateDatasets {
         environment.setRewardFunc(rewardFunc);
 
         // Creates agent
-        BatchAgent agent = (BatchAgent) Agent.fromFile(new File(
+        BatchAgentOld agent = (BatchAgentOld) Agent.fromFile(new File(
                 Locator.locate(AGENT_ID)
                         .getNode(config)
                         .asText()));

@@ -49,8 +49,8 @@ import org.mmarini.rl.envs.DLEnvironment;
 import org.mmarini.rl.envs.GymApi;
 import org.mmarini.rl.envs.RewardFunctionOld;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.batch.BatchAgent;
-import org.mmarini.wheelly.batch.BatchTrainer;
+import org.mmarini.wheelly.batch.BatchAgentOld;
+import org.mmarini.wheelly.batch.BatchTrainerOld;
 import org.mmarini.wheelly.batch.ProgressInfo;
 import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.perception.PerceptionConnector;
@@ -141,10 +141,10 @@ public class BatchTraining {
     private final JProgressBar progressBar;
     private final JTextField infoBar;
     private final KpisPanel kpisPanel;
-    private BatchTrainer trainer;
+    private BatchTrainerOld trainer;
     private JFrame frame;
     private int numEpochs;
-    private BatchAgent agent;
+    private BatchAgentOld agent;
     private DLEnvironment environment;
     private StatsListener statsListener;
     private KeyBinWriter kpisWriter;
@@ -214,7 +214,7 @@ public class BatchTraining {
         // Creates agent
 
         logger.atInfo().log("Creating agent ...");
-        this.agent = (BatchAgent) Agent.fromFile(
+        this.agent = (BatchAgentOld) Agent.fromFile(
                 new File(Locator.locate("agent").getNode(config).asText()));
         environment.connect((PerceptionConnector) agent);
 
@@ -422,7 +422,7 @@ public class BatchTraining {
                 dlAgent.network().setListeners(listener);
             }
         }
-        this.trainer = new BatchTrainer(agent, stateFiles, actionMaskFiles, rewardFile);
+        this.trainer = new BatchTrainerOld(agent, stateFiles, actionMaskFiles, rewardFile);
         trainer.readProgressInfo()
                 .observeOn(Schedulers.io())
                 .throttleLatest(PROGRESS_INTERVAL, TimeUnit.MILLISECONDS)
