@@ -48,12 +48,7 @@
 
     <logger name="com.networknt.schema" level="INFO"/>
 
-    <logger name="org.mmarini.rl.agents.DLAgent" level="INFO"/>
-    <logger name="org.mmarini.rl.agents.TrajectoryDatasetIterator" level="INFO"/>
-
-    <logger name="org.mmarini.wheelly.robots.SimRobotObstacleTest" level="INFO"/>
     <logger name="org.mmarini.wheelly.control.RobotControllerStatus" level="INFO"/>
-    <logger name="org.mmarini.wheelly.robots.SimRobot" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.engines.MappingState" level="INFO"/>
 
@@ -62,9 +57,8 @@
     <logger name="org.mmarini.wheelly.mqtt.MockMqttClient" level="DEBUG"/>
     <logger name="org.mmarini.wheelly.mqtt.RemoteDevice" level="DEBUG"/>
 
-
-    <logger name="org.mmarini.wheelly.sockets.LineSocket" level="DEBUG"/>
-
+    <logger name="org.mmarini.wheelly.robots.SimRobot" level="INFO"/>
+    <logger name="org.mmarini.wheelly.robots.SimRobotObstacleTest" level="INFO"/>
     <logger name="org.mmarini.wheelly.rrt.AStar" level="INFO"/>
 
 

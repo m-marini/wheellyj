@@ -63,7 +63,6 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static org.mmarini.rl.agents.DLAgent.*;
 
 /**
  * Builds DL Agent
@@ -435,6 +434,13 @@ public class RLAgentBuilder {
                 IDENTITY_RES_NET_BLOCK_ID, this::buildIdentityResNetBlock
         );
     }
+
+    public static final String NUM_EPOCHS_ID = "numEpochs";
+    public static final String TRAJECTORY_SIZE_ID = "trajectorySize";
+    public static final String BATCH_SIZE_ID = "batchSize";
+    public static final String AVG_REWARD_ID = "avgReward";
+    public static final String ALPHAS_ID = "alphas";
+    public static final String BETA_ID = "beta";
 
     /**
      * Returns the agent

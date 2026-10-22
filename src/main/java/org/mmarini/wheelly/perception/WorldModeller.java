@@ -182,6 +182,9 @@ public class WorldModeller implements Perceptor {
                 onDecision.accept(Tuple2.of(model, command));
             }
         }
+        if (onDecision != null) {
+            onDecision.accept(Tuple2.of(model, command));
+        }
     }
 
     /**

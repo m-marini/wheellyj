@@ -31,6 +31,7 @@ package org.mmarini.wheelly.behaviours;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.perception.DecisionMaker;
+import org.mmarini.wheelly.perception.WithDecisionCallback;
 import org.mmarini.wheelly.perception.WithDecisionMaker;
 import org.mmarini.wheelly.perception.WorldModel;
 import org.mmarini.wheelly.robots.RobotCommand;
@@ -43,11 +44,12 @@ import java.io.File;
  * Manages the interaction bridge between the underlying robot controller and the TD learning agent.
  * <p>
  * This interface unifies operational telemetry streaming, macro-action dispatching, inference mapping,
- * and multi-input signal specification definitions into a centralized execution lifecycle container
+ * and multi-input signal specification definitions into a centralised execution lifecycle container
  * for autonomous robotic behaviors.
  * </p>
  */
-public interface BehaviourApi extends DecisionMaker<WorldModel, RobotCommand>, WithDecisionMaker<BehaviourState, BehaviourAction> {
+public interface BehaviourApi extends DecisionMaker<WorldModel, RobotCommand>,
+        WithDecisionMaker<BehaviourState, BehaviourAction>, WithDecisionCallback<BehaviourState, BehaviourAction> {
 
     /**
      * Parses and instantiates a concrete {@code EnvironmentApi} implementation from a JSON document configuration block.

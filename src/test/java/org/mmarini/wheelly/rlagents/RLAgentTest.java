@@ -91,8 +91,7 @@ class RLAgentTest {
                 .weightInit(WeightInit.XAVIER)
                 .graphBuilder()
                 .addInputs(MAP_SIGNAL_ID)
-                //.setInputTypes(InputType.convolutional(GRID_SIZE, GRID_SIZE, NUM_CHANNELS))
-                .setInputTypes(InputType.feedForward(GRID_SIZE))
+                .setInputTypes(InputType.convolutional(GRID_SIZE, GRID_SIZE, NUM_CHANNELS))
                 .addLayer(CRITIC_ID,
                         new OutputLayer.Builder()
                                 .nOut(1)
@@ -308,6 +307,6 @@ class RLAgentTest {
         agent = RLAgent.create(FILE, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, REWARD, false);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
                 agent.validate(withSpec));
-        assertThat(ex.getMessage(), matchesPattern("Wrong output size: \\[head\\] expected \\[1, 7\\] actual \\[1, 6\\]"));
+        assertThat(ex.getMessage(), matchesPattern("Wrong output size: \\[head] expected \\[1, 7] actual \\[1, 6]"));
     }
 }

@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.behaviours;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.Tuple2;
 import org.mmarini.wheelly.behaviours.fsm.FSMContext;
 import org.mmarini.wheelly.behaviours.fsm.HeadMacroActionState;
 import org.mmarini.wheelly.behaviours.fsm.MacroActionConfig;
@@ -47,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
+import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
@@ -93,6 +95,7 @@ public class MacroActionsBehaviour implements BehaviourApi, FSMContext {
     private final HeadMacroActionState headState;
     private WorldModel currentWorldModel;
     private DecisionMaker<BehaviourState, BehaviourAction> decisionMaker;
+    private Consumer<Tuple2<BehaviourState, BehaviourAction>> onDecision;
 
     /**
      * Creates the deep learning environment
@@ -132,9 +135,13 @@ public class MacroActionsBehaviour implements BehaviourApi, FSMContext {
                 || motionState.expired()
                 || motionState.completed()) {
             // Generates a new macro action from inference engine
-            BehaviourAction nextAction = decisionMaker.decide(new MacroActionsState(state, motionState.currentAction(), headState.currentAction()));
+            MacroActionsState state1 = new MacroActionsState(state, motionState.currentAction(), headState.currentAction());
+            BehaviourAction nextAction = decisionMaker.decide(state1);
             headState.init(this, nextAction.headActionId());
             motionState.init(this, nextAction.moveActionId());
+            if (onDecision != null) {
+                onDecision.accept(Tuple2.of(state1, nextAction));
+            }
         }
         MotionStatus motionCmd = motionState.tick(this);
         HeadStatus headCmd = headState.tick(this);
@@ -155,6 +162,11 @@ public class MacroActionsBehaviour implements BehaviourApi, FSMContext {
         if (decisionMaker == null) {
             throw new IllegalStateException("Environment is not connected to any decision maker.");
         }
+    }
+
+    @Override
+    public void onDecision(Consumer<Tuple2<BehaviourState, BehaviourAction>> callback) {
+        this.onDecision = onDecision == null ? callback : onDecision.andThen(callback);
     }
 
     /**
