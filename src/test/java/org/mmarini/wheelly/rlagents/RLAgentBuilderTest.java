@@ -81,7 +81,7 @@ class RLAgentBuilderTest {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.wheelly.rlagents.RLAgentBuilderTest/convResNet.yml");
         // When create agent.yml
-        agent = RLAgentBuilder.create(root, env);
+        agent = RLAgentBuilder.create(root);
 
         // Then
         ComputationGraph network = agent.network();
@@ -106,7 +106,7 @@ class RLAgentBuilderTest {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.wheelly.rlagents.RLAgentBuilderTest/dense.yml");
         // When create agent.yml
-        agent = RLAgentBuilder.create(root, env);
+        agent = RLAgentBuilder.create(root);
 
         // Then
         ComputationGraph network = agent.network();
@@ -122,7 +122,7 @@ class RLAgentBuilderTest {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.wheelly.rlagents.RLAgentBuilderTest/flatten.yml");
         // When create agent.yml
-        agent = RLAgentBuilder.create(root, env);
+        agent = RLAgentBuilder.create(root);
 
         // Then
         ComputationGraph network = agent.network();
@@ -194,7 +194,7 @@ class RLAgentBuilderTest {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.wheelly.rlagents.RLAgentBuilderTest/identityResNet.yml");
         // When create agent.yml
-        agent = RLAgentBuilder.create(root, env);
+        agent = RLAgentBuilder.create(root);
 
         // Then
         ComputationGraph network = agent.network();
@@ -216,7 +216,7 @@ class RLAgentBuilderTest {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.wheelly.rlagents.RLAgentBuilderTest/testInOut.yml");
         // When create agent.yml
-        agent = RLAgentBuilder.create(root, env);
+        agent = RLAgentBuilder.create(root);
 
         // Then
         ComputationGraph network = agent.network();
@@ -231,7 +231,7 @@ class RLAgentBuilderTest {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.wheelly.rlagents.RLAgentBuilderTest/merge.yml");
         // When create agent.yml
-        agent = RLAgentBuilder.create(root, env);
+        agent = RLAgentBuilder.create(root);
 
         // Then
         ComputationGraph network = agent.network();
@@ -251,7 +251,7 @@ class RLAgentBuilderTest {
         // Given a JSON configuration
         JsonNode root = Utils.fromResource("/org.mmarini.wheelly.rlagents.RLAgentBuilderTest/vertex.yml");
         // When create agent.yml
-        agent = RLAgentBuilder.create(root, env);
+        agent = RLAgentBuilder.create(root);
 
         // Then
         ComputationGraph network = agent.network();

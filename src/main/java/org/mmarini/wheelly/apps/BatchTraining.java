@@ -50,7 +50,7 @@ import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.batch.BatchAgentOld;
 import org.mmarini.wheelly.batch.BatchTrainerOld;
 import org.mmarini.wheelly.batch.ProgressInfo;
-import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.perception.PerceptionConnector;
 import org.mmarini.wheelly.perception.WorldModeller;
 import org.mmarini.wheelly.rlagents.DLListener;
@@ -187,8 +187,8 @@ public class BatchTraining {
         RobotApi robot = AppYaml.robotFromJson(config);
 
         // Creates controller
-        RobotControllerApi controller = AppYaml.controllerFromJson(config);
-        controller.connectRobot(robot);
+        ControllerApi controller = AppYaml.controllerFromJson(config);
+        controller.init(robot);
 
         // Creates modeller
         WorldModeller modeller = AppYaml.modellerFromJson(config);

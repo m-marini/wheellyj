@@ -64,8 +64,8 @@ public class MacroActionsAdapter implements GymAdapter {
     public static final String HEAD_ID = "head";
     public static final String STATE_FUNCTION_ID = "stateFunction";
     public static final Map<String, SignalSpec> ACTION_SPEC = Map.of(
-            HEAD_ID, SignalSpec.create(1L, 1L),
-            MOVE_ID, SignalSpec.create(1L, 1L)
+            HEAD_ID, SignalSpec.create(1L, HeadActionId.values().length),
+            MOVE_ID, SignalSpec.create(1L, MoveActionId.values().length)
     );
     private static final Logger logger = LoggerFactory.getLogger(MacroActionsAdapter.class);
 
@@ -133,12 +133,7 @@ public class MacroActionsAdapter implements GymAdapter {
 
     @Override
     public BehaviourAction decide(BehaviourState state) {
-        if (stateFunc == null) {
-            throw new IllegalStateException("Missing state function");
-        }
-        if (rewardFunc == null) {
-            throw new IllegalStateException("Missing reward function");
-        }
+        ensureConnected();
         Map<String, INDArray> signals1 = state(state);
         Map<String, INDArray> actions = agent.act(signals1);
 
@@ -187,6 +182,9 @@ public class MacroActionsAdapter implements GymAdapter {
         if (stateFunc == null) {
             throw new IllegalStateException("Environment is not connected to any state function");
         }
+        if (rewardFunc == null) {
+            throw new IllegalStateException("Missing reward function");
+        }
     }
 
     /**
@@ -217,10 +215,15 @@ public class MacroActionsAdapter implements GymAdapter {
      * @param state1  the resulting environment state after the action execution
      * @return the calculated reward value, or {@code 0.0} if no reward function is configured
      */
-    public double reward(BehaviourState state0, BehaviourAction actions, BehaviourState state1) {
+    private double reward(BehaviourState state0, BehaviourAction actions, BehaviourState state1) {
         return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
+    /**
+     * Sets the reward function
+     *
+     * @param rewardFunc the reward function
+     */
     public void rewardFunc(RewardFunction rewardFunc) {
         this.rewardFunc = rewardFunc;
     }
@@ -253,6 +256,7 @@ public class MacroActionsAdapter implements GymAdapter {
      */
     @Override
     public Map<String, SignalSpec> stateSpec() {
+        ensureConnected();
         return stateFunc.spec();
     }
 

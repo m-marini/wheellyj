@@ -28,36 +28,22 @@
 
 package org.mmarini.wheelly.control;
 
-import io.reactivex.rxjava3.core.Flowable;
-import org.mmarini.wheelly.robots.HeadStatus;
-import org.mmarini.wheelly.robots.MotionStatus;
-
-import java.util.function.Consumer;
-
 /**
- * The robot controller connector api
+ * Gets the robot controller status
  */
-public interface RobotControllerConnector {
-    void headStatus(HeadStatus headStatus);
-
-    void motionStatus(MotionStatus headStatus);
+public interface ControllerStatusApi {
+    /**
+     * Returns true if the controller is inferencing
+     */
+    boolean inferencing();
 
     /**
-     * Registers the consumer of inference event
-     *
-     * @param callback the callback
+     * Returns true if the controller is ready
      */
-    void onInference(Consumer<RobotStatus> callback);
+    boolean ready();
 
     /**
-     * Registers the consumer of latch event
-     *
-     * @param callback the callback
+     * Returns true if the controller is started
      */
-    void onLatch(Consumer<RobotStatus> callback);
-
-    /**
-     * Returns the flow of controller ready
-     */
-    Flowable<Boolean> readReady();
+    boolean started();
 }

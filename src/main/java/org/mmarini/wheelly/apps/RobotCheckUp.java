@@ -39,7 +39,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.NotImplementedException;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.wheelly.robots.RobotCommands;
@@ -152,7 +152,7 @@ public class RobotCheckUp {
     private final SensorMonitor sensorMonitor;
     private final SensorsPanel sensorPanel;
     private Function<RobotStatus, FinalResult> checkupProcess;
-    private RobotControllerApi controller;
+    private ControllerApi controller;
     private Namespace parseArgs;
     private RobotApi robot;
 
@@ -461,7 +461,7 @@ controller.execute(command.scanDirection(directions[currentTest]));
 
         logger.info("Creating controller ...");
         controller = AppYaml.controllerFromJson(config);
-        controller.connectRobot(robot);
+        controller.init(robot);
 
         controller.readErrors().subscribe(
                 this::onControllerError,

@@ -32,7 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.control.Controller;
-import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.robots.CorrelatedCameraEvent;
 import org.mmarini.wheelly.robots.RobotCommand;
@@ -126,7 +126,7 @@ public class WorldModeller implements Perceptor {
     }
 
     @Override
-    public WorldModeller connectController(RobotControllerApi controller) {
+    public WorldModeller connectController(ControllerApi controller) {
         this.controller = requireNonNull(controller);
         controller.onLatch(this::onLatch);
         controller.onInference(this::onInference);
@@ -134,6 +134,17 @@ public class WorldModeller implements Perceptor {
                 .subscribeOn(Schedulers.io())
                 .subscribe(this::onConnected);
         return this;
+    }
+
+    @Override
+    public void decisionMaker(DecisionMaker<WorldModel, RobotCommand> decisionMaker) {
+        this.decisionMaker = decisionMaker;
+    }
+
+    @Override
+    public void init(RobotSpec robotSpec, ControllerApi controller) {
+        setRobotSpec(robotSpec);
+        connectController(controller);
     }
 
     /**
@@ -187,11 +198,6 @@ public class WorldModeller implements Perceptor {
         }
         model = this.updateStatus(model, robotStatus);
         currentModel = model;
-    }
-
-    @Override
-    public void decisionMaker(DecisionMaker<WorldModel, RobotCommand> decisionMaker) {
-        this.decisionMaker = decisionMaker;
     }
 
     /**

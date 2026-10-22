@@ -36,7 +36,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.engines.ProcessorContextApi;
 import org.mmarini.wheelly.engines.StateMachineAgent;
@@ -229,7 +229,7 @@ public class RobotExecutor {
     /**
      * The supervisor engine managing data routing pipelines across connected actuators and modules.
      */
-    private RobotControllerApi controller;
+    private ControllerApi controller;
 
     /**
      * The sensory integration matrix model structuring dynamic safe navigation cells.
@@ -277,7 +277,7 @@ public class RobotExecutor {
 
         logger.atInfo().log("Creating controller ...");
         this.controller = AppYaml.controllerFromJson(config);
-        controller.connectRobot(robot);
+        controller.init(robot);
 
         logger.atInfo().log("Creating world modeller ...");
         this.modeller = AppYaml.modellerFromJson(config);

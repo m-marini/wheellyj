@@ -88,7 +88,7 @@ class RobotControllerTest {
         JsonNode root = fromResource("/simRobot0Obstacles.yml");
         this.robot = SimRobot.create(root, new File("simRobot0Obstacles.yml"));
         this.controller = new RobotController(REACTION_INTERVAL, COMMAND_INTERVAL, x -> 12d)
-                .connectRobot(robot);
+                .init(robot);
         this.controller.addOnRobotStatus(robotStates::add);
     }
 
@@ -111,7 +111,7 @@ class RobotControllerTest {
         // When start the controller
         controller.start();
         controller.readControllerStatus()
-                .filter(RobotControllerStatusApi::ready)
+                .filter(ControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
         controller.motionStatus(MotionStatus.backward(target));
@@ -141,14 +141,14 @@ class RobotControllerTest {
     void testConnect() {
         // Given a mock robot
         // and a controller
-        TestSubscriber<RobotControllerStatusApi> lineSub = new TestSubscriber<>();
+        TestSubscriber<ControllerStatusApi> lineSub = new TestSubscriber<>();
         controller.readControllerStatus()
                 .subscribe(lineSub);
 
         // When start the controller
         controller.start();
         controller.readControllerStatus()
-                .filter(RobotControllerStatusApi::ready)
+                .filter(ControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
         controller.shutdown();
@@ -158,7 +158,7 @@ class RobotControllerTest {
         // And
         lineSub.assertComplete();
         lineSub.assertNoErrors();
-        List<RobotControllerStatusApi> lines = lineSub.values();
+        List<ControllerStatusApi> lines = lineSub.values();
         assertThat(lines, hasSize(greaterThanOrEqualTo(2)));
         assertFalse(lines.getFirst().started());
         assertFalse(lines.getLast().started());
@@ -177,7 +177,7 @@ class RobotControllerTest {
         // When start the controller
         controller.start();
         controller.readControllerStatus()
-                .filter(RobotControllerStatusApi::ready)
+                .filter(ControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
         controller.motionStatus(MotionStatus.forward(target));
@@ -215,7 +215,7 @@ class RobotControllerTest {
         controller.start();
         // And waiting for 2 inference status
         controller.readControllerStatus()
-                .filter(RobotControllerStatusApi::inferencing)
+                .filter(ControllerStatusApi::inferencing)
                 .limit(2)
                 .blockingSubscribe();
         // And then shutting down
@@ -244,7 +244,7 @@ class RobotControllerTest {
         // When start the controller
         controller.start();
         controller.readControllerStatus()
-                .filter(RobotControllerStatusApi::ready)
+                .filter(ControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
         controller.motionStatus(MotionStatus.rotate(Angle.fromDeg(targetDeg)));
@@ -278,7 +278,7 @@ class RobotControllerTest {
         // When start the controller
         controller.start();
         controller.readControllerStatus()
-                .filter(RobotControllerStatusApi::ready)
+                .filter(ControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
         controller.headStatus(HeadStatus.scan(Angle.fromDeg(headDeg)));
@@ -303,14 +303,14 @@ class RobotControllerTest {
     void testShutdown() {
         // Given a mock robot
         // and a controller
-        TestSubscriber<RobotControllerStatusApi> lineSub = new TestSubscriber<>();
+        TestSubscriber<ControllerStatusApi> lineSub = new TestSubscriber<>();
         controller.readControllerStatus()
                 .subscribe(lineSub);
 
         // When start the controller
         controller.start();
         controller.readControllerStatus()
-                .filter(RobotControllerStatusApi::ready)
+                .filter(ControllerStatusApi::ready)
                 .firstElement()
                 .blockingGet();
         controller.shutdown();

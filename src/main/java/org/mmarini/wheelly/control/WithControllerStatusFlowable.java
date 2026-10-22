@@ -48,8 +48,8 @@ public interface WithControllerStatusFlowable {
      * actuation feedback loops.
      * </p>
      *
-     * @return A {@link Flowable} emitting sequential {@link RobotControllerStatusApi} snapshots
+     * @return A {@link Flowable} emitting sequential {@link ControllerStatusApi} snapshots
      * reflecting the live controller configuration and state changes.
      */
-    Flowable<RobotControllerStatusApi> readControllerStatus();
+    Flowable<ControllerStatusApi> readControllerStatus();
 }

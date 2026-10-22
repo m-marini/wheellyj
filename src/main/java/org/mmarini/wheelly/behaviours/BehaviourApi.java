@@ -29,7 +29,7 @@
 package org.mmarini.wheelly.behaviours;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.perception.DecisionMaker;
 import org.mmarini.wheelly.perception.WithDecisionMaker;
 import org.mmarini.wheelly.perception.WorldModel;
@@ -58,11 +58,11 @@ public interface BehaviourApi extends DecisionMaker<WorldModel, RobotCommand>, W
      *
      * @param config     the root JSON node containing the environment property tree schema
      * @param locator    the contextual locator pattern targeting the relative configuration scope
-     * @param controller the active {@link RobotControllerApi} mapping the hardware layer
+     * @param controller the active {@link ControllerApi} mapping the hardware layer
      * @return a fully initialised {@code EnvironmentApi} instance
      */
-    static BehaviourApi fromConfig(JsonNode config, Locator locator, RobotControllerApi controller) {
-        return Utils.createObject(config, locator, new Object[]{controller}, new Class[]{RobotControllerApi.class});
+    static BehaviourApi fromConfig(JsonNode config, Locator locator, ControllerApi controller) {
+        return Utils.createObject(config, locator, new Object[]{controller}, new Class[]{ControllerApi.class});
     }
 
     /**
@@ -73,12 +73,12 @@ public interface BehaviourApi extends DecisionMaker<WorldModel, RobotCommand>, W
      * </p>
      *
      * @param file       the physical configuration file instance (e.g., YAML or JSON source)
-     * @param controller the active {@link RobotControllerApi} mapping the hardware layer
+     * @param controller the active {@link ControllerApi} mapping the hardware layer
      * @return a fully initialised {@code EnvironmentApi} instance
      * @throws Throwable if any instantiation, validation, or reflection processing errors occur
      */
-    static BehaviourApi fromFile(File file, RobotControllerApi controller) throws Throwable {
-        return Utils.createObject(file, new Object[]{controller}, new Class[]{RobotControllerApi.class});
+    static BehaviourApi fromFile(File file, ControllerApi controller) throws Throwable {
+        return Utils.createObject(file, new Object[]{controller}, new Class[]{ControllerApi.class});
     }
 
     /**

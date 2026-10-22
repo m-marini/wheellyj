@@ -28,8 +28,9 @@
 
 package org.mmarini.wheelly.perception;
 
-import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.robots.RobotSpec;
 
 /**
  * Defines the contract for an environmental perceptor that builds and maintains the world model.
@@ -50,8 +51,23 @@ public interface Perceptor extends PerceptionConnector, WithClearMap, WithDecisi
      * simulated hardware devices, enabling continuous world model updates and timely action dispatching.
      * </p>
      *
-     * @param controller The {@link RobotControllerApi} instance to be attached to the perception system.
+     * @param controller The {@link ControllerApi} instance to be attached to the perception system.
      * @return A reference to this {@code Perceptor} instance to facilitate method chaining.
      */
-    Perceptor connectController(RobotControllerApi controller);
+    Perceptor connectController(ControllerApi controller);
+
+
+    /**
+     * Initializes the perceptor by configuring the robot physical specifications and
+     * connecting the core execution controller.
+     * <p>
+     * This method prepares the perception system for operational loops, ensuring that sensory
+     * thresholds, dimensions, and telemetric capabilities are aligned with the physical or
+     * simulated profile of the robot.
+     * </p>
+     *
+     * @param robotSpec  The {@link RobotSpec} containing physical and geometric configurations of the robot.
+     * @param controller The {@link ControllerApi} instance handling the communication loop.
+     */
+    void init(RobotSpec robotSpec, ControllerApi controller);
 }

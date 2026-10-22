@@ -40,6 +40,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.wheelly.gyms.ExecutionResult;
 import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.wheelly.gyms.WithSignalsSpec;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -62,7 +63,6 @@ import static org.mmarini.rl.envs.DLStateFunction.MAP_SIGNAL_ID;
 import static org.mmarini.wheelly.TestFunctions.matrixShape;
 
 class RLAgentTest {
-    public static final int NUM_SAMPLES = 2;
     public static final int SEED = 1234;
     public static final int NUM_CHANNELS = 4;
     public static final int GRID_SIZE = 9;
@@ -91,7 +91,8 @@ class RLAgentTest {
                 .weightInit(WeightInit.XAVIER)
                 .graphBuilder()
                 .addInputs(MAP_SIGNAL_ID)
-                .setInputTypes(new InputType.InputTypeConvolutional(GRID_SIZE, GRID_SIZE, NUM_CHANNELS))
+                //.setInputTypes(InputType.convolutional(GRID_SIZE, GRID_SIZE, NUM_CHANNELS))
+                .setInputTypes(InputType.feedForward(GRID_SIZE))
                 .addLayer(CRITIC_ID,
                         new OutputLayer.Builder()
                                 .nOut(1)
@@ -136,18 +137,13 @@ class RLAgentTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        Map<String, SignalSpec> stateSpec = Map.of(MAP_SIGNAL_ID, SignalSpec.create(1, NUM_CHANNELS, GRID_SIZE, GRID_SIZE));
-        Map<String, SignalSpec> actionSpec = Map.of(
-                MOVE_ACTION_ID, SignalSpec.create(1, 1),
-                HEAD_ACTION_ID, SignalSpec.create(1, 1)
-        );
         ComputationGraphConfiguration conf = build();
         // logger.atDebug().log("yaml network {}", conf.toYaml());
         ComputationGraph net = new ComputationGraph(conf);
         net.init();
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
-        this.agent = RLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, FILE, false);
+        this.agent = RLAgent.create(FILE, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, REWARD, false);
         deleteRecursive(FILE);
     }
 
@@ -197,36 +193,60 @@ class RLAgentTest {
 
     @Test
     void testMissingAction() {
-        Map<String, SignalSpec> stateSpec = Map.of(MAP_SIGNAL_ID, SignalSpec.create(1, NUM_CHANNELS, GRID_SIZE, GRID_SIZE));
-        Map<String, SignalSpec> actionSpec = Map.of(
-                MOVE_ACTION_ID, SignalSpec.create(1, 1),
-                HEAD_ACTION_ID, SignalSpec.create(1, 1),
-                "missing1", SignalSpec.create(1, 1),
-                "missing2", SignalSpec.create(1, 1)
-        );
+        WithSignalsSpec withSpec = new WithSignalsSpec() {
+            @Override
+            public Map<String, SignalSpec> actionSpec() {
+                return Map.of(
+                        MOVE_ACTION_ID, SignalSpec.create(1, NUM_MOVEMENT_COMMANDS),
+                        HEAD_ACTION_ID, SignalSpec.create(1, NUM_SENSOR_COMMANDS),
+                        "missing1", SignalSpec.create(1, 1),
+                        "missing2", SignalSpec.create(1, 1)
+                );
+            }
+
+            @Override
+            public Map<String, SignalSpec> stateSpec() {
+                return Map.of(MAP_SIGNAL_ID, SignalSpec.create(1, NUM_CHANNELS, GRID_SIZE, GRID_SIZE));
+            }
+        };
         ComputationGraphConfiguration conf = build();
         ComputationGraph net = new ComputationGraph(conf);
+        net.init();
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
+        agent = RLAgent.create(FILE, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, REWARD, false);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                RLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, FILE, false));
+                agent.validate(withSpec));
         assertThat(ex.getMessage(), matchesPattern("Missing output layers \\[missing1, missing2]"));
     }
 
     @Test
     void testMissingState() {
-        Map<String, SignalSpec> stateSpec = Map.of();
-        Map<String, SignalSpec> actionSpec = Map.of(
-                MOVE_ACTION_ID, SignalSpec.create(1, 1),
-                HEAD_ACTION_ID, SignalSpec.create(1, 1)
-        );
+        WithSignalsSpec withSpec = new WithSignalsSpec() {
+
+            @Override
+            public Map<String, SignalSpec> actionSpec() {
+                return Map.of(
+                        MOVE_ACTION_ID, SignalSpec.create(1, 1),
+                        HEAD_ACTION_ID, SignalSpec.create(1, 1)
+                );
+            }
+
+            @Override
+            public Map<String, SignalSpec> stateSpec() {
+                return Map.of();
+            }
+        };
         ComputationGraphConfiguration conf = build();
         ComputationGraph net = new ComputationGraph(conf);
+        net.init();
 
         Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
-
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> RLAgent.create(stateSpec, actionSpec, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, FILE, false));
+        agent = RLAgent.create(FILE, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, REWARD, false);
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                agent.validate(withSpec)
+        );
         assertThat(ex.getMessage(), matchesPattern("Missing input layers \\[map]"));
     }
 
@@ -261,5 +281,33 @@ class RLAgentTest {
         // When train
         assertNotSame(net, agent.network());
         assertEquals(0, agent.status().trajectoryBuffer().size());
+    }
+
+    @Test
+    void testWrongAction() {
+        WithSignalsSpec withSpec = new WithSignalsSpec() {
+
+            @Override
+            public Map<String, SignalSpec> actionSpec() {
+                return Map.of(
+                        MOVE_ACTION_ID, SignalSpec.create(1, NUM_MOVEMENT_COMMANDS - 1),
+                        HEAD_ACTION_ID, SignalSpec.create(1, NUM_SENSOR_COMMANDS - 1)
+                );
+            }
+
+            @Override
+            public Map<String, SignalSpec> stateSpec() {
+                return Map.of(MAP_SIGNAL_ID, SignalSpec.create(1, NUM_CHANNELS, GRID_SIZE, GRID_SIZE));
+            }
+        };
+        ComputationGraphConfiguration conf = build();
+        ComputationGraph net = new ComputationGraph(conf);
+        net.init();
+
+        Random random = Nd4j.getRandomFactory().getNewRandomInstance(SEED);
+        agent = RLAgent.create(FILE, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, REWARD, false);
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                agent.validate(withSpec));
+        assertThat(ex.getMessage(), matchesPattern("Wrong output size: \\[head\\] expected \\[1, 7\\] actual \\[1, 6\\]"));
     }
 }

@@ -31,7 +31,7 @@ package org.mmarini.wheelly.utils;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.rl.envs.GymApi;
 import org.mmarini.wheelly.behaviours.BehaviourApi;
-import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.gyms.GymAdapter;
 import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModeller;
@@ -56,8 +56,8 @@ public interface AppYaml {
      *
      * @param config the root node
      */
-    static RobotControllerApi controllerFromJson(JsonNode config) throws Throwable {
-        return RobotControllerApi.fromFile(new File(config.path("controller").asText()));
+    static ControllerApi controllerFromJson(JsonNode config) throws Throwable {
+        return ControllerApi.fromFile(new File(config.path("controller").asText()));
     }
 
     /**

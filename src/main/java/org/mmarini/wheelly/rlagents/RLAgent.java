@@ -33,11 +33,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
+import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
+import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.batch.BatchAgent;
 import org.mmarini.wheelly.gyms.ExecutionResult;
 import org.mmarini.wheelly.gyms.SignalSpec;
+import org.mmarini.wheelly.gyms.WithSignalsSpec;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.wheelly.utils.WithShutdownCompletable;
 import org.mmarini.yaml.Locator;
@@ -50,10 +53,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -110,8 +110,6 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
     /**
      * Returns the agent
      *
-     * @param stateSpec          the state specification
-     * @param actionSpec         the action specification
      * @param network            the network
      * @param random             the random number generator
      * @param numEpochs          the number of epochs to train
@@ -122,11 +120,13 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      * @param filePath           the file path for the agent save
      * @param concurrentTraining true if concurrent training
      */
-    public static RLAgent create(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec, ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, File filePath, boolean concurrentTraining) {
+    /*
+    public static RLAgent create(ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, File filePath, boolean concurrentTraining) {
         RLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, 0, concurrentTraining);
-        agent.validate(stateSpec, actionSpec);
         return agent;
     }
+
+     */
 
     /**
      * Returns the agent from the file path
@@ -300,7 +300,6 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
 
     @Override
     public RLAgent init() {
-        // TODO recreate an initial network
         return this;
     }
 
@@ -499,15 +498,22 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
         return status.get().trajectoryBuffer().bufferSize();
     }
 
+    @Override
+    public void validate(WithSignalsSpec adapter) throws Throwable {
+        validate(adapter.stateSpec(), adapter.actionSpec());
+    }
+
     /**
      * Validates the agent
      *
      * @param stateSpec  the state specification
      * @param actionSpec the action specification
      */
-    public void validate(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec) {
+    private void validate(Map<String, SignalSpec> stateSpec, Map<String, SignalSpec> actionSpec) {
         ComputationGraph network = status.get().network();
-        String missingLayers = network.getConfiguration().getNetworkInputs().stream()
+        ComputationGraphConfiguration conf = network.getConfiguration();
+        // Validate for state layers
+        String missingLayers = conf.getNetworkInputs().stream()
                 .filter(id -> !stateSpec.containsKey(id))
                 .sorted()
                 .reduce((a, b) -> a + ", " + b)
@@ -515,7 +521,8 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
         if (missingLayers != null) {
             throw new IllegalArgumentException(format("Missing input layers [%s]", missingLayers));
         }
-        List<String> networkOutputs = network.getConfiguration().getNetworkOutputs();
+        // Validate for action layers
+        List<String> networkOutputs = conf.getNetworkOutputs();
         missingLayers = actionSpec.keySet()
                 .stream()
                 .filter(id -> !networkOutputs.contains(id))
@@ -524,6 +531,17 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
                 .orElse(null);
         if (missingLayers != null) {
             throw new IllegalArgumentException(format("Missing output layers [%s]", missingLayers));
+        }
+
+        // Validate for action layer sizes
+        for (String id : actionSpec.keySet().stream().sorted().toList()) {
+            long nOut = ((OutputLayer) network.getLayer(id).conf().getLayer()).getNOut();
+            long[] shape = actionSpec.get(id).shape();
+            long[] expectedShape = {1, nOut};
+            if (!Arrays.equals(expectedShape, shape)) {
+                throw new IllegalArgumentException(format("Wrong output size: [%s] expected %s actual %s",
+                        id, Arrays.toString(expectedShape), Arrays.toString(shape)));
+            }
         }
     }
 

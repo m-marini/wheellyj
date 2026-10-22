@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.rlagents;
 
 import org.mmarini.wheelly.gyms.AdapterConnector;
+import org.mmarini.wheelly.gyms.WithSignalsSpec;
 import org.mmarini.wheelly.utils.WithShutdownCompletable;
 import org.mmarini.yaml.Utils;
 
@@ -57,6 +58,22 @@ public interface Agent extends AdapterConnector, AutoCloseable, WithShutdownComp
      * Resets the inference engine
      */
     Agent init();
+
+    /**
+     * Sets the learning state of the agent's underlying cognitive or neural model.
+     * <p>
+     * Enabling learning allows the agent to continuously adapt its policy, value functions,
+     * or internal parameters based on environmental rewards and sensory feedback. Freezing
+     * learning configures the agent to run strictly in inference mode, executing the
+     * currently optimal policy without further exploration or weight updates.
+     * </p>
+     *
+     * @param learning {@code true} to enable reinforcement learning and policy adaptation,
+     *                 {@code false} to lock the agent's behavior to execution-only mode.
+     */
+    void learning(boolean learning);
+
+    void validate(WithSignalsSpec adapter) throws Throwable;
 
     /**
      * Saves the model

@@ -32,10 +32,11 @@ import io.reactivex.rxjava3.core.Completable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.perception.*;
 import org.mmarini.wheelly.robots.MotionStatus;
 import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.robots.RobotSpec;
 import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.geom.Point2D;
@@ -153,8 +154,13 @@ class MacroActionsBehaviourTest {
             }
 
             @Override
-            public Perceptor connectController(RobotControllerApi controller) {
+            public Perceptor connectController(ControllerApi controller) {
                 return null;
+            }
+
+            @Override
+            public void init(RobotSpec robotSpec, ControllerApi controller) {
+
             }
 
             @Override

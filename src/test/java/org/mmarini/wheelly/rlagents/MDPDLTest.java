@@ -246,7 +246,7 @@ public class MDPDLTest {
                 return stateSpec;
             }
         };
-        agent = RLAgentBuilder.create(conf, env);
+        agent = RLAgentBuilder.create(conf);
     }
 
 

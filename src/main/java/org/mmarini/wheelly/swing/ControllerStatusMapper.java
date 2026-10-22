@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.control.RobotControllerStatusApi;
+import org.mmarini.wheelly.control.ControllerStatusApi;
 
 /**
  * The mapper robot controller status
@@ -45,7 +45,7 @@ public interface ControllerStatusMapper {
      *
      * @param status the status
      */
-    static String map(RobotControllerStatusApi status) {
+    static String map(ControllerStatusApi status) {
         if (!status.started()) {
             return NOT_STARTED;
         } else if (status.inferencing()) {

@@ -38,8 +38,8 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
+import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.control.RobotController;
-import org.mmarini.wheelly.control.RobotControllerApi;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.robots.HeadStatus;
@@ -224,7 +224,7 @@ public class MatrixMonitor {
     /**
      * The engine interface managing target processing command pipelines.
      */
-    private RobotControllerApi controller;
+    private ControllerApi controller;
     /**
      * The interface connection channel assigned to talk to the robot unit.
      */
@@ -289,7 +289,7 @@ public class MatrixMonitor {
      * Creates the application context by loading the configurations.
      */
     private void createConnections() {
-        controller.connectRobot(robot);
+        controller.init(robot);
     }
 
     /**

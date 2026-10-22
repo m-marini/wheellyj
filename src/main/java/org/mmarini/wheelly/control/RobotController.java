@@ -59,7 +59,7 @@ import static org.mmarini.wheelly.utils.Utils.linear;
 /**
  * Robot controller
  */
-public class RobotController implements RobotControllerApi {
+public class RobotController implements ControllerApi {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/controller-schema-2.0";
     private static final Logger logger = LoggerFactory.getLogger(RobotController.class);
 
@@ -91,7 +91,7 @@ public class RobotController implements RobotControllerApi {
     private final IntToDoubleFunction decodeVoltage;
     private final CompletableSubject shutdownCompletable;
     private final PublishProcessor<Throwable> controllerErrors;
-    private final BehaviorProcessor<RobotControllerStatusApi> controllerStatus;
+    private final BehaviorProcessor<ControllerStatusApi> controllerStatus;
     private final AtomicReference<RobotControllerStatus> status;
     private final List<Consumer<RobotStatus>> onRobotStatus;
     private final List<Consumer<RobotStatus>> onLatches;
@@ -138,7 +138,7 @@ public class RobotController implements RobotControllerApi {
     }
 
     @Override
-    public RobotController connectRobot(RobotApi robot) {
+    public RobotController init(RobotApi robot) {
         this.robot = requireNonNull(robot);
         RobotStatus robotStatus = RobotStatus.create(robot.robotSpec(), decodeVoltage);
         RobotControllerStatus st = this.status.updateAndGet(s -> s.robotStatus(robotStatus));
@@ -318,7 +318,7 @@ public class RobotController implements RobotControllerApi {
     }
 
     @Override
-    public Flowable<RobotControllerStatusApi> readControllerStatus() {
+    public Flowable<ControllerStatusApi> readControllerStatus() {
         return controllerStatus;
     }
 
@@ -330,7 +330,7 @@ public class RobotController implements RobotControllerApi {
     @Override
     public Flowable<Boolean> readReady() {
         return readControllerStatus()
-                .map(RobotControllerStatusApi::ready)
+                .map(ControllerStatusApi::ready)
                 .distinctUntilChanged();
     }
 

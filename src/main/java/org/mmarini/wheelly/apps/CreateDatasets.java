@@ -44,7 +44,7 @@ import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.batch.BatchAgentOld;
 import org.mmarini.wheelly.batch.DatasetBuilder;
 import org.mmarini.wheelly.batch.ProgressInfo;
-import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.perception.WorldModeller;
 import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.wheelly.storage.serde.InferenceFileReader;
@@ -162,8 +162,8 @@ public class CreateDatasets {
         RobotApi robot = AppYaml.robotFromJson(config);
 
         // Creates controller
-        RobotControllerApi controller = AppYaml.controllerFromJson(config);
-        controller.connectRobot(robot);
+        ControllerApi controller = AppYaml.controllerFromJson(config);
+        controller.init(robot);
 
         // Creates modeller
         this.modeller = AppYaml.modellerFromJson(config);

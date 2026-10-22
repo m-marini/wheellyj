@@ -61,7 +61,7 @@ public record RobotControllerStatus(
         boolean started,
         long lastInference,
         MotionStatus lastMotionStatus,
-        HeadStatus lastHeadStatus, long lastHeadTime, long lastMotionTime) implements RobotControllerStatusApi {
+        HeadStatus lastHeadStatus, long lastHeadTime, long lastMotionTime) implements ControllerStatusApi {
 
     private static final Logger logger = LoggerFactory.getLogger(RobotControllerStatus.class);
 

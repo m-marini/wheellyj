@@ -39,7 +39,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.NotImplementedException;
 import org.mmarini.swing.GridLayoutHelper;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.control.RobotControllerApi;
+import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.robots.CameraEvent;
 import org.mmarini.wheelly.robots.RobotApi;
@@ -122,7 +122,7 @@ public class CameraCalibration {
     private JFrame comFrame;
     private JFrame commandFrame;
     private JFrame sensorFrame;
-    private RobotControllerApi controller;
+    private ControllerApi controller;
     private Namespace parseArgs;
     private RobotApi robot;
     private Consumer<RobotStatus> currentState;
@@ -168,7 +168,7 @@ public class CameraCalibration {
      * Creates the context connections
      */
     private void createConnections() {
-        controller.connectRobot(robot);
+        controller.init(robot);
     }
 
     /**

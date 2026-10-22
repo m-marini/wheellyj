@@ -104,7 +104,7 @@ import java.io.File;
  * </code>
  * </p>
  */
-public interface RobotControllerApi extends Controller,
+public interface ControllerApi extends Controller,
         WithRobotStatusCallback, WithErrorFlowable, WithControllerStatusFlowable, WithControllerReadyFlowable,
         WithShutdownCompletable {
     /**
@@ -114,7 +114,7 @@ public interface RobotControllerApi extends Controller,
      * @param locator the configuration locator
      * @param robot   the robot api
      */
-    static RobotControllerApi fromConfig(JsonNode config, Locator locator, RobotApi robot) {
+    static ControllerApi fromConfig(JsonNode config, Locator locator, RobotApi robot) {
         return Utils.createObject(config, locator, new Object[]{robot}, new Class[]{RobotApi.class});
     }
 
@@ -123,7 +123,7 @@ public interface RobotControllerApi extends Controller,
      *
      * @param file the configuration file
      */
-    static RobotControllerApi fromFile(File file) throws Throwable {
+    static ControllerApi fromFile(File file) throws Throwable {
         return Utils.createObject(file);
     }
 
@@ -132,7 +132,7 @@ public interface RobotControllerApi extends Controller,
      *
      * @param robot the robot
      */
-    RobotControllerApi connectRobot(RobotApi robot);
+    ControllerApi init(RobotApi robot);
 
     /**
      * Reconnect the robot
