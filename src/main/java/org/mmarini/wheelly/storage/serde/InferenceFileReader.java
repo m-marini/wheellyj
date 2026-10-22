@@ -29,9 +29,9 @@
 package org.mmarini.wheelly.storage.serde;
 
 import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.MacroActionsStateOld;
 import org.mmarini.wheelly.behaviours.HeadActionId;
 import org.mmarini.wheelly.behaviours.MacroAction;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
 import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.perception.*;
@@ -91,22 +91,22 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
         return this;
     }
 
-    private MacroAction readAgentAction() throws IOException {
+    private MacroAction readMacroAction() throws IOException {
         MoveActionId move = readMoveActionId();
         HeadActionId head = readHeadActionId();
         return new MacroAction(move, head);
     }
 
-    public MacroActionsStateOld readMacroEnvState() throws IOException {
+    public MacroActionsState readMacroActionState() throws IOException {
         WorldModel model = readModel();
         MoveActionId move = readMoveActionId();
         HeadActionId head = readHeadActionId();
-        return new MacroActionsStateOld(model, move, head);
+        return new MacroActionsState(model, move, head);
     }
 
-    public Tuple2<MacroActionsStateOld, MacroAction> readMacroEnvStep() throws IOException {
-        MacroActionsStateOld state = readMacroEnvState();
-        MacroAction action = readAgentAction();
+    public Tuple2<MacroActionsState, MacroAction> readMacroActionStep() throws IOException {
+        MacroActionsState state = readMacroActionState();
+        MacroAction action = readMacroAction();
         return Tuple2.of(state, action);
     }
 

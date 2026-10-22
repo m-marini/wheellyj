@@ -32,7 +32,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.rl.envs.WorldModelState;
+import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.mmarini.wheelly.behaviours.HeadActionId;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
+import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.wheelly.utils.Angle;
 
@@ -49,12 +52,14 @@ class MoveToLabelTest {
     public static final int SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 100;
 
-    static WorldModelState createState(Point2D robotLocation, int robotDeg, Point2D marker) {
-        return new WorldModelState(new WorldModelBuilder()
+    static BehaviourState createState(Point2D robotLocation, int robotDeg, Point2D marker) {
+        return new MacroActionsState(new WorldModelBuilder()
                 .robotLocation(robotLocation)
                 .robotDir(robotDeg)
                 .addMarker(MARKER0, marker)
-                .build());
+                .build(),
+                MoveActionId.HALT_ACTION,
+                HeadActionId.LOOK_STRAIGHT_ACTION);
     }
 
     public static Stream<Arguments> dataReward() {
@@ -88,9 +93,9 @@ class MoveToLabelTest {
         // Given two states
         Point2D.Double robotLocation0 = new Point2D.Double(robotX, robotY);
         Point2D marker = Angle.fromDeg(markerDeg).at(robotLocation0, markerDistance);
-        WorldModelState s0 = createState(robotLocation0, robotDeg, marker);
+        BehaviourState s0 = createState(robotLocation0, robotDeg, marker);
         Point2D robotLocation1 = Angle.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
-        WorldModelState s1 = createState(robotLocation1, robotDeg, marker);
+        BehaviourState s1 = createState(robotLocation1, robotDeg, marker);
 
         double reward = MoveToLabel.moveToLabel(matchReward).reward(s0, null, s1);
 
@@ -103,9 +108,9 @@ class MoveToLabelTest {
         // Given two states
         Point2D.Double robotLocation0 = new Point2D.Double(robotX, robotY);
         Point2D marker = Angle.fromDeg(markerDeg).at(robotLocation0, markerDistance);
-        WorldModelState s0 = createState(robotLocation0, robotDeg, marker);
+        BehaviourState s0 = createState(robotLocation0, robotDeg, marker);
         Point2D robotLocation1 = Angle.fromDeg(markerDeg + moveToTargetDeg).at(robotLocation0, moveDistance);
-        WorldModelState s1 = createState(robotLocation1, robotDeg, marker);
+        BehaviourState s1 = createState(robotLocation1, robotDeg, marker);
 
         double reward = MoveToLabel.moveToLabel(1).reward(s0, null, s1);
 

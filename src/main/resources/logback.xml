@@ -54,8 +54,8 @@
     <logger name="org.mmarini.wheelly.apps.Wheelly" level="INFO"/>
     <logger name="org.mmarini.wheelly.apps.CameraCalibration" level="INFO"/>
 
-    <logger name="org.mmarini.wheelly.batch.BinFilesDatasetIteratorOld" level="INFO"/>
-    <logger name="org.mmarini.wheelly.behaviours.fsm.MovePathState" level="DEBUG"/>
+    <logger name="org.mmarini.wheelly.batch.BinFilesDatasetIterator" level="INFO"/>
+    <logger name="org.mmarini.wheelly.behaviours.fsm.MovePathState" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.control.RobotController" level="INFO"/>
     <logger name="org.mmarini.wheelly.control.RobotControllerStatus" level="INFO"/>

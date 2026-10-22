@@ -29,10 +29,6 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.ArraySignal;
-import org.mmarini.rl.envs.MacroActionsStateOld;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.behaviours.HeadActionId;
 import org.mmarini.wheelly.behaviours.MoveActionId;
@@ -174,7 +170,7 @@ public class MacroActionsStateFunction implements StateFunction {
      *
      * @param worldSpec  the structural world layout specification profile
      * @param numMarkers the number of recognised optical markers configured in the system
-     * @return a {@link Map} pairing signal keys to their respective {@link SignalSpecOld} structures
+     * @return a {@link Map} pairing signal keys to their respective {@link SignalSpec} structures
      */
     private static Map<String, SignalSpec> createSpec(WorldModelSpec worldSpec, int numMarkers) {
         long radarSize = worldSpec.robotMapSize();
@@ -249,7 +245,7 @@ public class MacroActionsStateFunction implements StateFunction {
      *
      * @param states an array of current execution environment states
      * @return a 2D float {@link INDArray} matrix mapping state batches to active FSM action flags
-     * @throws IllegalArgumentException if any state element within the batch is not an instance of {@link MacroActionsStateOld}
+     * @throws IllegalArgumentException if any state element within the batch is not an instance of {@link BehaviourState}
      */
     private INDArray fsmSignal(BehaviourState... states) {
         int n = states.length;
@@ -469,14 +465,14 @@ public class MacroActionsStateFunction implements StateFunction {
      * of environment states.
      * <p>
      * This method orchestrates the full state feature extraction pipeline, processing raw
-     * telemetry into independent ND4J-backed {@link ArraySignal} instances. It centralises
+     * telemetry into independent ND4J-backed instances. It centralises
      * chassis kinematics, proximity metrics, sensor head tracking vectors, optical marker features,
      * concurrent FSM indicators, and multichannel grid maps into an unmodifiable map layout
      * matching the environment's state specification.
      * </p>
      *
      * @param states a varargs array of current execution environment states to be processed
-     * @return a {@link Map} pairing signal identifier keys to their respective encapsulated {@link Signal} vectors
+     * @return a {@link Map} pairing signal identifier keys to their respective encapsulated vectors
      */
     @Override
     public Map<String, INDArray> signals(BehaviourState... states) {
@@ -497,7 +493,7 @@ public class MacroActionsStateFunction implements StateFunction {
      * strict compatibility with the reinforcement learning environment configuration.
      * </p>
      *
-     * @return a {@link Map} pairing signal identifier keys to their respective {@link SignalSpecOld} structures
+     * @return a {@link Map} pairing signal identifier keys to their respective {@link SignalSpec} structures
      */
     @Override
     public Map<String, SignalSpec> spec() {

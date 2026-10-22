@@ -31,9 +31,12 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.RewardFunctionOld;
-import org.mmarini.rl.envs.WorldModelState;
 import org.mmarini.wheelly.TestFunctions;
+import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.mmarini.wheelly.behaviours.HeadActionId;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
+import org.mmarini.wheelly.behaviours.MoveActionId;
+import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.yaml.Locator;
@@ -47,7 +50,7 @@ import static org.hamcrest.Matchers.closeTo;
 
 class SensorLabelTest {
 
-    static WorldModelState createState(int headDeg, double leftPps, double rightPps, double distance, int markerId) {
+    static BehaviourState createState(int headDeg, double leftPps, double rightPps, double distance, int markerId) {
         WorldModelBuilder builder = new WorldModelBuilder()
                 .headAngle(headDeg)
                 .frontDistance(distance)
@@ -56,7 +59,9 @@ class SensorLabelTest {
             Point2D markerLocation = Angle.fromDeg(headDeg).at(new Point2D.Double(), distance);
             builder = builder.addMarker(markerId, markerLocation);
         }
-        return new WorldModelState(builder.build());
+        return new MacroActionsState(builder.build(),
+                MoveActionId.HALT_ACTION,
+                HeadActionId.LOOK_STRAIGHT_ACTION);
     }
 
     @ParameterizedTest(
@@ -94,9 +99,9 @@ class SensorLabelTest {
                 "sensorRange: 30",
                 "reward: 2"
         ));
-        WorldModelState state = createState(headDir, leftPps, rightPps,
+        BehaviourState state = createState(headDir, leftPps, rightPps,
                 distance, markerId);
-        RewardFunctionOld f = SensorLabel.create(root, Locator.root());
+        RewardFunction f = SensorLabel.create(root, Locator.root());
 
         double result = f.reward(null, null, state);
 

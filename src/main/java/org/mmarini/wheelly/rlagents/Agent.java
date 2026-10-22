@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.rlagents;
 
+import org.mmarini.wheelly.batch.BatchAgent;
 import org.mmarini.wheelly.gyms.AdapterConnector;
 import org.mmarini.wheelly.gyms.WithSignalsSpec;
 import org.mmarini.wheelly.utils.WithShutdownCompletable;
@@ -35,7 +36,7 @@ import org.mmarini.yaml.Utils;
 
 import java.io.File;
 
-public interface Agent extends AdapterConnector, AutoCloseable, WithShutdownCompletable {
+public interface Agent extends AdapterConnector, BatchAgent, AutoCloseable, WithShutdownCompletable {
 
     /**
      * Returns the agent from agent

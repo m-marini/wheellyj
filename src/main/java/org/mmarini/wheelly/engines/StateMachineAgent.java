@@ -184,10 +184,10 @@ public class StateMachineAgent implements ProcessorContextApi, DecisionMaker<Wor
     /**
      * Sets the modeller
      *
-     * @param modeller the modeller
+     * @param cleaner the modeller
      */
-    public void modeller(WithClearMap modeller) {
-        this.modeller = modeller;
+    public void mapClener(WithClearMap cleaner) {
+        this.modeller = cleaner;
     }
 
     @Override

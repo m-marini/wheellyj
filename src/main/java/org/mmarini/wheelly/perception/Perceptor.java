@@ -70,4 +70,6 @@ public interface Perceptor extends PerceptionConnector, WithClearMap, WithDecisi
      * @param controller The {@link ControllerApi} instance handling the communication loop.
      */
     void init(RobotSpec robotSpec, ControllerApi controller);
+
+    WorldModel updateForInference(WorldModel model);
 }

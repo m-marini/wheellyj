@@ -29,9 +29,6 @@
 package org.mmarini.wheelly.gyms;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.BehaviourStateOld;
-import org.mmarini.rl.envs.Signal;
-import org.mmarini.rl.envs.SignalSpecOld;
 import org.mmarini.wheelly.behaviours.*;
 import org.mmarini.wheelly.perception.WorldModelSpec;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
@@ -43,6 +40,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.DoubleConsumer;
 import java.util.function.Function;
@@ -96,6 +95,7 @@ public class MacroActionsAdapter implements GymAdapter {
     }
 
     private final Function<WorldModelSpec, StateFunction> stateFuncBuilder;
+    private final ActionFunction actionFunction;
     private StateFunction stateFunc;
     private RewardFunction rewardFunc;
     private AdapterConnector agent;
@@ -109,7 +109,32 @@ public class MacroActionsAdapter implements GymAdapter {
      */
     public MacroActionsAdapter(Function<WorldModelSpec, StateFunction> stateFuncBuilder) {
         this.stateFuncBuilder = stateFuncBuilder;
+        this.actionFunction = new ActionFunction() {
+            @Override
+            public List<BehaviourAction> commands(Map<String, INDArray> actions, BehaviourState... states) {
+                long n = actions.values().iterator().next().size(0);
+                List<BehaviourAction> result = new ArrayList<>();
+                for (int i = 0; i < n; i++) {
+                    int moveCode = actions.get(MOVE_ID).getInt(i, 0);
+                    MoveActionId moveId = MoveActionId.values()[moveCode];
+                    int headCode = actions.get(HEAD_ID).getInt(i, 0);
+                    HeadActionId headId = HeadActionId.values()[headCode];
+                    result.add(new MacroAction(moveId, headId));
+                }
+                return result;
+            }
+
+            @Override
+            public Map<String, SignalSpec> spec() {
+                return actionSpec();
+            }
+        };
         logger.atDebug().log("Created");
+    }
+
+    @Override
+    public ActionFunction actionFunction() {
+        return actionFunction;
     }
 
     @Override
@@ -162,12 +187,8 @@ public class MacroActionsAdapter implements GymAdapter {
      * @param actions the map containing movement and heading signals
      * @return the decoded {@link MacroAction} wrapper
      */
-    private BehaviourAction decodeAction(Map<String, INDArray> actions) {
-        int moveCode = actions.get(MOVE_ID).getInt(0, 0);
-        MoveActionId moveId = MoveActionId.values()[moveCode];
-        int headCode = actions.get(HEAD_ID).getInt(0, 0);
-        HeadActionId headId = HeadActionId.values()[headCode];
-        return new MacroAction(moveId, headId);
+    public BehaviourAction decodeAction(Map<String, INDArray> actions) {
+        return actionFunction.commands(actions).getFirst();
     }
 
     /**
@@ -215,7 +236,8 @@ public class MacroActionsAdapter implements GymAdapter {
      * @param state1  the resulting environment state after the action execution
      * @return the calculated reward value, or {@code 0.0} if no reward function is configured
      */
-    private double reward(BehaviourState state0, BehaviourAction actions, BehaviourState state1) {
+    @Override
+    public double reward(BehaviourState state0, BehaviourAction actions, BehaviourState state1) {
         return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
     }
 
@@ -224,6 +246,7 @@ public class MacroActionsAdapter implements GymAdapter {
      *
      * @param rewardFunc the reward function
      */
+    @Override
     public void rewardFunc(RewardFunction rewardFunc) {
         this.rewardFunc = rewardFunc;
     }
@@ -235,14 +258,19 @@ public class MacroActionsAdapter implements GymAdapter {
      * to generate a map of input signals ready for reinforcement learning agent consumption.
      * </p>
      *
-     * @param model the current {@link BehaviourStateOld} context to extract signals from
-     * @return a map pairing signal identifiers with their processed {@link Signal} values
+     * @param model the current {@link BehaviourState} context to extract signals from
+     * @return a map pairing signal identifiers with their processed {@link INDArray} values
      * @throws NullPointerException if the provided model is null
      */
     public Map<String, INDArray> state(BehaviourState... model) {
         requireNonNull(model);
         ensureConnected();
         return stateFunc.signals(model);
+    }
+
+    @Override
+    public StateFunction stateFunction() {
+        return stateFunc;
     }
 
     /**
@@ -252,9 +280,8 @@ public class MacroActionsAdapter implements GymAdapter {
      * sensory data that the environment provides to the reinforcement learning agent.
      * </p>
      *
-     * @return a map pairing signal identifiers with their corresponding {@link SignalSpecOld}
+     * @return a map pairing signal identifiers with their corresponding {@link SignalSpec}
      */
-    @Override
     public Map<String, SignalSpec> stateSpec() {
         ensureConnected();
         return stateFunc.spec();

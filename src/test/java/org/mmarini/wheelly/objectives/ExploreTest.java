@@ -31,9 +31,12 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.RewardFunctionOld;
-import org.mmarini.rl.envs.WorldModelState;
 import org.mmarini.wheelly.TestFunctions;
+import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.mmarini.wheelly.behaviours.HeadActionId;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
+import org.mmarini.wheelly.behaviours.MoveActionId;
+import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -49,11 +52,13 @@ class ExploreTest {
     public static final double DECAY = 10000d;
 
 
-    static WorldModelState createState(int knownCount) {
+    static BehaviourState createState(int knownCount) {
         long timestamp = System.currentTimeMillis();
-        return new WorldModelState(new WorldModelBuilder()
+        return new MacroActionsState(new WorldModelBuilder()
                 .mapRadar(IntStream.range(0, knownCount), cell -> cell.addAnechoic(timestamp, DECAY))
-                .build());
+                .build(),
+                MoveActionId.HALT_ACTION,
+                HeadActionId.LOOK_STRAIGHT_ACTION);
     }
 
     @ParameterizedTest
@@ -69,9 +74,9 @@ class ExploreTest {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + Explore.SCHEMA_NAME,
                 "class: " + Explore.class.getName()));
-        RewardFunctionOld f = Explore.create(root, Locator.root());
-        WorldModelState state0 = createState(knownCount0);
-        WorldModelState state1 = createState(knownCount1);
+        RewardFunction f = Explore.create(root, Locator.root());
+        BehaviourState state0 = createState(knownCount0);
+        BehaviourState state1 = createState(knownCount1);
 
         double result = f.reward(state0, null, state1);
 
@@ -92,9 +97,9 @@ class ExploreTest {
                 "$schema: " + Explore.SCHEMA_NAME,
                 "class: " + Explore.class.getName(),
                 "reward: 2"));
-        RewardFunctionOld f = Explore.create(root, Locator.root());
-        WorldModelState state0 = createState(knownCount0);
-        WorldModelState state1 = createState(knownCount1);
+        RewardFunction f = Explore.create(root, Locator.root());
+        BehaviourState state0 = createState(knownCount0);
+        BehaviourState state1 = createState(knownCount1);
 
         double result = f.reward(state0, null, state1);
 

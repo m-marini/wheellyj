@@ -32,9 +32,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.envs.MacroActionsStateOld;
 import org.mmarini.wheelly.behaviours.HeadActionId;
 import org.mmarini.wheelly.behaviours.MacroAction;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
 import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.perception.*;
@@ -82,7 +82,7 @@ class InferenceFileTest {
     private static final Map<Integer, FiducialMarker> MARKERS = Map.of(
             UNKNOWN_MARKER, new FiducialMarker(UNKNOWN_MARKER, new Point2D.Double(1, 2), 1, 2, 3));
     public static final WorldModel MODEL = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS, null, null);
-    public static final MacroActionsStateOld MACRO_ENV_STATE = new MacroActionsStateOld(MODEL, MoveActionId.MICRO_FORWARD_ACTION, HeadActionId.SCAN_ACTION);
+    public static final MacroActionsState MACRO_ENV_STATE = new MacroActionsState(MODEL, MoveActionId.MICRO_FORWARD_ACTION, HeadActionId.SCAN_ACTION);
     private InferenceFileWriter writer;
 
     @BeforeEach
@@ -145,8 +145,8 @@ class InferenceFileTest {
     void testDLMacroActionStep() throws IOException {
         writer.write(MACRO_ENV_STATE, AGENT_ACTION);
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-            Tuple2<MacroActionsStateOld, MacroAction> step = reader.readMacroEnvStep();
-            MacroActionsStateOld state = step._1;
+            Tuple2<MacroActionsState, MacroAction> step = reader.readMacroActionStep();
+            MacroActionsState state = step._1;
             WorldModel model = state.worldModel();
             RadarMap radarRead = model.radarMap();
             assertEquals(MODEL.robotStatus(), model.robotStatus());
@@ -219,7 +219,7 @@ class InferenceFileTest {
     void testMacroEnvState() throws IOException {
         writer.write(MACRO_ENV_STATE);
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-            MacroActionsStateOld state = reader.readMacroEnvState();
+            MacroActionsState state = reader.readMacroActionState();
             WorldModel model = state.worldModel();
             RadarMap radarRead = model.radarMap();
             assertEquals(MODEL.robotStatus(), model.robotStatus());

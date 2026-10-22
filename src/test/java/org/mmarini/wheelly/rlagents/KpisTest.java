@@ -55,7 +55,7 @@ public class KpisTest {
         ).reshape(2, 4);
 
         // When reset compute maxMinRatio
-        INDArray ratio = org.mmarini.rl.agents.Kpis.maxGeometricMeanRatio(data);
+        INDArray ratio = Kpis.maxGeometricMeanRatio(data);
 
         float mean0 = (float) Math.sqrt(Math.sqrt(0.1f * 0.2f * 0.5f * 0.2f));
         float mean1 = (float) Math.sqrt(Math.sqrt(0.1f * 0.6f * 0.2f * 0.1f));
@@ -75,7 +75,7 @@ public class KpisTest {
         ).reshape(2, 4);
 
         // When reset compute maxMinRatio
-        INDArray ratio = org.mmarini.rl.agents.Kpis.maxMinRatio(data);
+        INDArray ratio = Kpis.maxMinRatio(data);
 
         assertThat(ratio, matrixCloseTo(new long[]{2, 1}, 1e-6,
                 0.5f / 0.1f,
@@ -98,7 +98,7 @@ public class KpisTest {
         ).reshape(2, 3);
 
         // When compute rms
-        INDArray ratio = org.mmarini.rl.agents.Kpis.rms(data);
+        INDArray ratio = Kpis.rms(data);
 
         assertThat(ratio, matrixCloseTo(new long[]{2, 1}, 1e-6,
                 expected,

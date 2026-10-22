@@ -53,8 +53,8 @@ import org.mmarini.wheelly.gyms.WithRewardCallback;
 import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.GridMap;
+import org.mmarini.wheelly.perception.Perceptor;
 import org.mmarini.wheelly.perception.WorldModel;
-import org.mmarini.wheelly.perception.WorldModeller;
 import org.mmarini.wheelly.rlagents.Agent;
 import org.mmarini.wheelly.rlagents.RLAgent;
 import org.mmarini.wheelly.rlagents.TrainingKpis;
@@ -192,7 +192,7 @@ public class Wheelly {
     private List<JFrame> allFrames;
     private RobotApi robot;
     private ControllerApi controller;
-    private WorldModeller perceptor;
+    private Perceptor perceptor;
     private GymAdapter adapter;
     private BehaviourApi behaviuor;
     private Agent agent;
@@ -242,13 +242,13 @@ public class Wheelly {
         this.controller = AppYaml.controllerFromJson(config);
 
         logger.atInfo().log("Creating world modeller ...");
-        this.perceptor = AppYaml.modellerFromJson(config);
+        this.perceptor = AppYaml.perceptorFromJson(config);
 
         logger.atInfo().log("Creating behaviour ...");
         this.behaviuor = AppYaml.behaviourFromJson(config);
 
         logger.atInfo().log("Creating RL environment ...");
-        this.adapter = AppYaml.adapterfromFile(config);
+        this.adapter = AppYaml.adapterFromFile(config);
 
         logger.atInfo().log("Create reward function ...");
         RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
@@ -266,10 +266,9 @@ public class Wheelly {
         controller.init(robot);
 
         perceptor.init(robot.robotSpec(), controller);
-
         perceptor.decisionMaker(behaviuor);
 
-        behaviuor.decisionMaker(adapter);
+        behaviuor.decisionMaker(this::decide);
 
         adapter.agent(agent);
 

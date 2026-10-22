@@ -36,16 +36,14 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.mmarini.rl.agents.Agent;
-import org.mmarini.rl.envs.DLEnvironment;
-import org.mmarini.rl.envs.GymApi;
-import org.mmarini.rl.envs.RewardFunctionOld;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.batch.BatchAgentOld;
 import org.mmarini.wheelly.batch.DatasetBuilder;
 import org.mmarini.wheelly.batch.ProgressInfo;
+import org.mmarini.wheelly.behaviours.BehaviourApi;
 import org.mmarini.wheelly.control.ControllerApi;
-import org.mmarini.wheelly.perception.WorldModeller;
+import org.mmarini.wheelly.gyms.GymAdapter;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.Perceptor;
 import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.wheelly.storage.serde.InferenceFileReader;
 import org.mmarini.wheelly.utils.AppYaml;
@@ -76,7 +74,6 @@ public class CreateDatasets {
     public static final int PROGRESS_INTERVAL = 1000;
     private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.4";
     private static final Logger logger = LoggerFactory.getLogger(CreateDatasets.class);
-    public static final String AGENT_ID = "agent";
 
     static {
         try (INDArray ignored = Nd4j.zeros(1)) {
@@ -122,8 +119,8 @@ public class CreateDatasets {
     protected final Namespace args;
     private final JProgressBar progressBar;
     private final JTextField infoBar;
-    private WorldModeller modeller;
-    private DLEnvironment environment;
+    private Perceptor perceptor;
+    private GymAdapter adapter;
     private JFrame frame;
 
     /**
@@ -162,36 +159,33 @@ public class CreateDatasets {
         RobotApi robot = AppYaml.robotFromJson(config);
 
         // Creates controller
+        logger.atInfo().log("Creating controller ...");
         ControllerApi controller = AppYaml.controllerFromJson(config);
-        controller.init(robot);
 
         // Creates modeller
-        this.modeller = AppYaml.modellerFromJson(config);
-        modeller.setRobotSpec(robot.robotSpec());
-        // TODO modeller.connectController(controller);
+        logger.atInfo().log("Creating modeller ...");
+        this.perceptor = AppYaml.perceptorFromJson(config);
+
+        // Create behaviour
+        logger.atInfo().log("Creating behaviour ...");
+        BehaviourApi behaviour = AppYaml.behaviourFromJson(config);
 
         // Creates environment
-        GymApi env = AppYaml.envFromJson(config);
-        if (env instanceof DLEnvironment we) {
-            this.environment = we;
-        } else {
-            throw new IllegalArgumentException(format(
-                    "Environment must be %s (%s)",
-                    DLEnvironment.class.getSimpleName(),
-                    env.getClass().getSimpleName()
-            ));
-        }
-        environment.connect(modeller);
-        // Load reward function
-        RewardFunctionOld rewardFunc = (RewardFunctionOld) AppYaml.rewardFromJson(config);
-        environment.setRewardFunc(rewardFunc);
+        logger.atInfo().log("Creating RL adapter ...");
+        this.adapter = AppYaml.adapterFromFile(config);
 
-        // Creates agent
-        BatchAgentOld agent = (BatchAgentOld) Agent.fromFile(new File(
-                Locator.locate(AGENT_ID)
-                        .getNode(config)
-                        .asText()));
-        // TODO environment.connect(agent);
+        logger.atInfo().log("Create reward function ...");
+        RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
+
+        controller.init(robot);
+
+        perceptor.init(robot.robotSpec(), controller);
+        perceptor.decisionMaker(behaviour);
+
+        behaviour.decisionMaker(adapter);
+        // TODO modeller.connectController(controller);
+
+        adapter.rewardFunc(rewardFunc);
 
         // Creates random number generator
         Random random = Nd4j.getRandomFactory().getNewRandomInstance();
@@ -314,9 +308,9 @@ public class CreateDatasets {
         InferenceFileReader reader = InferenceFileReader.fromFile(new File(this.args.getString("dataset")));
         DatasetBuilder builder = new DatasetBuilder(
                 reader,
-                modeller,
+                perceptor,
                 new File(this.args.getString("temp")),
-                environment);
+                adapter);
         builder.readProgressInfo()
                 .subscribeOn(Schedulers.io())
                 .throttleLatest(PROGRESS_INTERVAL, TimeUnit.MILLISECONDS)

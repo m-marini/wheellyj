@@ -164,6 +164,11 @@ class MacroActionsBehaviourTest {
             }
 
             @Override
+            public WorldModel updateForInference(WorldModel model) {
+                return null;
+            }
+
+            @Override
             public void onDecision(Consumer<Tuple2<WorldModel, RobotCommand>> callback) {
             }
 

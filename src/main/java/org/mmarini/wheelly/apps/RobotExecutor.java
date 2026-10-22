@@ -44,8 +44,8 @@ import org.mmarini.wheelly.engines.StateNode;
 import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.perception.FiducialMarker;
 import org.mmarini.wheelly.perception.GridMap;
+import org.mmarini.wheelly.perception.Perceptor;
 import org.mmarini.wheelly.perception.WorldModel;
-import org.mmarini.wheelly.perception.WorldModeller;
 import org.mmarini.wheelly.robots.Obstacle;
 import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.wheelly.robots.RobotCommand;
@@ -234,7 +234,7 @@ public class RobotExecutor {
     /**
      * The sensory integration matrix model structuring dynamic safe navigation cells.
      */
-    private WorldModeller modeller;
+    private Perceptor perceptor;
 
     /**
      * Initialises a new {@link RobotExecutor} instance, allocating visual panels, tracking structures,
@@ -277,18 +277,19 @@ public class RobotExecutor {
 
         logger.atInfo().log("Creating controller ...");
         this.controller = AppYaml.controllerFromJson(config);
-        controller.init(robot);
 
         logger.atInfo().log("Creating world modeller ...");
-        this.modeller = AppYaml.modellerFromJson(config);
-        modeller.setRobotSpec(robot.robotSpec());
-        modeller.connectController(controller);
-        modeller.decisionMaker(this::onDecisionProcess);
+        this.perceptor = AppYaml.perceptorFromJson(config);
 
         logger.atInfo().log("Creating agent ...");
         this.agent = StateMachineAgent.fromFile(
                 new File(config.path("agent").asText()));
-        agent.modeller(modeller);
+
+        controller.init(robot);
+        perceptor.init(robot.robotSpec(), controller);
+        perceptor.connectController(controller);
+        perceptor.decisionMaker(this::onDecisionProcess);
+        agent.mapClener(perceptor);
 
         this.sessionDuration = this.args.getLong("time") * 1000;
         logger.atInfo().setMessage("Session will be running for {} sec...").addArgument(sessionDuration).log();
@@ -406,7 +407,7 @@ public class RobotExecutor {
      * @param actionEvent the action event triggered by the clear map component
      */
     private void onClearMapButton(ActionEvent actionEvent) {
-        modeller.clearRadarMap();
+        perceptor.clearRadarMap();
     }
 
     /**

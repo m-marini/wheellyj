@@ -31,9 +31,12 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.RewardFunctionOld;
-import org.mmarini.rl.envs.WorldModelState;
 import org.mmarini.wheelly.TestFunctions;
+import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.mmarini.wheelly.behaviours.HeadActionId;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
+import org.mmarini.wheelly.behaviours.MoveActionId;
+import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
@@ -45,11 +48,13 @@ import static org.hamcrest.Matchers.closeTo;
 
 class NoMoveObjectiveTest {
 
-    static WorldModelState createState(int sensorDir, double leftPps, double rightPps) {
-        return new WorldModelState(new WorldModelBuilder()
+    static BehaviourState createState(int sensorDir, double leftPps, double rightPps) {
+        return new MacroActionsState(new WorldModelBuilder()
                 .headAngle(sensorDir)
                 .robotSpeed(leftPps, rightPps)
-                .build());
+                .build(),
+                MoveActionId.HALT_ACTION,
+                HeadActionId.LOOK_STRAIGHT_ACTION);
     }
 
     @ParameterizedTest(name = "[index] head {1} DEG, power({2},{3})")
@@ -67,13 +72,13 @@ class NoMoveObjectiveTest {
             "0,0,1,-1",
     })
     void testCreate(double expected,
-                int sensorDir,
-                double leftPps, double rightPps) throws IOException {
+                    int sensorDir,
+                    double leftPps, double rightPps) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + NoMove.SCHEMA_NAME,
                 "class: " + NoMove.class.getName()));
-        RewardFunctionOld f = NoMove.create(root, Locator.root());
-        WorldModelState state = createState(sensorDir, leftPps, rightPps);
+        RewardFunction f = NoMove.create(root, Locator.root());
+        BehaviourState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.reward(null, null, state);
 
@@ -95,14 +100,14 @@ class NoMoveObjectiveTest {
             "0,0,1,-1",
     })
     void testCreateWithReward(double expected,
-                          int sensorDir,
-                          double leftPps, double rightPps) throws IOException {
+                              int sensorDir,
+                              double leftPps, double rightPps) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + NoMove.SCHEMA_NAME,
                 "class: " + NoMove.class.getName(),
                 "reward: 2"));
-        RewardFunctionOld f = NoMove.create(root, Locator.root());
-        WorldModelState state = createState(sensorDir, leftPps, rightPps);
+        RewardFunction f = NoMove.create(root, Locator.root());
+        BehaviourState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.reward(null, null, state);
 
@@ -126,15 +131,15 @@ class NoMoveObjectiveTest {
             "0,0,1,-1",
     })
     void testCreateWithRewardAndSensor(double expected,
-                                   int sensorDir,
-                                   double leftPps, double rightPps) throws IOException {
+                                       int sensorDir,
+                                       double leftPps, double rightPps) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + NoMove.SCHEMA_NAME,
                 "class: " + NoMove.class.getName(),
                 "sensorRange: 1",
                 "reward: 2"));
-        RewardFunctionOld f = NoMove.create(root, Locator.root());
-        WorldModelState state = createState(sensorDir, leftPps, rightPps);
+        RewardFunction f = NoMove.create(root, Locator.root());
+        BehaviourState state = createState(sensorDir, leftPps, rightPps);
 
         double result = f.reward(null, null, state);
 

@@ -29,11 +29,9 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.RewardFunctionOld;
 import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.FiducialMarker;
-import org.mmarini.wheelly.perception.WithWorldModel;
-import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
@@ -65,10 +63,10 @@ public interface SensorLabel {
      *
      * @param root    the root JSON document containing configuration data
      * @param locator the locator pointing to the objective configuration node
-     * @return the configured {@link RewardFunctionOld} instance
+     * @return the configured {@link RewardFunction} instance
      * @throws IllegalArgumentException if the JSON structure does not comply with the schema
      */
-    static RewardFunctionOld create(JsonNode root, Locator locator) {
+    static RewardFunction create(JsonNode root, Locator locator) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double minDistance = locator.path(MIN_DISTANCE_ID).getNode(root).asDouble();
         double maxDistance = locator.path(MAX_DISTANCE_ID).getNode(root).asDouble();
@@ -88,12 +86,12 @@ public interface SensorLabel {
      * @param velocityThreshold the threshold of velocity to consider the robot stopped
      * @param sensorRange       the sensor direction range angle tolerance
      * @param reward            the reward value assigned in case of a matched goal
-     * @return the lambda expression implementing the {@link RewardFunctionOld}
+     * @return the lambda expression implementing the {@link RewardFunction}
      */
-    static RewardFunctionOld<WithWorldModel, RobotCommand> label(double minDistance, double maxDistance,
-                                                                 double velocityThreshold,
-                                                                 Angle sensorRange,
-                                                                 double reward) {
+    static RewardFunction label(double minDistance, double maxDistance,
+                                double velocityThreshold,
+                                Angle sensorRange,
+                                double reward) {
         return (s0, a, s1) -> {
             // the environment supports radar map
             RobotStatus robotStatus = s1.worldModel().robotStatus();

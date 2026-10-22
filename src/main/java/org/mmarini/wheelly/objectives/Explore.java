@@ -29,11 +29,9 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.RewardFunctionOld;
+import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.MapCell;
 import org.mmarini.wheelly.perception.RadarMap;
-import org.mmarini.wheelly.perception.WithWorldModel;
-import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
@@ -58,7 +56,7 @@ public interface Explore {
      * @param root    the root json document
      * @param locator the locator
      */
-    static RewardFunctionOld<WithWorldModel, RobotCommand> create(JsonNode root, Locator locator) {
+    static RewardFunction create(JsonNode root, Locator locator) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double reward = locator.path("reward").getNode(root).asDouble(1d);
         return explore(reward);
@@ -67,7 +65,7 @@ public interface Explore {
     /**
      * Returns the function of reward for the given environment
      */
-    static RewardFunctionOld<WithWorldModel, RobotCommand> explore(double reward) {
+    static RewardFunction explore(double reward) {
         return (s0, a, s1) -> {
             RadarMap radarMap0 = s0.worldModel().radarMap();
             RadarMap radarMap1 = s1.worldModel().radarMap();

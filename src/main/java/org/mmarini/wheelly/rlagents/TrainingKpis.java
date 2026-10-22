@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.Map;
 
 import static java.lang.Math.log;
-import static org.mmarini.rl.agents.NNRLTrainingDataGenerator.CRITIC_ID;
+import static org.mmarini.wheelly.rlagents.NNRLTrainingDataGenerator.CRITIC_ID;
 
 /**
  * Tracks the predictions, the RL error and the average rewards of a minibatch

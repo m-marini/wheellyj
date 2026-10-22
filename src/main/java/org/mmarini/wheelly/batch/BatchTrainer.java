@@ -31,6 +31,7 @@ package org.mmarini.wheelly.batch;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import org.mmarini.wheelly.rlagents.Agent;
 import org.mmarini.wheelly.rlagents.RLDatasetIterator;
 import org.mmarini.wheelly.rlagents.TrainingKpis;
 import org.mmarini.wheelly.storage.serde.BinArrayFile;
@@ -65,7 +66,7 @@ public class BatchTrainer {
      * @param actionMasks the action masks
      * @param rewards     the rewards
      */
-    public BatchTrainer(BatchAgent agent, Map<String, BinArrayFile> states, Map<String, BinArrayFile> actionMasks, BinArrayFile rewards) {
+    public BatchTrainer(Agent agent, Map<String, BinArrayFile> states, Map<String, BinArrayFile> actionMasks, BinArrayFile rewards) {
         this.status = new AtomicReference<>(new BatchTrainerStatus(agent, null, false));
         this.states = requireNonNull(states);
         this.actionMasks = requireNonNull(actionMasks);
@@ -107,7 +108,7 @@ public class BatchTrainer {
      */
     public BatchAgent train(int numEpochs) throws Exception {
         // Backup the agent
-        BatchAgent agent = status.get().agent();
+        Agent agent = status.get().agent();
         agent.backup();
         // Creates the dataset iterator
         /*

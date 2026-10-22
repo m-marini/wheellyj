@@ -34,7 +34,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
-import org.mmarini.rl.envs.DLStateFunction;
 import org.mmarini.wheelly.behaviours.*;
 import org.mmarini.wheelly.perception.GridMap;
 import org.mmarini.wheelly.perception.GridTopology;
@@ -66,7 +65,6 @@ import static org.mmarini.wheelly.perception.WorldModelBuilder.GRID_MAP_SIZE;
 import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_ROBOT_SPEC;
 
 class MacroActionsStateFunctionTest {
-    public static final double EPSILON = 1e-5;
     public static final int LABEL_CHANNEL = 4;
     public static final long SEED = 1234;
     public static final int NUM_RANDOM_TEST_CASES = 30;
@@ -276,7 +274,7 @@ class MacroActionsStateFunctionTest {
         // Then ...
         assertThat(signals, hasKey("map"));
         INDArray signal = signals.get("map");
-        assertArrayEquals(new long[]{2, DLStateFunction.NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
+        assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
         Angle cellDir = Angle.direction(robotLocation, cellLocation);
         Angle cellDirRobotRelative = cellDir.sub(Angle.fromDeg(directionDeg));

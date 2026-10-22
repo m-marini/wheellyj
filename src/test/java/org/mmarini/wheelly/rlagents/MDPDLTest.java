@@ -55,7 +55,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mmarini.rl.agents.NNRLTrainingDataGenerator.CRITIC_ID;
+import static org.mmarini.wheelly.rlagents.NNRLTrainingDataGenerator.CRITIC_ID;
 
 public class MDPDLTest {
     public static final long SEED = 1234L;
@@ -63,7 +63,6 @@ public class MDPDLTest {
     public static final String STATE_ID = "state";
     public static final int TRAJECTORY_SIZE = 64;
     public static final int NUM_EPOCHS = 4;
-    public static final int BATCH_SIZE = 16;
     public static final String AGENT_CONF_YAML = """
             ---
             $schema: https://mmarini.org/wheelly/rl-agent-builder-schema-2.0
@@ -85,7 +84,7 @@ public class MDPDLTest {
                 learningRate: 1e-3
                 decayRms: 0.96
                 epsilon: 1e-3
-              optimizationAlog: StochasticGradientDescent
+              optimizationAlgo: StochasticGradientDescent
               weightInit:
                 type: Xavier
               l1: 1e-7

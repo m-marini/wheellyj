@@ -62,6 +62,8 @@ public interface GymAdapter extends DecisionMaker<BehaviourState, BehaviourActio
         return Utils.createObject(file);
     }
 
+    ActionFunction actionFunction();
+
     /**
      * Injects the adapter connector representing the processing agent layer.
      * <p>
@@ -72,4 +74,10 @@ public interface GymAdapter extends DecisionMaker<BehaviourState, BehaviourActio
      * @param agent The {@link AdapterConnector} module representing the interactive agent loop.
      */
     void agent(AdapterConnector agent);
+
+    double reward(BehaviourState state0, BehaviourAction actions, BehaviourState state1);
+
+    void rewardFunc(RewardFunction rewardFunc);
+
+    StateFunction stateFunction();
 }

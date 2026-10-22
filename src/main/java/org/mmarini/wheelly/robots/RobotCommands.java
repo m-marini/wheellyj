@@ -28,8 +28,6 @@
 
 package org.mmarini.wheelly.robots;
 
-import org.mmarini.rl.envs.BehaviourActionOld;
-
 import java.awt.geom.Point2D;
 
 import static java.util.Objects.requireNonNull;
@@ -46,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  */
 public record RobotCommands(MotionStatusId status, Point2D moveTarget, int rotationDirection,
                             HeadStatusId headStatus, int scanDirection,
-                            Point2D headTarget) implements BehaviourActionOld {
+                            Point2D headTarget) {
 
     static RobotCommands HALT = new RobotCommands(MotionStatusId.HALT, new Point2D.Double(),
             0, HeadStatusId.FIX_DIRECTION, 0, new Point2D.Double());

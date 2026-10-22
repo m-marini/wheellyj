@@ -31,12 +31,13 @@ package org.mmarini.wheelly.objectives;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mmarini.rl.envs.RewardFunctionOld;
-import org.mmarini.rl.envs.WorldModelState;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.perception.WithWorldModel;
+import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.mmarini.wheelly.behaviours.HeadActionId;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
+import org.mmarini.wheelly.behaviours.MoveActionId;
+import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModelBuilder;
-import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -46,11 +47,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 
 class AvoidTest {
-    static WorldModelState createState(boolean canMoveForward, boolean canMoveBackward) {
-        return new WorldModelState(new WorldModelBuilder()
+    static BehaviourState createState(boolean canMoveForward, boolean canMoveBackward) {
+        return new MacroActionsState(new WorldModelBuilder()
                 .canMoveForward(canMoveForward)
                 .canMoveBackward(canMoveBackward)
-                .build());
+                .build(), MoveActionId.HALT_ACTION, HeadActionId.LOOK_STRAIGHT_ACTION);
     }
 
     @ParameterizedTest
@@ -66,8 +67,8 @@ class AvoidTest {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + AvoidContact.SCHEMA_NAME,
                 "class: " + AvoidContact.class.getName()));
-        RewardFunctionOld<WithWorldModel, RobotCommand> f = AvoidContact.create(root, Locator.root());
-        WorldModelState state = createState(canMoveForward != 0, canMoveBackward != 0);
+        RewardFunction f = AvoidContact.create(root, Locator.root());
+        BehaviourState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
         double result = f.reward(null, null, state);
 
@@ -88,8 +89,8 @@ class AvoidTest {
                 "$schema: " + AvoidContact.SCHEMA_NAME,
                 "class: " + AvoidContact.class.getName(),
                 "reward: -2"));
-        RewardFunctionOld<WithWorldModel, RobotCommand> f = AvoidContact.create(root, Locator.root());
-        WorldModelState state = createState(canMoveForward != 0, canMoveBackward != 0);
+        RewardFunction f = AvoidContact.create(root, Locator.root());
+        BehaviourState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
         double result = f.reward(null, null, state);
 

@@ -29,11 +29,11 @@
 package org.mmarini.wheelly.utils;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.GymApi;
 import org.mmarini.wheelly.behaviours.BehaviourApi;
 import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.gyms.GymAdapter;
 import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.Perceptor;
 import org.mmarini.wheelly.perception.WorldModeller;
 import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.yaml.Locator;
@@ -43,8 +43,8 @@ import java.io.IOException;
 
 public interface AppYaml {
 
-    static GymAdapter adapterfromFile(JsonNode config) throws Throwable {
-        return GymAdapter.fromFile(new File(config.path("environment").asText()));
+    static GymAdapter adapterFromFile(JsonNode config) throws Throwable {
+        return GymAdapter.fromFile(new File(config.path("adapter").asText()));
     }
 
     static BehaviourApi behaviourFromJson(JsonNode config) throws Throwable {
@@ -58,15 +58,6 @@ public interface AppYaml {
      */
     static ControllerApi controllerFromJson(JsonNode config) throws Throwable {
         return ControllerApi.fromFile(new File(config.path("controller").asText()));
-    }
-
-    /**
-     * Returns the environment reading the file of "environment" property
-     *
-     * @param config the json document
-     */
-    static GymApi envFromJson(JsonNode config) throws Throwable {
-        return GymApi.fromFile(new File(config.path("environment").asText()));
     }
 
     /**
@@ -99,7 +90,7 @@ public interface AppYaml {
      * @param config the JSON configuration
      * @throws IOException in case of error
      */
-    static WorldModeller modellerFromJson(JsonNode config) throws Throwable {
+    static Perceptor perceptorFromJson(JsonNode config) throws Throwable {
         return WorldModeller.fromFile(new File(config.path("modeller").asText()));
     }
 

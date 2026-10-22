@@ -29,11 +29,9 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.RewardFunctionOld;
 import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.FiducialMarker;
-import org.mmarini.wheelly.perception.WithWorldModel;
-import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
@@ -67,10 +65,10 @@ public interface Label {
      *
      * @param root    the root JSON document containing configuration data
      * @param locator the locator pointing to the objective configuration node
-     * @return the configured {@link RewardFunctionOld} instance
+     * @return the configured {@link RewardFunction} instance
      * @throws IllegalArgumentException if the JSON structure does not comply with the schema
      */
-    static RewardFunctionOld<WithWorldModel, RobotCommand> create(JsonNode root, Locator locator) {
+    static RewardFunction create(JsonNode root, Locator locator) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         int markerId = locator.path(MARKER_ID).getNode(root).asInt();
         double minDistance = locator.path(MIN_DISTANCE_ID).getNode(root).asDouble();
@@ -94,17 +92,17 @@ public interface Label {
      * @param directionRange    the direction range tolerance angle
      * @param sensorRange       the sensor direction range angle tolerance
      * @param reward            the reward value assigned in case of a matched goal
-     * @return the lambda expression implementing the {@link RewardFunctionOld}
+     * @return the lambda expression implementing the {@link RewardFunction}
      */
-    static RewardFunctionOld<WithWorldModel, RobotCommand> label(int markerId, double minDistance, double maxDistance,
-                                                                 double velocityThreshold,
-                                                                 Angle directionRange,
-                                                                 Angle sensorRange,
-                                                                 double reward) {
+    static RewardFunction label(int markerId, double minDistance, double maxDistance,
+                                double velocityThreshold,
+                                Angle directionRange,
+                                Angle sensorRange,
+                                double reward) {
         return (s0, a, s1) -> {
             RobotStatus robotStatus = s1.worldModel().robotStatus();
             Map<Integer, FiducialMarker> markers = s1.worldModel().markers();
-            // Get the nearest labeled obstacle
+            // Get the nearest labelled obstacle
             Point2D robotLocation = robotStatus.location();
             FiducialMarker fiducialMarker = markers.get(markerId);
             // check robot power in range
@@ -116,7 +114,7 @@ public interface Label {
                 Angle labeledDir = Angle.direction(robotLocation, markerLocation);
                 if (distance >= minDistance && distance <= maxDistance
                         && labeledDir.isCloseTo(robotStatus.direction(), directionRange)
-                        // and any sector in sensor direction range with a labeled target in distance range
+                        // and any sector in sensor direction range with a labelled target in distance range
                         && robotStatus.headDirection().isCloseTo(Angle.DEG0, sensorRange)) {
                     return reward;
                 }

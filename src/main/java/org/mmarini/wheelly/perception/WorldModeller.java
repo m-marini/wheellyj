@@ -219,6 +219,7 @@ public class WorldModeller implements Perceptor {
      *
      * @param model the model
      */
+    @Override
     public WorldModel updateForInference(WorldModel model) {
         RobotStatus robotStatus = model.robotStatus();
         // Create the robot-relative radar map

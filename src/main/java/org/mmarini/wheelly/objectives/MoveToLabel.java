@@ -29,10 +29,8 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.rl.envs.RewardFunctionOld;
-import org.mmarini.wheelly.perception.WithWorldModel;
+import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.WorldModel;
-import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
@@ -52,7 +50,7 @@ public interface MoveToLabel {
      * @param root    the root JSON document
      * @param locator the locator
      */
-    static RewardFunctionOld<WithWorldModel, RobotCommand> create(JsonNode root, Locator locator) {
+    static RewardFunction create(JsonNode root, Locator locator) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
         return moveToLabel(reward);
@@ -63,7 +61,7 @@ public interface MoveToLabel {
      *
      * @param reward the reward
      */
-    static RewardFunctionOld<WithWorldModel, RobotCommand> moveToLabel(double reward) {
+    static RewardFunction moveToLabel(double reward) {
         return (s0, ignore, s1) -> {
             double d0 = targetDistance(s0.worldModel());
             double d1 = targetDistance(s1.worldModel());

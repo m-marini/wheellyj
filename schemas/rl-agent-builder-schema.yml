@@ -400,7 +400,7 @@ $defs:
         minimum: 0
     required:
       - graphBuilder
-  OptimizationAlog:
+  OptimizationAlgos:
     type: string
     enum:
       - ConjucateGradient
