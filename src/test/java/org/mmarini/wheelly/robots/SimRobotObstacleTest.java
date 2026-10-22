@@ -106,7 +106,7 @@ class SimRobotObstacleTest {
 
         SimRobot simRobot = new SimRobot(new SimRobot.SimRobotConfig(DEFAULT_ROBOT_SPEC, INTERVAL, INTERVAL, 0,
                 MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL, CHANGE_MAP_PERIOD,
-                CHANGE_MAP_PERIOD, 0, 0, DEFAULT_WORLD_SIZE, 0, 0,
+                CHANGE_MAP_PERIOD, 0, 0, 0, DEFAULT_WORLD_SIZE, 0, 0,
                 List.of(mapBuilder), DEFAULT_ANTI_GIMBAL_RADIUS),
                 random, random);
         simRobot.robotPos(location.getX(), location.getY());

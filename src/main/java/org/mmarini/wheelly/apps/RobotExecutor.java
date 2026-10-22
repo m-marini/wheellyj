@@ -81,7 +81,7 @@ public class RobotExecutor {
     /**
      * The configuration target schema resource path URL utilised for validating YAML files.
      */
-    public static final String EXECUTOR_SCHEMA_YML = "https://mmarini.org/wheelly/executor-schema-2.0";
+    public static final String EXECUTOR_SCHEMA_YML = "https://mmarini.org/wheelly/executor-schema-3.0";
     private static final Logger logger = LoggerFactory.getLogger(RobotExecutor.class);
 
     /**

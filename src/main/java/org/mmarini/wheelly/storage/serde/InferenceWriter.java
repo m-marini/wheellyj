@@ -28,9 +28,9 @@
 
 package org.mmarini.wheelly.storage.serde;
 
+import org.mmarini.wheelly.behaviours.BehaviourAction;
+import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.behaviours.HeadActionId;
-import org.mmarini.wheelly.behaviours.MacroAction;
-import org.mmarini.wheelly.behaviours.MacroActionsState;
 import org.mmarini.wheelly.behaviours.MoveActionId;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.perception.*;
@@ -191,7 +191,7 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      *
      * @param state the state
      */
-    default <T extends InferenceWriter> T write(MacroActionsState state) throws IOException {
+    default <T extends InferenceWriter> T write(BehaviourState state) throws IOException {
         return write(state.worldModel())
                 .write(state.moveActionId())
                 .write(state.headActionId());
@@ -315,13 +315,13 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         return (T) this;
     }
 
-    default <T extends InferenceWriter> T write(MacroAction value) throws IOException {
+    default <T extends InferenceWriter> T write(BehaviourAction value) throws IOException {
         write(value.moveActionId());
         write(value.headActionId());
         return (T) this;
     }
 
-    default <T extends InferenceWriter> T write(MacroActionsState macroEnvState, MacroAction agentAction) throws IOException {
+    default <T extends InferenceWriter> T write(BehaviourState macroEnvState, BehaviourAction agentAction) throws IOException {
         write(macroEnvState)
                 .write(agentAction);
         return (T) this;

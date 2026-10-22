@@ -11,8 +11,8 @@ properties:
   markerLabels:
     type: array
     items:
-      type: string
-      minLength: 1
+      type: integer
+      minimum: 0
     minItems: 1
 required:
   - $schema

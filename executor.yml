@@ -1,11 +1,11 @@
 ---
-$schema: https://mmarini.org/wheelly/executor-schema-2.0
+$schema: https://mmarini.org/wheelly/executor-schema-3.0
 #robot: conf/robots/mqttRobot.yml
 #robot: conf/robots/simRobot0Obstacles.yml
 #robot: conf/robots/simRobot1Obstacles.yml
 robot: conf/robots/simRobotSmallNoObstacles.yml
 controller: conf/control/controller.yml
-modeller: conf/perception/modeller.yml
+perceptor: conf/perception/perceptor.yml
 agent: conf/agents/findLabelAgent.yml
 #gent: conf/agents/idleAgent.yml
 #agent: conf/agents/guardAgent.yml

@@ -1,6 +1,6 @@
 ---
-$schema: https://mmarini.org/wheelly/dl-agent-builder-schema-2.0
-class: org.mmarini.rl.agents.DLAgentBuilder
+$schema: https://mmarini.org/wheelly/rl-agent-builder-schema-2.0
+class: org.mmarini.wheelly.rlagents.RLAgentBuilder
 numEpochs: 3
 trajectorySize: 256
 batchSize: 32
@@ -49,10 +49,10 @@ network:
         height: 69
         depth: 5
         format: NCHW
-      canMoveStates:
+      proxy:
         # canMoveStates 6
         type: FeedForward
-        size: 6
+        size: 4
     hiddens:
       cnn-in:
         # cnn-in cnn(128, k=7, s=2, p=3) 128 x 35 x 35
@@ -71,7 +71,7 @@ network:
         activation: Relu
       dense-out:
         type: DenseLayer
-        inputs: [ canMoveStates, flattenMap ]
+        inputs: [ proxy, flattenMap ]
         nOut: 2048
         weightInit:
           type: Xavier
@@ -158,7 +158,7 @@ network:
       move:
         type: OutputLayer
         inputs: [ out ]
-        nOut: 365
+        nOut: 16
         activation: SoftMax
         lossFunction: NegativeLogLikelihood
         weightInit:
@@ -166,7 +166,7 @@ network:
       head:
         type: OutputLayer
         inputs: [ out ]
-        nOut: 7
+        nOut: 9
         activation: SoftMax
         lossFunction: NegativeLogLikelihood
         weightInit:

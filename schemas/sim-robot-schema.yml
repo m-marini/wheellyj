@@ -37,6 +37,9 @@ properties:
   numLabels:
     type: integer
     minimum: 0
+  markerId:
+    type: integer
+    minimum: 0
   maxAngularSpeed:
     type: integer
     minimum: 1

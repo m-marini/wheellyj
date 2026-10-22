@@ -66,7 +66,7 @@ class SimRobotTest {
     public static final int INTERVAL = 10;
     public static final SimRobotConfig DEFAULT_SIM_ROBOT_CONFIG = new SimRobotConfig(DEFAULT_ROBOT_SPEC, INTERVAL, 0, MESSAGE_INTERVAL,
             MESSAGE_INTERVAL, MESSAGE_INTERVAL, STALEMATE_INTERVAL,
-            0, 0, 0, 0, DEFAULT_WORLD_SIZE, 0, 0,
+            0, 0, 0, 0, 0, DEFAULT_WORLD_SIZE, 0, 0,
             List.of(MapBuilder.empty(41, GRID_SIZE)), DEFAULT_ANTI_GIMBAL_RADIUS);
     public static final int NUM_CASES = 30;
     public static final double MAX_DISTANCE = 1;

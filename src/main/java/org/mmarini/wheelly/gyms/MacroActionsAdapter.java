@@ -287,6 +287,7 @@ public class MacroActionsAdapter implements GymAdapter {
         return stateFunc.spec();
     }
 
+    @Override
     public void worldModelSpec(WorldModelSpec worldModelSpec) {
         this.stateFunc = stateFuncBuilder.apply(worldModelSpec);
     }

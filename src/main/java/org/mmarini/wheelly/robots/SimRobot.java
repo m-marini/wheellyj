@@ -153,7 +153,7 @@ public class SimRobot implements RobotApi {
      * The threshold timeout interval window assigned to reset pending asynchronous status states (ms).
      */
     public static final long STATUS_TIMEOUT = 3000;
-    public static final int MARKER_ID = 0;
+
     /**
      * The scaling adjustment variable utilised to align core physical metres into JBox2D coordinate systems.
      */
@@ -1232,7 +1232,8 @@ public class SimRobot implements RobotApi {
         if (markerLocation != null) {
             Angle markerDirection = Angle.direction(cameraLocation, markerLocation);
             Angle markerRelativeDirection = markerDirection.sub(cameraAzimuth);
-            event = new CameraEvent(robotTime, MARKER_ID, CAMERA_WIDTH, CAMERA_HEIGHT, points, markerRelativeDirection);
+            event = new CameraEvent(robotTime, config.markerId(), CAMERA_WIDTH, CAMERA_HEIGHT,
+                    points, markerRelativeDirection);
         } else {
             event = CameraEvent.unknown(robotTime);
         }
@@ -1604,6 +1605,7 @@ public class SimRobot implements RobotApi {
      * @param randomPeriod      the dynamic countdown duration window governing periodic obstacle displacements (ms)
      * @param numObstacles      the total target unlabelled obstacle count to spawn within the world canvas matrix
      * @param numLabels         the total camera tracking visual tag markers to distribute inside the grid
+     * @param markerId          the marker identifier
      * @param worldSize         the outer structural square canvas coordinate size width limit in metres (m)
      * @param errSensor         the standard Gaussian deviation noise factor applied to emulate lidar distance inaccuracies
      * @param errSigma          the scale variance coefficient applied to simulate mechanical wheel track slippage
@@ -1622,7 +1624,7 @@ public class SimRobot implements RobotApi {
             long randomPeriod,
             int numObstacles,
             int numLabels,
-            double worldSize,
+            int markerId, double worldSize,
             double errSensor,
             double errSigma,
             List<MapBuilder> maps,
@@ -1639,6 +1641,7 @@ public class SimRobot implements RobotApi {
         public static SimRobotConfig fromJson(JsonNode root, Locator locator) {
             int numObstacles = locator.path("numObstacles").getNode(root).asInt();
             int numLabels = locator.path("numLabels").getNode(root).asInt();
+            int markerId = locator.path("markerId").getNode(root).asInt();
             double errSigma = locator.path("errSigma").getNode(root).asDouble();
             double errSensor = locator.path("errSensor").getNode(root).asDouble();
             long motionInterval = locator.path("motionInterval").getNode(root).asLong(DEFAULT_MOTION_INTERVAL);
@@ -1665,7 +1668,8 @@ public class SimRobot implements RobotApi {
                     .toList();
             return new SimRobotConfig(robotSpec, interval, tickInterval, motionInterval, lidarInterval, cameraInterval,
                     stalemateInterval, mapPeriod, randomPeriod, numObstacles, numLabels,
-                    worldSize, errSensor, errSigma, maps, antiGimbalRadius);
+                    markerId
+                    , worldSize, errSensor, errSigma, maps, antiGimbalRadius);
         }
 
         /**

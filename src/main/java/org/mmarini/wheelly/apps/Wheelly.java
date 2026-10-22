@@ -47,7 +47,6 @@ import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.control.RobotController;
 import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.gyms.GymAdapter;
-import org.mmarini.wheelly.gyms.MacroActionsAdapter;
 import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.gyms.WithRewardCallback;
 import org.mmarini.wheelly.mqtt.MqttRobot;
@@ -97,7 +96,7 @@ import static org.mmarini.yaml.Utils.fromFile;
  * Run a test to check for robot environment with random behaviour agent
  */
 public class Wheelly {
-    public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-3.0";
+    public static final String WHEELLY_SCHEMA_YML = "https://mmarini.org/wheelly/wheelly-schema-4.0";
     public static final int LAYOUT_INTERVAL = 300;
     public static final MacroAction HALT_ACTION = new MacroAction(MoveActionId.HALT_ACTION, HeadActionId.LOOK_STRAIGHT_ACTION);
     private static final Logger logger = LoggerFactory.getLogger(Wheelly.class);
@@ -194,10 +193,9 @@ public class Wheelly {
     private ControllerApi controller;
     private Perceptor perceptor;
     private GymAdapter adapter;
-    private BehaviourApi behaviuor;
     private Agent agent;
     private JFrame frame;
-    private InferenceWriter modelDumper;
+    private InferenceWriter inferenceWriter;
     private KeyBinWriter kpisWriter;
     private long savingInterval;
 
@@ -245,7 +243,7 @@ public class Wheelly {
         this.perceptor = AppYaml.perceptorFromJson(config);
 
         logger.atInfo().log("Creating behaviour ...");
-        this.behaviuor = AppYaml.behaviourFromJson(config);
+        BehaviourApi behaviour = AppYaml.behaviourFromJson(config);
 
         logger.atInfo().log("Creating RL environment ...");
         this.adapter = AppYaml.adapterFromFile(config);
@@ -266,16 +264,15 @@ public class Wheelly {
         controller.init(robot);
 
         perceptor.init(robot.robotSpec(), controller);
-        perceptor.decisionMaker(behaviuor);
+        perceptor.decisionMaker(behaviour);
 
-        behaviuor.decisionMaker(this::decide);
+        behaviour.decisionMaker(this::decide);
 
         adapter.agent(agent);
+        adapter.rewardFunc(rewardFunc);
+        adapter.worldModelSpec(perceptor.worldModelSpec());
 
-        if (adapter instanceof MacroActionsAdapter maAdapter) {
-            maAdapter.worldModelSpec(perceptor.worldModelSpec());
-            maAdapter.rewardFunc(rewardFunc);
-        }
+        agent.validate(adapter);
 
         this.savingInterval = Locator.locate("savingInterval").getNode(config).asLong();
         autosaveInstant = System.currentTimeMillis() + savingInterval;
@@ -291,15 +288,14 @@ public class Wheelly {
         // Creates the model dumper
         String inference = this.args.getString("inference");
         if (inference != null) {
-            this.modelDumper = InferenceFileWriter.fromFile(new File(inference));
-            /* TODO
-            switch (behaviuor) {
-                case MacroActionsAdapter env -> env.inferenceWriter(modelDumper);
-                default -> {
+            this.inferenceWriter = InferenceFileWriter.fromFile(new File(inference));
+            behaviour.onDecision(t -> {
+                try {
+                    inferenceWriter.write(t._1, t._2);
+                } catch (IOException e) {
+                    logger.atError().setCause(e).log("Error writing decision");
                 }
-            }
-
-             */
+            });
         }
 
         if (!(robot instanceof SimRobot)) {
@@ -446,15 +442,6 @@ public class Wheelly {
         allFrames = List.of(frame);
     }
 
-    /*
-    private RobotCommand decide(WorldModel state) {
-        return active.get()
-                ? environment.decide(state)
-                : RobotCommand.halt();
-    }
-
-     */
-
     private BehaviourAction decide(BehaviourState state) {
         return active.get()
                 ? adapter.decide(state)
@@ -499,9 +486,9 @@ public class Wheelly {
     }
 
     private void onControllerShutdown() {
-        if (modelDumper != null) {
+        if (inferenceWriter != null) {
             try {
-                modelDumper.close();
+                inferenceWriter.close();
             } catch (Exception e) {
                 logger.atError().setCause(e).log("Error shuttingDown model dumper");
             }
@@ -692,18 +679,6 @@ public class Wheelly {
         RobotStatus robotStatus = worldModel.robotStatus();
         Map<Integer, FiducialMarker> markers = worldModel.markers();
         GridMap map = worldModel.gridMap();
-
-        // Dumps world model
-        if (modelDumper != null) {
-            /* TODO
-            try {
-                modelDumper.write(worldModel, inferenceResult._2);
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error dumping model");
-            }
-
-             */
-        }
         long robotClock = robotStatus.robotTime();
         long time = System.currentTimeMillis();
         Angle robotDir = robotStatus.direction();

@@ -43,12 +43,19 @@ import java.io.IOException;
 
 public interface AppYaml {
 
+    String ADAPTER_ID = "adapter";
+    String BEHAVIOUR_ID = "behaviour";
+    String CONTROLLER = "controller";
+    String PERCEPTOR_ID = "perceptor";
+    String REWARD_FUNCTION_ID = "rewardFunction";
+    String ROBOT_ID = "robot";
+
     static GymAdapter adapterFromFile(JsonNode config) throws Throwable {
-        return GymAdapter.fromFile(new File(config.path("adapter").asText()));
+        return GymAdapter.fromFile(new File(config.path(ADAPTER_ID).asText()));
     }
 
     static BehaviourApi behaviourFromJson(JsonNode config) throws Throwable {
-        return BehaviourApi.fromFile(new File(config.path("behaviour").asText()));
+        return BehaviourApi.fromFile(new File(config.path(BEHAVIOUR_ID).asText()));
     }
 
     /**
@@ -57,7 +64,7 @@ public interface AppYaml {
      * @param config the root node
      */
     static ControllerApi controllerFromJson(JsonNode config) throws Throwable {
-        return ControllerApi.fromFile(new File(config.path("controller").asText()));
+        return ControllerApi.fromFile(new File(config.path(CONTROLLER).asText()));
     }
 
     /**
@@ -91,7 +98,7 @@ public interface AppYaml {
      * @throws IOException in case of error
      */
     static Perceptor perceptorFromJson(JsonNode config) throws Throwable {
-        return WorldModeller.fromFile(new File(config.path("modeller").asText()));
+        return WorldModeller.fromFile(new File(config.path(PERCEPTOR_ID).asText()));
     }
 
     /**
@@ -101,7 +108,7 @@ public interface AppYaml {
      * @throws IOException in case of error
      */
     static RewardFunction rewardFromJson(JsonNode config) throws IOException {
-        return RewardFunction.fromFile(new File(config.path("rewardFunction").asText()));
+        return RewardFunction.fromFile(new File(config.path(REWARD_FUNCTION_ID).asText()));
     }
 
     /**
@@ -111,7 +118,6 @@ public interface AppYaml {
      * @throws IOException in case of error
      */
     static RobotApi robotFromJson(JsonNode config) throws Throwable {
-        return RobotApi.fromFile(new File(config.path("robot").asText()));
+        return RobotApi.fromFile(new File(config.path(ROBOT_ID).asText()));
     }
-
 }

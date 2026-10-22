@@ -67,7 +67,7 @@ public class SensorMonitor extends MatrixTable {
     /**
      * The unique column identifier key assigned to display parsed QR code data strings.
      */
-    public static final String QR_CODE_KEY = "qrCode";
+    public static final String MARKER_KEY = "qrCode";
 
     /**
      * The unique column identifier key assigned to display the calculated robot position along the X axis.
@@ -186,7 +186,7 @@ public class SensorMonitor extends MatrixTable {
                         addColumn(SENSOR_DIR_KEY, Messages.getString("SensorMonitor.sensorDir"), 3),
                         addColumn(FRONT_DIST_KEY, Messages.getString("SensorMonitor.frontDistance"), 4),
                         addColumn(REAR_DIST_KEY, Messages.getString("SensorMonitor.rearDistance"), 4),
-                        addColumn(QR_CODE_KEY, Messages.getString("SensorMonitor.qrCode"), 3),
+                        addColumn(MARKER_KEY, Messages.getString("SensorMonitor.qrCode"), 3),
                         addColumn(HEAD_STATUS_KEY, Messages.getString("SensorMonitor.headStatus"), 13),
                         addColumn(SCAN_HEAD_KEY, Messages.getString("SensorMonitor.scanHead"), 13),
 
@@ -284,7 +284,11 @@ public class SensorMonitor extends MatrixTable {
         printf(SENSOR_DIR_KEY, "%4d", status.headDirection().toIntDeg());
         printf(FRONT_DIST_KEY, "%4d", status.lidarMessage().frontDistance());
         printf(REAR_DIST_KEY, "%4d", status.lidarMessage().rearDistance());
-        printf(QR_CODE_KEY, "%d", status.markerId());
+        if (status.markerId() >= 0) {
+            printf(MARKER_KEY, "%d", status.markerId());
+        } else {
+            printf(MARKER_KEY, "?");
+        }
 
         switch (status.lidarMessage().trackingState()) {
             case FRONT_TRACK -> printf(HEAD_STATUS_KEY, "ft %.2f,%.2f",

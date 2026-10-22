@@ -31,6 +31,7 @@ package org.mmarini.wheelly.gyms;
 import org.mmarini.wheelly.behaviours.BehaviourAction;
 import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.wheelly.perception.DecisionMaker;
+import org.mmarini.wheelly.perception.WorldModelSpec;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
@@ -80,4 +81,6 @@ public interface GymAdapter extends DecisionMaker<BehaviourState, BehaviourActio
     void rewardFunc(RewardFunction rewardFunc);
 
     StateFunction stateFunction();
+
+    void worldModelSpec(WorldModelSpec worldModelSpec);
 }

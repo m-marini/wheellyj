@@ -7,6 +7,7 @@ mapFiles:
   - conf/maps/room10x10.yml
 mapPeriod: 600000
 numRandomLabels: 1
+markerId: 1
 labelPeriod: 600000
 numRandomObstacles: 1
 obstaclePeriod: 600000
