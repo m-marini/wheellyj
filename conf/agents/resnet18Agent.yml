@@ -28,7 +28,7 @@ network:
   l1: 1e-7
   l2: 5e-5
   graphBuilder:
-    # cnn-dense                       128
+    # cnn-dense                       256
     # maxpool-out subsampling(3,3)    1024 x 1 x 1
     # resnet42 resnet(1024, k=3)      1024 x 3 x 3
     # resnet41 resnet(1024, k=3, s=2) 1024 x 3 x 3
@@ -42,36 +42,53 @@ network:
     # cnn-in cnn(32, k=7, s=2, p=3)   128 x 35 x 35
     # map(6.9m x 6.9m)                5 x 69 x 69
 
-    # robot  8 + 4 = 12
-    # head   7 + 3 = 10
-    # proxy          4
-    # camera 4 + 1 = 5
-    # fsm            25
+    # robot  8 + 4  = 12
+    # head   7 + 3  = 10
+    # proxy            4
+    # camera 4 + 1  =  5
+    # fsm    16 + 9 = 25
+
     # merge-sensors 56
     # batch
     # dense1 256
     # batch
-    # dense2 128
+    # dense2 256
     # batch
-    # dense3 128
+    # dense3 256
 
     # merge-all 256
     inputs:
-      map:
+      state-map:
         # map 5 x 69 x 69
         type: Convolutional
         width: 69
         height: 69
         depth: 5
         format: NCHW
-      proxy:
-        # canMoveStates 6
+      state-robot:
+        # 8 sensors + 4 state
+        type: FeedForward
+        size: 12
+      state-head:
+        # 7 sensors + 3 state
+        type: FeedForward
+        size: 10
+      state-proxy:
+        # 4 sensors
         type: FeedForward
         size: 4
+      state-camera:
+        # 4 sensors + 1 marker
+        type: FeedForward
+        size: 5
+      state-fsm:
+        # 16 motion states + 9 head state
+        type: FeedForward
+        size: 25
     hiddens:
       cnn-in:
         # cnn-in cnn(128, k=7, s=2, p=3) 128 x 35 x 35
-        inputs: [ map ]
+        inputs: [ state-map ]
         type: ConvolutionLayer
         nOut: 128
         kernelSize: [ 7, 7 ]
@@ -84,12 +101,77 @@ network:
         inputs: [ batch-in ]
         type: ActivationLayer
         activation: Relu
-      dense-out:
+
+      dense-sensors0:
         type: DenseLayer
-        inputs: [ proxy, flattenMap ]
-        nOut: 2048
+        inputs: [ state-robot, state-head, state-proxy, state-camera, state-fsm ]
+        nOut: 256
         weightInit:
           type: Xavier
+      batch-sensors0:
+        inputs: [ dense-sensors0 ]
+        type: BatchNormalizationLayer
+      relu-sensors0:
+        inputs: [ batch-sensors0 ]
+        type: ActivationLayer
+        activation: Relu
+
+      dense-sensors1:
+        type: DenseLayer
+        inputs: [ relu-sensors0 ]
+        nOut: 128
+        weightInit:
+          type: Xavier
+      batch-sensors1:
+        inputs: [ dense-sensors1 ]
+        type: BatchNormalizationLayer
+      relu-sensors1:
+        inputs: [ batch-sensors1 ]
+        type: ActivationLayer
+        activation: Relu
+
+      dense-sensors2:
+        type: DenseLayer
+        inputs: [ relu-sensors1 ]
+        nOut: 128
+        weightInit:
+          type: Xavier
+      batch-sensors2:
+        inputs: [ dense-sensors2 ]
+        type: BatchNormalizationLayer
+      relu-sensor2:
+        type: ActivationLayer
+        inputs: [ batch-sensors2 ]
+        activation: Relu
+
+      dense-map-out:
+        type: DenseLayer
+        inputs: [ flattenMap ]
+        nOut: 256
+        weightInit:
+          type: Xavier
+      batch-map-out:
+        inputs: [ dense-map-out ]
+        type: BatchNormalizationLayer
+      relu-map-out:
+        inputs: [ batch-map-out ]
+        type: ActivationLayer
+        activation: Relu
+
+      dense-out:
+        type: DenseLayer
+        inputs: [ relu-sensor2, relu-map-out ]
+        nOut: 512
+        weightInit:
+          type: Xavier
+      batch-out:
+        inputs: [ dense-out ]
+        type: BatchNormalizationLayer
+      out:
+        inputs: [ batch-out ]
+        type: ActivationLayer
+        activation: Relu
+
       maxpool-in:
         # maxpool-in subsampling(3,3)   128 x 33 x 33
         inputs: [ relu-in ]
@@ -102,13 +184,6 @@ network:
         type: SubsamplingLayer
         kernelSize: [ 3, 3 ]
         poolingType: Max
-      batch-out:
-        inputs: [ dense-out ]
-        type: BatchNormalizationLayer
-      out:
-        inputs: [ batch-out ]
-        type: ActivationLayer
-        activation: Relu
     blocks:
       resnet11:
         # resnet11 resnet(128, k=3, s=2)  128 x 17 x 17
@@ -170,7 +245,7 @@ network:
         lossFunction: SquaredLoss
         weightInit:
           type: Xavier
-      move:
+      action-move:
         type: OutputLayer
         inputs: [ out ]
         nOut: 16
@@ -178,7 +253,7 @@ network:
         lossFunction: NegativeLogLikelihood
         weightInit:
           type: Xavier
-      head:
+      action-head:
         type: OutputLayer
         inputs: [ out ]
         nOut: 9

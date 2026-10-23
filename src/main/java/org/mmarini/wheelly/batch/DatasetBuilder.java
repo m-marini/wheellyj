@@ -50,8 +50,8 @@ import java.io.IOException;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.gyms.MacroActionsAdapter.HEAD_ID;
-import static org.mmarini.wheelly.gyms.MacroActionsAdapter.MOVE_ID;
+import static org.mmarini.wheelly.gyms.MacroActionsAdapter.ACTION_HEAD_ID;
+import static org.mmarini.wheelly.gyms.MacroActionsAdapter.ACTION_MOVE_ID;
 
 /**
  * Builds the batch trainer
@@ -67,8 +67,8 @@ public class DatasetBuilder {
             headSignals.putScalar(i, action[i].headActionId().ordinal(), 1);
         }
         return Map.of(
-                MOVE_ID, moveSignals,
-                HEAD_ID, headSignals
+                ACTION_MOVE_ID, moveSignals,
+                ACTION_HEAD_ID, headSignals
         );
     }
 
@@ -81,9 +81,9 @@ public class DatasetBuilder {
     /**
      * Creates the builder
      *
-     * @param reader    the inference reader
-     * @param path      the file destination path
-     * @param adapter   the environment
+     * @param reader  the inference reader
+     * @param path    the file destination path
+     * @param adapter the environment
      */
     public DatasetBuilder(InferenceFileReader reader, Perceptor perceptor, File path, GymAdapter adapter) {
         this.reader = requireNonNull(reader);
@@ -125,15 +125,13 @@ public class DatasetBuilder {
 
         // Reads the inference records and convert to signals, actin masks and rewards
         StateFunction stateFunction = adapter.stateFunction();
-        Tuple2<MacroActionsState, MacroAction> record = null;
         MacroActionsState s0 = null;
-        MacroAction commands = null;
         int tot = reader.available() / KB;
         try (INDArray reward = Nd4j.create(1, 1)) {
             for (; ; ) {
                 try {
                     // Read record
-                    record = reader.readMacroActionStep();
+                    Tuple2<MacroActionsState, MacroAction> record = reader.readMacroActionStep();
                     MacroActionsState state = record._1;
                     MacroAction action = record._2;
                     // Write states

@@ -42,7 +42,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mmarini.wheelly.TestFunctions.matrixCloseTo;
 import static org.mmarini.wheelly.TestFunctions.matrixShape;
-import static org.mmarini.wheelly.gyms.MacroActionsAdapter.MOVE_ID;
+import static org.mmarini.wheelly.gyms.MacroActionsAdapter.ACTION_MOVE_ID;
 import static org.mmarini.wheelly.rlagents.RLAgentTest.*;
 
 class NNRLTrainingDataGeneratorTest {
@@ -84,7 +84,7 @@ class NNRLTrainingDataGeneratorTest {
     @Test
     void testCreateActionMask() {
         // When create action masks
-        INDArray mask = NNRLTrainingDataGenerator.createActionMask(trajectory.actions().get(MOVE_ID), NUM_MOVEMENT_COMMANDS);
+        INDArray mask = NNRLTrainingDataGenerator.createActionMask(trajectory.actions().get(ACTION_MOVE_ID), NUM_MOVEMENT_COMMANDS);
         assertThat(mask, matrixShape(NUM_EPOCHS, NUM_MOVEMENT_COMMANDS));
     }
 

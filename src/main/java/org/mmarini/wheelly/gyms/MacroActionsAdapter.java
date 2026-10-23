@@ -59,12 +59,12 @@ import static org.mmarini.yaml.Utils.EMPTY_OBJECTS;
  */
 public class MacroActionsAdapter implements GymAdapter {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/env-macro-actions-schema-0.1";
-    public static final String MOVE_ID = "move";
-    public static final String HEAD_ID = "head";
+    public static final String ACTION_MOVE_ID = "action-move";
+    public static final String ACTION_HEAD_ID = "action-head";
     public static final String STATE_FUNCTION_ID = "stateFunction";
     public static final Map<String, SignalSpec> ACTION_SPEC = Map.of(
-            HEAD_ID, SignalSpec.create(1L, HeadActionId.values().length),
-            MOVE_ID, SignalSpec.create(1L, MoveActionId.values().length)
+            ACTION_HEAD_ID, SignalSpec.create(1L, HeadActionId.values().length),
+            ACTION_MOVE_ID, SignalSpec.create(1L, MoveActionId.values().length)
     );
     private static final Logger logger = LoggerFactory.getLogger(MacroActionsAdapter.class);
 
@@ -83,8 +83,9 @@ public class MacroActionsAdapter implements GymAdapter {
     /**
      * Creates the deep learning environment from a JSON configuration file.
      *
-     * @param root    the document
-     * @param locator the locator of configuration
+     * @param root    the document root node
+     * @param locator the locator pointing to the configuration section
+     * @return the initialised {@link MacroActionsAdapter} instance
      * @throws IOException if a validation or reading error occurs
      */
     public static MacroActionsAdapter create(JsonNode root, Locator locator) throws IOException {
@@ -103,9 +104,13 @@ public class MacroActionsAdapter implements GymAdapter {
     private DoubleConsumer onReward;
 
     /**
-     * Creates the deep learning environment
+     * Creates the deep learning environment.
+     * <p>
+     * Initialises the internal anonymous implementation of {@link ActionFunction} used
+     * to translate action arrays into explicit multi-discrete command instances.
+     * </p>
      *
-     * @param stateFuncBuilder
+     * @param stateFuncBuilder the functional builder to generate the environmental state mapping
      */
     public MacroActionsAdapter(Function<WorldModelSpec, StateFunction> stateFuncBuilder) {
         this.stateFuncBuilder = stateFuncBuilder;
@@ -115,9 +120,9 @@ public class MacroActionsAdapter implements GymAdapter {
                 long n = actions.values().iterator().next().size(0);
                 List<BehaviourAction> result = new ArrayList<>();
                 for (int i = 0; i < n; i++) {
-                    int moveCode = actions.get(MOVE_ID).getInt(i, 0);
+                    int moveCode = actions.get(ACTION_MOVE_ID).getInt(i, 0);
                     MoveActionId moveId = MoveActionId.values()[moveCode];
-                    int headCode = actions.get(HEAD_ID).getInt(i, 0);
+                    int headCode = actions.get(ACTION_HEAD_ID).getInt(i, 0);
                     HeadActionId headId = HeadActionId.values()[headCode];
                     result.add(new MacroAction(moveId, headId));
                 }
@@ -132,11 +137,21 @@ public class MacroActionsAdapter implements GymAdapter {
         logger.atDebug().log("Created");
     }
 
+    /**
+     * Returns the internal action mapping function.
+     *
+     * @return the active {@link ActionFunction} instance
+     */
     @Override
     public ActionFunction actionFunction() {
         return actionFunction;
     }
 
+    /**
+     * Returns the signal structure configuration specifications for agent interactions.
+     *
+     * @return a map pairing action keys to their dimensional constraints
+     */
     @Override
     public Map<String, SignalSpec> actionSpec() {
         return ACTION_SPEC;
@@ -151,11 +166,27 @@ public class MacroActionsAdapter implements GymAdapter {
         return agent;
     }
 
+    /**
+     * Binds a reinforcement learning agent to this adapter environment.
+     *
+     * @param agent the {@link AdapterConnector} to handle stepping sequences
+     */
     @Override
     public void agent(AdapterConnector agent) {
         this.agent = agent;
     }
 
+    /**
+     * Generates a structural decision loop interface interaction step.
+     * <p>
+     * Evaluates behaviour states, fetches actions from the agent, processes step transitions,
+     * issues reward calculations back to the agent history tracker, and queues up the next step state.
+     * </p>
+     *
+     * @param state the active current snapshot of the environment behaviour state
+     * @return the resolved {@link BehaviourAction} command structure to pass downstream
+     * @throws IllegalStateException if internal components are missing linkage
+     */
     @Override
     public BehaviourAction decide(BehaviourState state) {
         ensureConnected();
@@ -187,7 +218,7 @@ public class MacroActionsAdapter implements GymAdapter {
      * @param actions the map containing movement and heading signals
      * @return the decoded {@link MacroAction} wrapper
      */
-    public BehaviourAction decodeAction(Map<String, INDArray> actions) {
+    private BehaviourAction decodeAction(Map<String, INDArray> actions) {
         return actionFunction.commands(actions).getFirst();
     }
 
@@ -207,7 +238,6 @@ public class MacroActionsAdapter implements GymAdapter {
             throw new IllegalStateException("Missing reward function");
         }
     }
-
     /**
      * Registers a callback function to be executed when a new reward is received.
      * <p>
@@ -242,9 +272,9 @@ public class MacroActionsAdapter implements GymAdapter {
     }
 
     /**
-     * Sets the reward function
+     * Sets the active reward evaluation function.
      *
-     * @param rewardFunc the reward function
+     * @param rewardFunc the {@link RewardFunction} instance to handle transition analysis
      */
     @Override
     public void rewardFunc(RewardFunction rewardFunc) {
@@ -268,6 +298,15 @@ public class MacroActionsAdapter implements GymAdapter {
         return stateFunc.signals(model);
     }
 
+    /**
+     * Returns the specification of the state signals generated by this environment.
+     * <p>
+     * The specification characterises the structural layout, dimensions, and types of
+     * sensory data that the environment provides to the reinforcement learning agent.
+     * </p>
+     *
+     * @return a map pairing signal identifiers with their corresponding {@link SignalSpec}
+     */
     @Override
     public StateFunction stateFunction() {
         return stateFunc;
@@ -287,6 +326,11 @@ public class MacroActionsAdapter implements GymAdapter {
         return stateFunc.spec();
     }
 
+    /**
+     * Initialises the active state function by applying the world model specification structure.
+     *
+     * @param worldModelSpec the {@link WorldModelSpec} defining environmental boundaries and sensors
+     */
     @Override
     public void worldModelSpec(WorldModelSpec worldModelSpec) {
         this.stateFunc = stateFuncBuilder.apply(worldModelSpec);

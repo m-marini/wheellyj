@@ -68,7 +68,7 @@ public class MacroActionsStateFunction implements StateFunction {
     /**
      * Identifier key for the grid map multidimensional signal.
      */
-    public static final String MAP_SIGNAL_ID = "map";
+    public static final String MAP_SIGNAL_ID = "state-map";
 
     public static final int CAMERA_SIGNAL_BASE_SIZE = 4;
     /**
@@ -109,27 +109,27 @@ public class MacroActionsStateFunction implements StateFunction {
     /**
      * Identifier key for the robot chassis kinematics feature vector.
      */
-    public static final String ROBOT_SIGNAL_ID = "robot";
+    public static final String ROBOT_SIGNAL_ID = "state-robot";
 
     /**
      * Identifier key for the proximity, tactile contact, and hindrance vector.
      */
-    public static final String PROXY_SIGNAL_ID = "proxy";
+    public static final String PROXY_SIGNAL_ID = "state-proxy";
 
     /**
      * Identifier key for the autonomous scanning head telemetry vector.
      */
-    public static final String HEAD_SIGNAL_ID = "head";
+    public static final String HEAD_SIGNAL_ID = "state-head";
 
     /**
      * Identifier key for the web camera optical marker tracking vector.
      */
-    public static final String CAMERA_SIGNAL_ID = "camera";
+    public static final String CAMERA_SIGNAL_ID = "state-camera";
 
     /**
      * Identifier key for the concurrent high-level FSM action flags vector.
      */
-    public static final String FSM_SIGNAL_ID = "fsm";
+    public static final String FSM_SIGNAL_ID = "state-fsm";
 
     public static final int ROBOT_SIGNAL_SIZE = 8 + MotionStatusId.values().length;
     public static final int PROXY_SIGNAL_SIZE = 4;

@@ -57,8 +57,8 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Utils.deleteRecursive;
 import static org.mmarini.wheelly.TestFunctions.matrixShape;
-import static org.mmarini.wheelly.gyms.MacroActionsAdapter.HEAD_ID;
-import static org.mmarini.wheelly.gyms.MacroActionsAdapter.MOVE_ID;
+import static org.mmarini.wheelly.gyms.MacroActionsAdapter.ACTION_HEAD_ID;
+import static org.mmarini.wheelly.gyms.MacroActionsAdapter.ACTION_MOVE_ID;
 import static org.mmarini.wheelly.gyms.MacroActionsStateFunction.MAP_SIGNAL_ID;
 import static org.mmarini.wheelly.rlagents.NNRLTrainingDataGenerator.CRITIC_ID;
 
@@ -73,8 +73,8 @@ class RLAgentTest {
     public static final float REWARD = 0.5F;
     public static final double EPSILON = 1e-6;
     public static final Map<String, Float> ALPHAS = Map.of(
-            HEAD_ID, 1F,
-            MOVE_ID, 1F);
+            ACTION_HEAD_ID, 1F,
+            ACTION_MOVE_ID, 1F);
     public static final float BETA = 0.8F;
     public static final float REWARD0 = 0F;
     public static final int NUM_STEPS = 10;
@@ -100,21 +100,21 @@ class RLAgentTest {
                                 .build(),
                         MAP_SIGNAL_ID
                 )
-                .addLayer(MOVE_ID,
+                .addLayer(ACTION_MOVE_ID,
                         new OutputLayer.Builder()
                                 .nOut(NUM_MOVEMENT_COMMANDS)
                                 .activation(Activation.SOFTMAX)
                                 .build(),
                         MAP_SIGNAL_ID
                 )
-                .addLayer(HEAD_ID,
+                .addLayer(ACTION_HEAD_ID,
                         new OutputLayer.Builder()
                                 .nOut(NUM_SENSOR_COMMANDS)
                                 .activation(Activation.SOFTMAX)
                                 .build(),
                         MAP_SIGNAL_ID
                 )
-                .setOutputs(CRITIC_ID, MOVE_ID, HEAD_ID)
+                .setOutputs(CRITIC_ID, ACTION_MOVE_ID, ACTION_HEAD_ID)
                 .build();
     }
 
@@ -126,8 +126,8 @@ class RLAgentTest {
                 MAP_SIGNAL_ID, Nd4j.rand(1, NUM_CHANNELS, GRID_SIZE, GRID_SIZE)
         );
         Map<String, INDArray> actions = Map.of(
-                MOVE_ID, Nd4j.createFromArray(Nd4j.getRandom().nextInt(NUM_MOVEMENT_COMMANDS)).reshape(1, 1),
-                HEAD_ID, Nd4j.createFromArray(Nd4j.getRandom().nextInt(NUM_SENSOR_COMMANDS)).reshape(1, 1)
+                ACTION_MOVE_ID, Nd4j.createFromArray(Nd4j.getRandom().nextInt(NUM_MOVEMENT_COMMANDS)).reshape(1, 1),
+                ACTION_HEAD_ID, Nd4j.createFromArray(Nd4j.getRandom().nextInt(NUM_SENSOR_COMMANDS)).reshape(1, 1)
         );
         return new ExecutionResult(s0, actions, reward, s1);
     }
@@ -162,17 +162,17 @@ class RLAgentTest {
         Map<String, INDArray> actions = agent.act(states);
 
         // Then the output actions states ...
-        assertThat(actions, hasKey(MOVE_ID));
-        assertThat(actions, hasKey(HEAD_ID));
+        assertThat(actions, hasKey(ACTION_MOVE_ID));
+        assertThat(actions, hasKey(ACTION_HEAD_ID));
 
-        INDArray moveAry = actions.get(MOVE_ID);
+        INDArray moveAry = actions.get(ACTION_MOVE_ID);
         assertThat(moveAry, matrixShape(2, 1));
         assertThat(moveAry.getInt(0), greaterThanOrEqualTo(0));
         assertThat(moveAry.getInt(0), lessThan(NUM_MOVEMENT_COMMANDS));
         assertThat(moveAry.getInt(1), greaterThanOrEqualTo(0));
         assertThat(moveAry.getInt(1), lessThan(NUM_MOVEMENT_COMMANDS));
 
-        INDArray sensorAry = actions.get(HEAD_ID);
+        INDArray sensorAry = actions.get(ACTION_HEAD_ID);
         assertThat(sensorAry, matrixShape(2, 1));
         assertThat(sensorAry.getInt(0), greaterThanOrEqualTo(0));
         assertThat(sensorAry.getInt(0), lessThan(NUM_SENSOR_COMMANDS));
@@ -196,8 +196,8 @@ class RLAgentTest {
             @Override
             public Map<String, SignalSpec> actionSpec() {
                 return Map.of(
-                        MOVE_ID, SignalSpec.create(1, NUM_MOVEMENT_COMMANDS),
-                        HEAD_ID, SignalSpec.create(1, NUM_SENSOR_COMMANDS),
+                        ACTION_MOVE_ID, SignalSpec.create(1, NUM_MOVEMENT_COMMANDS),
+                        ACTION_HEAD_ID, SignalSpec.create(1, NUM_SENSOR_COMMANDS),
                         "missing1", SignalSpec.create(1, 1),
                         "missing2", SignalSpec.create(1, 1)
                 );
@@ -227,8 +227,8 @@ class RLAgentTest {
             @Override
             public Map<String, SignalSpec> actionSpec() {
                 return Map.of(
-                        MOVE_ID, SignalSpec.create(1, 1),
-                        HEAD_ID, SignalSpec.create(1, 1)
+                        ACTION_MOVE_ID, SignalSpec.create(1, 1),
+                        ACTION_HEAD_ID, SignalSpec.create(1, 1)
                 );
             }
 
@@ -289,8 +289,9 @@ class RLAgentTest {
             @Override
             public Map<String, SignalSpec> actionSpec() {
                 return Map.of(
-                        MOVE_ID, SignalSpec.create(1, NUM_MOVEMENT_COMMANDS - 1),
-                        HEAD_ID, SignalSpec.create(1, NUM_SENSOR_COMMANDS - 1)
+                        ACTION_MOVE_ID, SignalSpec.create(1, NUM_MOVEMENT_COMMANDS - 1),
+                        ACTION_HEAD_ID
+                        , SignalSpec.create(1, NUM_SENSOR_COMMANDS - 1)
                 );
             }
 

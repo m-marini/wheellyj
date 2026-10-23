@@ -45,15 +45,15 @@ import java.util.function.Function;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasKey;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.wheelly.gyms.MacroActionsAdapter.HEAD_ID;
-import static org.mmarini.wheelly.gyms.MacroActionsAdapter.MOVE_ID;
+import static org.mmarini.wheelly.gyms.MacroActionsAdapter.ACTION_HEAD_ID;
+import static org.mmarini.wheelly.gyms.MacroActionsAdapter.ACTION_MOVE_ID;
 
 class MacroActionsAdapterTest {
 
     public static final int NUM_STATE_SIGNALS = 10;
     public static final Map<String, INDArray> ACTION_SIGNALS = Map.of(
-            MOVE_ID, Nd4j.ones(1, 1).mul(MoveActionId.HALT_ACTION.ordinal()),
-            HEAD_ID, Nd4j.ones(1, 1).mul(HeadActionId.LOOK_STRAIGHT_ACTION.ordinal()));
+            ACTION_MOVE_ID, Nd4j.ones(1, 1).mul(MoveActionId.HALT_ACTION.ordinal()),
+            ACTION_HEAD_ID, Nd4j.ones(1, 1).mul(HeadActionId.LOOK_STRAIGHT_ACTION.ordinal()));
     MacroActionsAdapter adapter;
     private ArrayList<Map<String, INDArray>> actSignals;
     private WorldModelBuilder builder;
@@ -98,11 +98,11 @@ class MacroActionsAdapterTest {
         Map<String, SignalSpec> spec = adapter.actionSpec();
 
         // Then
-        assertThat(spec, hasKey(MOVE_ID));
-        assertThat(spec, hasKey(HEAD_ID));
+        assertThat(spec, hasKey(ACTION_MOVE_ID));
+        assertThat(spec, hasKey(ACTION_HEAD_ID));
         // And
-        assertArrayEquals(new long[]{1, MoveActionId.values().length}, spec.get(MOVE_ID).shape());
-        assertArrayEquals(new long[]{1, HeadActionId.values().length}, spec.get(HEAD_ID).shape());
+        assertArrayEquals(new long[]{1, MoveActionId.values().length}, spec.get(ACTION_MOVE_ID).shape());
+        assertArrayEquals(new long[]{1, HeadActionId.values().length}, spec.get(ACTION_HEAD_ID).shape());
     }
 
     @Test
