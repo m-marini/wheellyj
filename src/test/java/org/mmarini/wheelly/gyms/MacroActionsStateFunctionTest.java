@@ -272,8 +272,8 @@ class MacroActionsStateFunctionTest {
         Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then ...
-        assertThat(signals, hasKey("map"));
-        INDArray signal = signals.get("map");
+        assertThat(signals, hasKey(MAP_SIGNAL_ID));
+        INDArray signal = signals.get(MAP_SIGNAL_ID);
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
         Angle cellDir = Angle.direction(robotLocation, cellLocation);
@@ -337,8 +337,8 @@ class MacroActionsStateFunctionTest {
         Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then ...
-        assertThat(signals, hasKey("map"));
-        INDArray signal = signals.get("map");
+        assertThat(signals, hasKey(MAP_SIGNAL_ID));
+        INDArray signal = signals.get(MAP_SIGNAL_ID);
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
         Angle cellDir = Angle.direction(robotLocation, cellLocation);
@@ -402,8 +402,8 @@ class MacroActionsStateFunctionTest {
         Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then ...
-        assertThat(signals, hasKey("map"));
-        INDArray signal = signals.get("map");
+        assertThat(signals, hasKey(MAP_SIGNAL_ID));
+        INDArray signal = signals.get(MAP_SIGNAL_ID);
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
         Angle cellDir = Angle.direction(robotLocation, cellLocation);
@@ -468,8 +468,8 @@ class MacroActionsStateFunctionTest {
         Map<String, INDArray> signals = stateFunc.signals(state, state);
 
         // Then ...
-        assertThat(signals, hasKey("map"));
-        INDArray signal = signals.get("map");
+        assertThat(signals, hasKey(MAP_SIGNAL_ID));
+        INDArray signal = signals.get(MAP_SIGNAL_ID);
         assertArrayEquals(new long[]{2, NUM_CELL_STATES + 1, GRID_MAP_SIZE, GRID_MAP_SIZE}, signal.shape());
 
         Angle cellDir = Angle.direction(robotLocation, cellLocation);

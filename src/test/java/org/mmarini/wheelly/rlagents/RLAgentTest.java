@@ -246,7 +246,7 @@ class RLAgentTest {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
                 agent.validate(withSpec)
         );
-        assertThat(ex.getMessage(), matchesPattern("Missing input layers \\[map]"));
+        assertThat(ex.getMessage(), matchesPattern("Missing input layers \\[state-map]"));
     }
 
     @Test
@@ -308,6 +308,6 @@ class RLAgentTest {
         agent = RLAgent.create(FILE, net, random, NUM_EPOCHS, NUM_STEPS, BATCH_SIZE, ALPHAS, BETA, REWARD, false);
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
                 agent.validate(withSpec));
-        assertThat(ex.getMessage(), matchesPattern("Wrong output size: \\[head] expected \\[1, 7] actual \\[1, 6]"));
+        assertThat(ex.getMessage(), matchesPattern("Wrong output size: \\[action-head] expected \\[1, 7] actual \\[1, 6]"));
     }
 }
