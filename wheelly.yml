@@ -1,11 +1,12 @@
 ---
-$schema: https://mmarini.org/wheelly/wheelly-schema-3.0
+$schema: https://mmarini.org/wheelly/wheelly-schema-4.0
 robot: conf/robots/simRobotSmallNoObstacles.yml
 #robot: conf/robots/simRobot1Obstacles.yml
 #robot: conf/robots/mqttRobot.yml
-controller: conf/controllers/controller.yml
-modeller: conf/modellers/modeller.yml
-environment: conf/environments/env.yml
+controller: conf/control/controller.yml
+perceptor: conf/perception/perceptor.yml
+behaviour: conf/behaviours/macro-actions.yml
+adapter: conf/gyms/macro-actions.yml
 rewardFunction: conf/objectives/findLabel2.yml
 agent: conf/agents/resnet18Agent.yml
 savingInterval: 14400000

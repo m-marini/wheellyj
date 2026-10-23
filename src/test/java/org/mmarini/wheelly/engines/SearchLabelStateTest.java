@@ -28,19 +28,22 @@
 
 package org.mmarini.wheelly.engines;
 
+import io.reactivex.rxjava3.core.Completable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.awt.geom.Point2D;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mmarini.Matchers.pointCloseTo;
-import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.engines.AbstractSearchAndMoveState.*;
 import static org.mmarini.wheelly.engines.TimeOutState.DEFAULT_TIMEOUT;
+import static org.mmarini.wheelly.perception.MarkerLocatorTest.MARKER0;
+import static org.mmarini.wheelly.utils.Utils.MM;
 
 class SearchLabelStateTest {
 
@@ -80,7 +83,7 @@ class SearchLabelStateTest {
                 ..+++++..
                 ..+++++..
                 ..+++++..
-                ....A....
+                ....0....
                 .........
                 """;
         int robotDeg = 90;
@@ -89,12 +92,14 @@ class SearchLabelStateTest {
                 .robotDirection(robotDeg)
                 .applyMap(mapText);
         ProcessorContextApi ctx = builder.build();
-        Point2D marker = ctx.worldModel().markers().get("A").location();
+        Point2D marker = ctx.worldModel().markers().get(MARKER0).location();
         assertThat(marker, pointCloseTo(0, -1, MM));
 
         // When ...
         state.init(ctx);
         state.entry(ctx);
+        // Wait for timer
+        Completable.timer(500, TimeUnit.MILLISECONDS).blockingAwait();
 
         // Then ...
         List<Point2D> path = state.path();

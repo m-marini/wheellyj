@@ -78,11 +78,10 @@ flow:
         notFound:
           to: mapping
     labelStuck:
-      $id: https://mmarini.org/wheelly/state-label-stuck-schema-1.0
+      $id: https://mmarini.org/wheelly/state-label-stuck-schema-2.0
       class: org.mmarini.wheelly.engines.LabelStuckState
       minDistance: 0.5
       maxDistance: 0.8
-      #      correlationDistance: 0.5
       transitions:
         blocked:
           to: clearMap

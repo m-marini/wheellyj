@@ -32,10 +32,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.WorldModelBuilder;
-import org.mmarini.wheelly.envs.BasicEnvState;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.mmarini.wheelly.behaviours.HeadActionId;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
+import org.mmarini.wheelly.behaviours.MoveActionId;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.WorldModelBuilder;
+import org.mmarini.wheelly.utils.Angle;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -47,44 +50,46 @@ import static org.hamcrest.Matchers.closeTo;
 
 class SensorLabelTest {
 
-    static BasicEnvState createState(int headDeg, double leftPps, double rightPps, double distance, String qrCode) {
+    static BehaviourState createState(int headDeg, double leftPps, double rightPps, double distance, int markerId) {
         WorldModelBuilder builder = new WorldModelBuilder()
                 .headAngle(headDeg)
                 .frontDistance(distance)
                 .robotSpeed(leftPps, rightPps);
-        if (!"?".equals(qrCode)) {
-            Point2D markerLocation = Complex.fromDeg(headDeg).at(new Point2D.Double(), distance);
-            builder = builder.addMarker(qrCode, markerLocation);
+        if (markerId >= 0) {
+            Point2D markerLocation = Angle.fromDeg(headDeg).at(new Point2D.Double(), distance);
+            builder = builder.addMarker(markerId, markerLocation);
         }
-        return new BasicEnvState(builder.build());
+        return new MacroActionsState(builder.build(),
+                MoveActionId.HALT_ACTION,
+                HeadActionId.LOOK_STRAIGHT_ACTION);
     }
 
     @ParameterizedTest(
-            name = "[{index}] head {1} DEG, pps={2},{3}, lidar at {4} m, qrCode={5}")
+            name = "[{index}] head {1} DEG, pps={2},{3}, lidar at {4} m, markerId={5}")
     @CsvSource({
-            "2, 0, 0,0, 0.8, A",
-            "2, 29, 0,0, 0.8, A", // sensor in range
-            "2, 331, 0,0, 0.8, A", // sensor in range
-            "2, 0, 4.9,4.9, 0.8, A", // power in range
-            "2, 0, -4.9,-4.9, 0.8, A", // power in range
-            "2, 0, 0,0, 0.51, A", // distance in range
-            "2, 0, 0,0, 0.99, A", // distance in range
+            "2, 0, 0,0, 0.8, 0",
+            "2, 29, 0,0, 0.8, 0", // sensor in range
+            "2, 331, 0,0, 0.8, 0", // sensor in range
+            "2, 0, 4.9,4.9, 0.8, 0", // power in range
+            "2, 0, -4.9,-4.9, 0.8, 0", // power in range
+            "2, 0, 0,0, 0.51, 0", // distance in range
+            "2, 0, 0,0, 0.99, 0", // distance in range
 
-            "0, 0, 0,0, 0.8, ?", // unknown camera signal
-            "0, 31, 0,0, 0.8, A", // sensor out of range
-            "0, 329, 0,0, 0.8, A", // sensor out of range
-            "0, 0, 0,0, 0.4, A", // too near
-            "0, 0, 0,0, 1.1, A", // too far
-            "0, 0, 5.1,0, 0.8, A", // power out of range
-            "0, 0, -5.1,0, 0.8, A", // power out of range
-            "0, 0, 0,5.1, 0.8, A", // power out of range
-            "0, 0, 0,-5.1, 0.8, A", // power out of range
+            "0, 0, 0,0, 0.8, -1", // unknown camera signal
+            "0, 31, 0,0, 0.8, 0", // sensor out of range
+            "0, 329, 0,0, 0.8, 0", // sensor out of range
+            "0, 0, 0,0, 0.4, 0", // too near
+            "0, 0, 0,0, 1.1, 0", // too far
+            "0, 0, 5.1,0, 0.8, 0", // power out of range
+            "0, 0, -5.1,0, 0.8, 0", // power out of range
+            "0, 0, 0,5.1, 0.8, 0", // power out of range
+            "0, 0, 0,-5.1, 0.8, 0", // power out of range
     })
     void create(double expectedReward,
                 int headDir,
                 double leftPps, double rightPps,
                 double distance,
-                String qrCode) throws IOException {
+                int markerId) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + SensorLabel.SCHEMA_NAME,
                 "class: " + SensorLabel.class.getName(),
@@ -94,11 +99,11 @@ class SensorLabelTest {
                 "sensorRange: 30",
                 "reward: 2"
         ));
-        BasicEnvState state = createState(headDir, leftPps, rightPps,
-                distance, qrCode);
+        BehaviourState state = createState(headDir, leftPps, rightPps,
+                distance, markerId);
         RewardFunction f = SensorLabel.create(root, Locator.root());
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expectedReward, 1e-4));
     }

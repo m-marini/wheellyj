@@ -1,0 +1,523 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/rl-agent-builder-schema-2.0
+title: Agent
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/rl-agent-builder-schema-2.0
+  class:
+    const: org.mmarini.wheelly.rlagents.RLAgentBuilder
+  alphas:
+    type: object
+    additionalProperties:
+      type: number
+      exclusiveMinimum: 0
+  beta:
+    type: number
+    exclusiveMinimum: 0
+  gamma:
+    type: number
+    minimum: 0
+    maximum: 1
+  avgReward:
+    type: number
+  numEpochs:
+    type: integer
+    minimum: 1
+  trajectorySize:
+    type: integer
+    minimum: 1
+  batchSize:
+    type: integer
+    minimum: 1
+  path:
+    type: string
+  network:
+    $ref: "#/$defs/Network"
+required:
+  - $schema
+  - class
+  - numEpochs
+  - trajectorySize
+  - batchSize
+  - alphas
+  - beta
+  - path
+  - network
+$defs:
+  Activation:
+    type: string
+    enum:
+      - Identity
+      - Relu
+      - SoftMax
+      - Tanh
+  Block:
+    anyOf:
+      - $ref: "#/$defs/Blocks/ConvolutionResNetBlock"
+      - $ref: "#/$defs/Blocks/IdentityResNetBlock"
+  Blocks:
+    ConvolutionResNetBlock:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 1
+        type:
+          const: ConvolutionResNetBlock
+        kernelSize:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          minItems: 2
+          maxItems: 2
+        stride:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          minItems: 2
+          maxItems: 2
+        depth:
+            type: integer
+            minimum: 1
+        weightInit:
+          $ref: "#/$defs/WeightInit"
+      required:
+        - type
+        - inputs
+        - kernelSize
+        - stride
+        - depth
+    IdentityResNetBlock:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 1
+        type:
+          const: IdentityResNetBlock
+        kernelSize:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          minItems: 2
+          maxItems: 2
+        depth:
+          type: integer
+          minimum: 1
+        weightInit:
+          $ref: "#/$defs/WeightInit"
+      required:
+        - type
+        - inputs
+        - kernelSize
+        - depth
+  CNN2DFormat:
+    type: string
+    enum:
+      - NCHW
+      - NHWC
+  DropOut:
+    type: number
+    minimum: 0
+    maximum: 1
+  GraphBuilder:
+    type: object
+    properties:
+      inputs:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/Input"
+      outputs:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/Layer"
+      hiddens:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/Layer"
+      vertices:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/Vertex"
+      blocks:
+        type: object
+        additionalProperties:
+          $ref: "#/$defs/Block"
+    required:
+      - inputs
+      - outputs
+  Input:
+    anyOf:
+      - $ref: "#/$defs/Inputs/FeedForward"
+      - $ref: "#/$defs/Inputs/Convolutional"
+  Inputs:
+    FeedForward:
+      type: object
+      properties:
+        type:
+          const: FeedForward
+        size:
+          type: integer
+      required:
+        - type
+        - size
+    Convolutional:
+      type: object
+      properties:
+        type:
+          const: Convolutional
+        width:
+          type: integer
+        height:
+          type: integer
+        depth:
+          type: integer
+        format:
+          $ref: "#/$defs/CNN2DFormat"
+      required:
+        - type
+        - width
+        - height
+        - depth
+  Layer:
+    anyOf:
+      - $ref: "#/$defs/Layers/ActivationLayer"
+      - $ref: "#/$defs/Layers/BatchNormalizationLayer"
+      - $ref: "#/$defs/Layers/ConvolutionLayer"
+      - $ref: "#/$defs/Layers/DenseLayer"
+      - $ref: "#/$defs/Layers/OutputLayer"
+      - $ref: "#/$defs/Layers/SubsamplingLayer"
+      - $ref: "#/$defs/Layers/ZeroPaddingLayer"
+  Layers:
+    ActivationLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        type:
+          const: ActivationLayer
+        activation:
+          $ref: "#/$defs/Activation"
+      required:
+        - type
+        - inputs
+    BatchNormalizationLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        type:
+          const: BatchNormalizationLayer
+      required:
+        - type
+        - inputs
+    ConvolutionLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 1
+        type:
+          const: ConvolutionLayer
+        kernelSize:
+          type: array
+          items:
+            type: integer
+        # default [ 5, 5 ]
+        stride:
+          type: array
+          items:
+            type: integer
+        padding:
+          type: array
+          items:
+            type: integer
+        # default [ 1, 1 ]
+        nOut:
+          type: integer
+          minimum: 1
+        weightInit:
+          $ref: "#/$defs/WeightInit"
+      required:
+        - type
+        - inputs
+        - kernelSize
+        - nOut
+    DenseLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        type:
+          const: DenseLayer
+        nOut:
+          type: integer
+          minimum: 1
+        weightInit:
+          $ref: "#/$defs/WeightInit"
+      required:
+        - type
+        - inputs
+        - nOut
+    OutputLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        type:
+          const: OutputLayer
+        nOut:
+          type: integer
+          minimum: 1
+        activation:
+          $ref: "#/$defs/Activation"
+        lossFunction:
+          $ref: "#/$defs/LossFunction"
+        dropOut:
+          $ref: "#/$defs/DropOut"
+        weightInit:
+          $ref: "#/$defs/WeightInit"
+      required:
+        - type
+        - inputs
+        - nOut
+    SubsamplingLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 1
+        type:
+          const: SubsamplingLayer
+        kernelSize:
+          type: array
+          items:
+            type: integer
+        stride:
+          type: array
+          items:
+            type: integer
+        padding:
+          type: array
+          items:
+            type: integer
+        poolingType:
+          $ref: "#/$defs/PoolingType"
+      required:
+        - type
+        - inputs
+        - kernelSize
+    ZeroPaddingLayer:
+      type: object
+      properties:
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 1
+        type:
+          const: ZeroPaddingLayer
+        padding:
+          type: array
+          items:
+            type: integer
+      required:
+        - type
+        - inputs
+        - padding
+  LossFunction:
+    type: string
+    enum:
+      - CosineProximity
+      - Mcxent
+      - Hinge
+      - KLDivergence
+      - L1
+      - L2
+      - MeanAbsoluteError
+      - MeanAbsolutePercentageError
+      - MeanSquaredLogarithmicError
+      - Mse
+      - NegativeLogLikelihood
+      - Poisson
+      - ReconstructionCrossentropy
+      - SparseMcxent
+      - SquaredLoss
+      - SquaredHinge
+      - Wasserstein
+      - Xent
+  Network:
+    type: object
+    properties:
+      activation:
+        $ref: "#/$defs/Activation"
+      dropOut:
+        $ref: "#/$defs/DropOut"
+      graphBuilder:
+        $ref: "#/$defs/GraphBuilder"
+      optimizationAlgo:
+        $ref: "#/$defs/OptimizationAlgos"
+      updater:
+        $ref: "#/$defs/Updater"
+      weightInit:
+        $ref: "#/$defs/WeightInit"
+      l1:
+        type: number
+      l2:
+        type: number
+      seed:
+        type: integer
+        minimum: 0
+    required:
+      - graphBuilder
+  OptimizationAlgos:
+    type: string
+    enum:
+      - ConjucateGradient
+      - Lbfgs
+      - LineGradientDescent
+      - StochasticGradientDescent
+  PoolingType:
+    type: string
+    enum:
+      - Avg
+      - Max
+      - PNorm
+      - Sum
+  Updater:
+    anyOf:
+      - $ref: "#/$defs/Updaters/Adam"
+      - $ref: "#/$defs/Updaters/Sgd"
+      - $ref: "#/$defs/Updaters/RmsProp"
+  Updaters:
+    Adam:
+      type: object
+      properties:
+        type:
+          const: Adam
+        learningRate:
+          type: number
+        beta:
+          type: number
+        beta1:
+          type: number
+        epsilon:
+          type: number
+      required:
+        - type
+    Sgd:
+      type: object
+      properties:
+        type:
+          const: Sgd
+        learning:
+          type: number
+      required:
+        - type
+    RmsProp:
+      type: object
+      properties:
+        type:
+          const: RmsProp
+        learningRate:
+          type: number
+        rmsDecay:
+          type: number
+        epsilon:
+          type: number
+      required:
+        - type
+  Vertex:
+    anyOf:
+      - $ref: "#/$defs/Vertices/ElementWiseVertex"
+      - $ref: "#/$defs/Vertices/FlattenVertex"
+      - $ref: "#/$defs/Vertices/MergeVertex"
+  Vertices:
+    ElementWiseVertex:
+      type: object
+      properties:
+        type:
+          const: ElementWiseVertex
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+      required:
+        - type
+        - inputs
+    FlattenVertex:
+      type: object
+      properties:
+        type:
+          const: FlattenVertex
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+      required:
+        - type
+        - inputs
+    MergeVertex:
+      type: object
+      properties:
+        type:
+          const: MergeVertex
+        inputs:
+          type: array
+          items:
+            type: string
+          minItems: 1
+      required:
+        - type
+        - inputs
+  WeightInit:
+    anyOf:
+      - $ref: "#/$defs/WeightInits/He"
+      - $ref: "#/$defs/WeightInits/Xavier"
+  WeightInits:
+    He:
+      type: object
+      properties:
+        type:
+          const: He
+      required:
+        - type
+    Xavier:
+      type: object
+      properties:
+        type:
+          const: Xavier
+      required:
+        - type

@@ -43,7 +43,8 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.robots.*;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 import org.slf4j.Logger;
@@ -63,8 +64,8 @@ import java.util.stream.Stream;
 import static java.lang.Math.round;
 import static java.lang.Math.tan;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.RobotSpec.distance2Pulse;
-import static org.mmarini.wheelly.apis.RobotSpec.location2Pulses;
+import static org.mmarini.wheelly.robots.RobotSpec.distance2Pulse;
+import static org.mmarini.wheelly.robots.RobotSpec.location2Pulses;
 import static org.mmarini.wheelly.rx.RXFunc.logError;
 
 /**
@@ -279,16 +280,23 @@ public class MqttRobot implements RobotApi {
     }
 
     @Override
-    public Single<Boolean> backward(Point2D location) {
-        if (!status.get().connected()) {
-            return Single.just(false);
-        }
-        Point2D pulses = location2Pulses(location);
-        int x = (int) round(pulses.getX());
-        int y = (int) round(pulses.getY());
-        return executeRobotCommand("bw", x + "," + y, DEFAULT_COMMAND_TIMEOUT)
-                .isEmpty()
-                .map(s -> !s);
+    public void addOnContacts(Consumer<WheellyContactsMessage> callback) {
+        onContacts.add(callback);
+    }
+
+    @Override
+    public void addOnLidar(Consumer<WheellyLidarMessage> callback) {
+        onLidars.add(callback);
+    }
+
+    @Override
+    public void addOnMotion(Consumer<WheellyMotionMessage> callback) {
+        onMotions.add(callback);
+    }
+
+    @Override
+    public void addOnSupply(Consumer<WheellySupplyMessage> callback) {
+        onSupplies.add(callback);
     }
 
     @Override
@@ -407,19 +415,6 @@ public class MqttRobot implements RobotApi {
     }
 
     @Override
-    public Single<Boolean> forward(Point2D location) {
-        if (!status.get().connected()) {
-            return Single.just(false);
-        }
-        Point2D pulses = location2Pulses(location);
-        int x = (int) round(pulses.getX());
-        int y = (int) round(pulses.getY());
-        return executeRobotCommand("fw", x + "," + y, DEFAULT_COMMAND_TIMEOUT)
-                .isEmpty()
-                .map(s -> !s);
-    }
-
-    @Override
     public Single<Boolean> halt() {
         return executeRobotCommand("ha", "ha", DEFAULT_COMMAND_TIMEOUT)
                 .isEmpty()
@@ -429,6 +424,19 @@ public class MqttRobot implements RobotApi {
     @Override
     public boolean isHalt() {
         return status.get().halted();
+    }
+
+    @Override
+    public Single<Boolean> move(boolean frontMove, Point2D location) {
+        if (!status.get().connected()) {
+            return Single.just(false);
+        }
+        Point2D pulses = location2Pulses(location);
+        int x = (int) round(pulses.getX());
+        int y = (int) round(pulses.getY());
+        return executeRobotCommand("mv", (frontMove ? 0 : 1) + "," + x + "," + y, DEFAULT_COMMAND_TIMEOUT)
+                .isEmpty()
+                .map(s -> !s);
     }
 
     /**
@@ -504,16 +512,6 @@ public class MqttRobot implements RobotApi {
         }
     }
 
-    @Override
-    public void addOnContacts(Consumer<WheellyContactsMessage> callback) {
-        onContacts.add(callback);
-    }
-
-    @Override
-    public void addOnLidar(Consumer<WheellyLidarMessage> callback) {
-        onLidars.add(callback);
-    }
-
     /**
      * Handles lidar message
      *
@@ -523,11 +521,6 @@ public class MqttRobot implements RobotApi {
         for (Consumer<WheellyLidarMessage> callback : onLidars) {
             callback.accept(message);
         }
-    }
-
-    @Override
-    public void addOnMotion(Consumer<WheellyMotionMessage> callback) {
-        onMotions.add(callback);
     }
 
     /**
@@ -569,11 +562,6 @@ public class MqttRobot implements RobotApi {
         MqttRobotStatus st = status.updateAndGet(MqttRobotStatus::setRobotNotConfigured);
         states.onNext(st);
         configure();
-    }
-
-    @Override
-    public void addOnSupply(Consumer<WheellySupplyMessage> callback) {
-        onSupplies.add(callback);
     }
 
     /**
@@ -621,6 +609,11 @@ public class MqttRobot implements RobotApi {
     }
 
     @Override
+    public long robotTime() {
+        return System.currentTimeMillis() - status.get().startTime();
+    }
+
+    @Override
     public Single<Boolean> rotate(int dir) {
         if (!status.get().connected()) {
             return Single.just(false);
@@ -643,11 +636,6 @@ public class MqttRobot implements RobotApi {
     @Override
     public double simulationSpeed() {
         return 1;
-    }
-
-    @Override
-    public long robotTime() {
-        return System.currentTimeMillis() - status.get().startTime();
     }
 
     /**
@@ -714,5 +702,18 @@ public class MqttRobot implements RobotApi {
             logger.atError().setCause(ex).log("Error parsing supply message");
             return null;
         }
+    }
+
+    @Override
+    public Single<Boolean> track(boolean frontTrack, Point2D target) {
+        if (!status.get().connected()) {
+            return Single.just(false);
+        }
+        Point2D pulses = location2Pulses(target);
+        int x = (int) round(pulses.getX());
+        int y = (int) round(pulses.getY());
+        return executeRobotCommand("ht", (frontTrack ? 0 : 1) + "," + x + "," + y, DEFAULT_COMMAND_TIMEOUT)
+                .isEmpty()
+                .map(s -> !s);
     }
 }

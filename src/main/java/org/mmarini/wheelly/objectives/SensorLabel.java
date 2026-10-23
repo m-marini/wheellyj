@@ -29,11 +29,11 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.Complex;
-import org.mmarini.wheelly.apis.LabelMarker;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.FiducialMarker;
+import org.mmarini.wheelly.utils.Angle;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
 import java.awt.geom.Point2D;
@@ -43,43 +43,54 @@ import java.util.Optional;
 import static java.lang.Math.abs;
 
 /**
- * The label objective returns reward if the robot is stopped in front of a labelled target
- * within distance range and sensor oriented (within range) toward a label target
+ * The label objective returns a reward if the robot is stopped in front of a fiducial marker
+ * within a specific distance range and the sensor is oriented (within range) towards a fiducial marker.
  */
 public interface SensorLabel {
     float DEFAULT_VELOCITY_THRESHOLD = 0.01f;
     String SCHEMA_NAME = "https://mmarini.org/wheelly/objective-sensor-label-schema-0.1";
     int DEFAULT_SENSOR_RANGE = 0;
     double DEFAULT_REWARD = 1d;
+    String MIN_DISTANCE_ID = "minDistance";
+    String MAX_DISTANCE_ID = "maxDistance";
+    String VELOCITY_THRESHOLD_ID = "velocityThreshold";
+    String SENSOR_RANGE_ID = "sensorRange";
+    String REWARD_ID = "reward";
 
     /**
-     * Returns the function that implements the label goal
+     * Returns the function that implements the label goal parsed from a JSON configuration.
+     * It validates the node against the schema before extracting the parameters.
      *
-     * @param root    the root json document
-     * @param locator the locator
+     * @param root    the root JSON document containing configuration data
+     * @param locator the locator pointing to the objective configuration node
+     * @return the configured {@link RewardFunction} instance
+     * @throws IllegalArgumentException if the JSON structure does not comply with the schema
      */
     static RewardFunction create(JsonNode root, Locator locator) {
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        double minDistance = locator.path("minDistance").getNode(root).asDouble();
-        double maxDistance = locator.path("maxDistance").getNode(root).asDouble();
-        double velocityThreshold = locator.path("velocityThreshold").getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
-        Complex sensorRange = Complex.fromDeg(locator.path("sensorRange").getNode(root).asInt(DEFAULT_SENSOR_RANGE));
-        double reward = locator.path("reward").getNode(root).asDouble(DEFAULT_REWARD);
+        double minDistance = locator.path(MIN_DISTANCE_ID).getNode(root).asDouble();
+        double maxDistance = locator.path(MAX_DISTANCE_ID).getNode(root).asDouble();
+        double velocityThreshold = locator.path(VELOCITY_THRESHOLD_ID).getNode(root).asDouble(DEFAULT_VELOCITY_THRESHOLD);
+        Angle sensorRange = Angle.fromDeg(locator.path(SENSOR_RANGE_ID).getNode(root).asInt(DEFAULT_SENSOR_RANGE));
+        double reward = locator.path(REWARD_ID).getNode(root).asDouble(DEFAULT_REWARD);
         return label(minDistance, maxDistance, velocityThreshold, sensorRange, reward);
     }
 
     /**
-     * Returns the function of reward for the given environment
+     * Returns the reward function for the given environment parameters.
+     * The reward is granted only if the robot is stopped, within the target distance ranges,
+     * oriented towards the target, and a valid fiducial marker is detected.
      *
-     * @param minDistance       the minimum distance
-     * @param maxDistance       the maximum distance
-     * @param velocityThreshold the threshold of velocity
-     * @param sensorRange       the sensor direction range
-     * @param reward            the reward in case of matched goal
+     * @param minDistance       the minimum distance allowed from the target
+     * @param maxDistance       the maximum distance allowed from the target
+     * @param velocityThreshold the threshold of velocity to consider the robot stopped
+     * @param sensorRange       the sensor direction range angle tolerance
+     * @param reward            the reward value assigned in case of a matched goal
+     * @return the lambda expression implementing the {@link RewardFunction}
      */
     static RewardFunction label(double minDistance, double maxDistance,
                                 double velocityThreshold,
-                                Complex sensorRange,
+                                Angle sensorRange,
                                 double reward) {
         return (s0, a, s1) -> {
             // the environment supports radar map
@@ -87,7 +98,7 @@ public interface SensorLabel {
             double frontDistance = robotStatus.frontDistance();
             Point2D robotLocation = robotStatus.location();
             // Get the nearest marker
-            Optional<LabelMarker> marker = s1.worldModel().markers().values().stream()
+            Optional<FiducialMarker> marker = s1.worldModel().markers().values().stream()
                     .min(Comparator.comparingDouble(m -> m.location().distanceSq(robotLocation)));
             // obstacle distance in range
             if (frontDistance >= minDistance
@@ -96,7 +107,7 @@ public interface SensorLabel {
                     && abs(robotStatus.leftPps()) < velocityThreshold
                     && abs(robotStatus.rightPps()) < velocityThreshold
                     // and any sector in sensor direction range with a labelled target in distance range
-                    && robotStatus.headDirection().isClose0(sensorRange)
+                    && robotStatus.headDirection().isFront(sensorRange)
                     // and marker not null
                     && marker.isPresent()
             ) {

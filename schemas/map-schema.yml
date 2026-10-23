@@ -7,7 +7,7 @@ properties:
   $schema:
     const: https://mmarini.org/wheelly/map-schema-1.0
   class:
-    const: org.mmarini.wheelly.apis.MapBuilder
+    const: org.mmarini.wheelly.robots.MapBuilder
   shapes:
     type: array
     items:

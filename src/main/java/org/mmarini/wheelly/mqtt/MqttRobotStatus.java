@@ -28,8 +28,8 @@
 
 package org.mmarini.wheelly.mqtt;
 
-import org.mmarini.wheelly.apis.RobotStatusApi;
-import org.mmarini.wheelly.apis.WatchDog;
+import org.mmarini.wheelly.robots.RobotStatusApi;
+import org.mmarini.wheelly.utils.WatchDog;
 
 import java.util.Objects;
 
@@ -61,18 +61,6 @@ public record MqttRobotStatus(
     @Override
     public boolean configured() {
         return robotConfigured;
-    }
-
-    /**
-     * Returns the real robot state with the changed halted flag
-     *
-     * @param halted true if robot is halted
-     */
-    public MqttRobotStatus halted(boolean halted) {
-        return this.halted != halted
-                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured,
-                halted, configIndex, startTime, lastActivity, watchDog)
-                : this;
     }
 
     /**

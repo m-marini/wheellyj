@@ -30,9 +30,9 @@ package org.mmarini.wheelly.objectives;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
 /**
@@ -44,16 +44,16 @@ public interface AvoidContact {
     static RewardFunction avoid(double reward) {
         return (s0, a, s1) -> {
             RobotStatus status = s1.worldModel().robotStatus();
-                return !status.canMoveForward() || !status.canMoveBackward()
-                        ? reward
-                        : 0;
+            return !status.canMoveForward() || !status.canMoveBackward()
+                    ? reward
+                    : 0;
         };
     }
 
     /**
      * Returns the reward function from configuration
      *
-     * @param root    the root json document
+     * @param root    the root JSON document
      * @param locator the locator
      */
     static RewardFunction create(JsonNode root, Locator locator) {

@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.engines;
 
-import org.mmarini.wheelly.apis.RobotStatus;
+import org.mmarini.wheelly.control.RobotStatus;
 
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;

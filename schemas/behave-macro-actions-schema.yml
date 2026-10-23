@@ -1,0 +1,68 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/behave-macro-actions-schema-0.1
+title: Environment
+type: object
+properties:
+  $schema:
+    const: https://mmarini.org/wheelly/behave-macro-actions-schema-0.1
+  class:
+    const: org.mmarini.wheelly.behaviours.MacroActionsBehaviour
+  freeProb:
+    type: number
+    minimum: 0
+    maximum: 1
+  commitmentDuration:
+    type: integer
+    minimum: 0
+  growthDistance:
+    type: number
+    exclusiveMinimum: 0
+  markerStopDistance:
+    type: number
+    exclusiveMinimum: 0
+  maxIterations:
+    type: integer
+    minimum: 1
+  maxSearchTime:
+    type: integer
+    minimum: 0
+  microAngle:
+    type: integer
+    minimum: 1
+    maximum: 180
+  microDistance:
+    type: number
+    exclusiveMinimum: 0
+  minGoals:
+    type: integer
+    minimum: 1
+  minMarkerDistance:
+    type: number
+    minimum: 0
+  minNumberOfSamples:
+    type: integer
+    minimum: 1
+  minObstacleDistance:
+    type: number
+    minimum: 0
+  nearestTargetProb:
+    type: number
+    minimum: 0
+    maximum: 1
+  safeDistance:
+    type: number
+    exclusiveMinimum: 0
+  seed:
+    type: integer
+  scanAngleInterval:
+    type: integer
+    minimum: 1
+    maximum: 90
+  turnScanAngle:
+    type: integer
+    minimum: 1
+    maximum: 180
+required:
+  - $schema
+  - class

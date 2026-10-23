@@ -28,10 +28,10 @@
 
 package org.mmarini.wheelly.rrt;
 
-import org.mmarini.wheelly.apis.AreaExpression;
-import org.mmarini.wheelly.apis.GridTopology;
-import org.mmarini.wheelly.apis.MapCell;
-import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.perception.GridTopology;
+import org.mmarini.wheelly.perception.MapCell;
+import org.mmarini.wheelly.perception.RadarMap;
+import org.mmarini.wheelly.utils.AreaExpression;
 
 import java.awt.geom.Point2D;
 import java.util.*;
@@ -174,8 +174,7 @@ public class RRTPathFinder {
                 .mapToObj(i -> map.cell(i).location())
                 .collect(Collectors.toSet());
         // Create the pathfinder to any of the resulting target locations
-        return create(config, map, safetyDistance, targetLocations, random
-        );
+        return create(config, map, safetyDistance, targetLocations, random);
     }
 
     /**

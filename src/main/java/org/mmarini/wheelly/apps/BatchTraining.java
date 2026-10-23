@@ -41,16 +41,25 @@ import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.model.stats.StatsListener;
 import org.deeplearning4j.ui.model.storage.InMemoryStatsStorage;
 import org.mmarini.Tuple2;
-import org.mmarini.rl.agents.*;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.batch.BatchTrainer;
 import org.mmarini.wheelly.batch.ProgressInfo;
-import org.mmarini.wheelly.envs.DLEnvironment;
-import org.mmarini.wheelly.envs.EnvironmentApi;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.behaviours.BehaviourApi;
+import org.mmarini.wheelly.control.ControllerApi;
+import org.mmarini.wheelly.gyms.GymAdapter;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.Perceptor;
+import org.mmarini.wheelly.rlagents.Agent;
+import org.mmarini.wheelly.rlagents.DLListener;
+import org.mmarini.wheelly.rlagents.RLAgent;
+import org.mmarini.wheelly.rlagents.TrainingKpis;
+import org.mmarini.wheelly.robots.RobotApi;
+import org.mmarini.wheelly.storage.serde.BinArrayFile;
+import org.mmarini.wheelly.storage.serde.KeyBinWriter;
 import org.mmarini.wheelly.swing.KpisPanel;
 import org.mmarini.wheelly.swing.Utils;
+import org.mmarini.wheelly.utils.AppYaml;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
@@ -80,7 +89,7 @@ import static org.mmarini.yaml.Utils.fromFile;
 public class BatchTraining {
     public static final int PROGRESS_INTERVAL = 1000;
     public static final String STAT_PAGE = "http://localhost:9000/train/overview";
-    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.4";
+    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(BatchTraining.class);
 
     static {
@@ -130,11 +139,11 @@ public class BatchTraining {
     private final JProgressBar progressBar;
     private final JTextField infoBar;
     private final KpisPanel kpisPanel;
-    private BatchTrainer trainer;
     private JFrame frame;
     private int numEpochs;
-    private BatchAgent agent;
-    private DLEnvironment environment;
+    private BatchTrainer trainer;
+    private GymAdapter adapter;
+    private Agent agent;
     private StatsListener statsListener;
     private KeyBinWriter kpisWriter;
 
@@ -173,41 +182,43 @@ public class BatchTraining {
         JsonNode config = loadConfiguration();
 
         // Creates robot
+        logger.atInfo().log("Creating robot ...");
         RobotApi robot = AppYaml.robotFromJson(config);
 
         // Creates controller
-        RobotControllerApi controller = AppYaml.controllerFromJson(config);
-        controller.connectRobot(robot);
+        logger.atInfo().log("Creating controller ...");
+        ControllerApi controller = AppYaml.controllerFromJson(config);
 
-        // Creates modeller
-        WorldModeller modeller = AppYaml.modellerFromJson(config);
-        modeller.setRobotSpec(robot.robotSpec());
-        modeller.connectController(controller);
+        // Creates perceptor
+        logger.atInfo().log("Creating perceptor ...");
+        Perceptor perceptor = AppYaml.perceptorFromJson(config);
 
-        // Creates environment
-        EnvironmentApi env = AppYaml.envFromJson(config);
-        if (env instanceof DLEnvironment we) {
-            this.environment = we;
-        } else {
-            throw new IllegalArgumentException(format(
-                    "Environment must be %s (%s)",
-                    DLEnvironment.class.getSimpleName(),
-                    env.getClass().getSimpleName()
-            ));
-        }
-        environment.connect(modeller);
-        // Load reward function
+        // Creates behaviour
+        logger.atInfo().log("Creating behaviour ...");
+        BehaviourApi behaviour = AppYaml.behaviourFromJson(config);
+
+        // Creates adapter
+        logger.atInfo().log("Creating adapter ...");
+        adapter = AppYaml.adapterFromFile(config);
+
+        // Creates reward function
+        logger.atInfo().log("Creating reward function ...");
         RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
-        environment.setRewardFunc(rewardFunc);
 
         // Creates agent
-
         logger.atInfo().log("Creating agent ...");
-        this.agent = (BatchAgent) Agent.fromFile(
-                new File(Locator.locate("agent").getNode(config).asText()));
-        environment.connect(agent);
+        agent = Agent.fromFile(new File(Locator.locate("agent").getNode(config).asText()));
 
-        kpisPanel.addActionColumns(environment.actionSpec()
+        // Create layers' connection
+        controller.init(robot);
+        perceptor.init(robot.robotSpec(), controller);
+        perceptor.decisionMaker(behaviour);
+        behaviour.decisionMaker(adapter);
+        adapter.rewardFunc(rewardFunc);
+        adapter.agent(agent);
+        adapter.worldModelSpec(perceptor.worldModelSpec());
+
+        kpisPanel.addActionColumns(adapter.actionSpec()
                 .keySet().stream().sorted().toArray(String[]::new));
 
         // Creates random number generator
@@ -218,7 +229,7 @@ public class BatchTraining {
         }
 
         numEpochs = Locator.locate("numEpochs").getNode(config).asInt(agent.numEpochs());
-        if (agent instanceof DLAgent dlAgent) {
+        if (agent instanceof RLAgent dlAgent) {
             if (args.getBoolean("ui")) {
                 UIServer uiServer = UIServer.getInstance();
                 StatsStorage statsStorage = new InMemoryStatsStorage();
@@ -313,7 +324,7 @@ public class BatchTraining {
      */
     private void onKpis(TrainingKpis kpis) {
         try {
-            kpisPanel.print(kpis);
+            // TODO kpisPanel.print(kpis);
             if (kpisWriter != null) {
                 kpis.write(kpisWriter);
             }
@@ -388,22 +399,21 @@ public class BatchTraining {
      * @throws Exception in case of error
      */
     private void runBatch() throws Exception {
-
         // Creates the batch trainer
         File path = new File(args.getString("path"));
-        Map<String, BinArrayFile> stateFiles = environment.stateSpec().keySet()
+        Map<String, BinArrayFile> stateFiles = adapter.stateSpec().keySet()
                 .stream()
                 .map(key ->
                         Tuple2.of(key, new BinArrayFile(new File(path, key + ".bin"))))
                 .collect(Tuple2.toMap());
-        Map<String, BinArrayFile> actionMaskFiles = environment.actionSpec().keySet()
+        Map<String, BinArrayFile> actionMaskFiles = adapter.actionSpec().keySet()
                 .stream()
                 .map(key ->
                         Tuple2.of(key, new BinArrayFile(new File(path, key + ".bin"))))
                 .collect(Tuple2.toMap());
         BinArrayFile rewardFile = new BinArrayFile(new File(path, "rewards.bin"));
         long size = rewardFile.size();
-        if (agent instanceof DLAgent dlAgent) {
+        if (agent instanceof RLAgent dlAgent) {
             DLListener listener = new DLListener((int) (size * numEpochs));
             if (statsListener != null) {
                 dlAgent.network().setListeners(statsListener, listener);
