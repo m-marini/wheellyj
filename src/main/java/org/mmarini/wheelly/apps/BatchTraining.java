@@ -89,7 +89,7 @@ import static org.mmarini.yaml.Utils.fromFile;
 public class BatchTraining {
     public static final int PROGRESS_INTERVAL = 1000;
     public static final String STAT_PAGE = "http://localhost:9000/train/overview";
-    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.4";
+    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(BatchTraining.class);
 
     static {
@@ -182,21 +182,27 @@ public class BatchTraining {
         JsonNode config = loadConfiguration();
 
         // Creates robot
+        logger.atInfo().log("Creating robot ...");
         RobotApi robot = AppYaml.robotFromJson(config);
 
         // Creates controller
+        logger.atInfo().log("Creating controller ...");
         ControllerApi controller = AppYaml.controllerFromJson(config);
 
         // Creates perceptor
+        logger.atInfo().log("Creating perceptor ...");
         Perceptor perceptor = AppYaml.perceptorFromJson(config);
 
         // Creates behaviour
+        logger.atInfo().log("Creating behaviour ...");
         BehaviourApi behaviour = AppYaml.behaviourFromJson(config);
 
-        // Creates environment
+        // Creates adapter
+        logger.atInfo().log("Creating adapter ...");
         adapter = AppYaml.adapterFromFile(config);
 
         // Creates reward function
+        logger.atInfo().log("Creating reward function ...");
         RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
 
         // Creates agent
@@ -210,6 +216,7 @@ public class BatchTraining {
         behaviour.decisionMaker(adapter);
         adapter.rewardFunc(rewardFunc);
         adapter.agent(agent);
+        adapter.worldModelSpec(perceptor.worldModelSpec());
 
         kpisPanel.addActionColumns(adapter.actionSpec()
                 .keySet().stream().sorted().toArray(String[]::new));
