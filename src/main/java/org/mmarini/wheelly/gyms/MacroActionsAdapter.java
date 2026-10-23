@@ -189,7 +189,10 @@ public class MacroActionsAdapter implements GymAdapter {
      */
     @Override
     public BehaviourAction decide(BehaviourState state) {
-        ensureConnected();
+        if (agent == null) {
+            throw new IllegalStateException("Adapter is not connected to any agent.");
+        }
+
         Map<String, INDArray> signals1 = state(state);
         Map<String, INDArray> actions = agent.act(signals1);
 
@@ -223,22 +226,6 @@ public class MacroActionsAdapter implements GymAdapter {
     }
 
     /**
-     * Validates that all required operational dependencies are connected.
-     *
-     * @throws IllegalStateException if the agent or the state function is missing
-     */
-    private void ensureConnected() {
-        if (agent == null) {
-            throw new IllegalStateException("Environment is not connected to any agent.");
-        }
-        if (stateFunc == null) {
-            throw new IllegalStateException("Environment is not connected to any state function");
-        }
-        if (rewardFunc == null) {
-            throw new IllegalStateException("Missing reward function");
-        }
-    }
-    /**
      * Registers a callback function to be executed when a new reward is received.
      * <p>
      * If a callback is already present, the new callback is chained to the existing one
@@ -268,7 +255,10 @@ public class MacroActionsAdapter implements GymAdapter {
      */
     @Override
     public double reward(BehaviourState state0, BehaviourAction actions, BehaviourState state1) {
-        return rewardFunc != null ? rewardFunc.reward(state0, actions, state1) : 0;
+        if (rewardFunc == null) {
+            throw new IllegalStateException("Missing reward function");
+        }
+        return rewardFunc.reward(state0, actions, state1);
     }
 
     /**
@@ -294,7 +284,9 @@ public class MacroActionsAdapter implements GymAdapter {
      */
     public Map<String, INDArray> state(BehaviourState... model) {
         requireNonNull(model);
-        ensureConnected();
+        if (stateFunc == null) {
+            throw new IllegalStateException("Adapter is not connected to any state function");
+        }
         return stateFunc.signals(model);
     }
 
@@ -309,6 +301,9 @@ public class MacroActionsAdapter implements GymAdapter {
      */
     @Override
     public StateFunction stateFunction() {
+        if (stateFunc == null) {
+            throw new IllegalStateException("Adapter is not connected to any state function");
+        }
         return stateFunc;
     }
 
@@ -322,7 +317,9 @@ public class MacroActionsAdapter implements GymAdapter {
      * @return a map pairing signal identifiers with their corresponding {@link SignalSpec}
      */
     public Map<String, SignalSpec> stateSpec() {
-        ensureConnected();
+        if (stateFunc == null) {
+            throw new IllegalStateException("Adapter is not connected to any state function");
+        }
         return stateFunc.spec();
     }
 

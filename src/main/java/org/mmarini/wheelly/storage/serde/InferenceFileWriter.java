@@ -28,6 +28,9 @@
 
 package org.mmarini.wheelly.storage.serde;
 
+import org.mmarini.wheelly.perception.GridTopology;
+import org.mmarini.wheelly.perception.WorldModelSpec;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -49,12 +52,31 @@ public class InferenceFileWriter extends DataFileWriter implements InferenceWrit
         return new InferenceFileWriter(stream);
     }
 
+    protected boolean headerWritten;
+
     /**
      * Creates the world model writer
      *
-     * @param stream   the file
+     * @param stream the file
      */
     protected InferenceFileWriter(OutputStream stream) {
         super(stream);
+    }
+
+    /**
+     * Write the header of inference file
+     *
+     * @param spec     the world spec
+     * @param topology the grid topology
+     */
+    @Override
+    public InferenceFileWriter writeHeader(WorldModelSpec spec, GridTopology topology) throws IOException {
+        if (!headerWritten) {
+            write(Type.RL_MACRO_ACTION.ordinal());
+            write(spec);
+            write(topology);
+            headerWritten = true;
+        }
+        return this;
     }
 }

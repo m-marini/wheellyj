@@ -85,7 +85,11 @@ public class InferenceFileReader extends DataFileReader implements InferenceRead
      * Initialises file by reading the header
      */
     private InferenceFileReader init() throws IOException {
-        type = InferenceWriter.Type.values()[readInt()];
+        int typeOrd = readInt();
+        if (typeOrd != InferenceWriter.Type.RL_MACRO_ACTION.ordinal()) {
+            throw new IllegalStateException("file type is not RL_MACRO_ACTION");
+        }
+        type = InferenceWriter.Type.values()[typeOrd];
         worldSpec = readWorldSpec();
         topology = readTopology();
         return this;

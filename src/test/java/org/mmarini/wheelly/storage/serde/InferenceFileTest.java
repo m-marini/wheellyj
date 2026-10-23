@@ -90,7 +90,7 @@ class InferenceFileTest {
         FILE.delete();
         this.writer = assertDoesNotThrow(() -> {
             InferenceFileWriter file = InferenceFileWriter.fromFile(FILE);
-            file.writeHeader(InferenceWriter.Type.DL_MACRO_ACTION, WORLD_MODEL_SPEC, TOPOLOGY);
+            file.writeHeader(WORLD_MODEL_SPEC, TOPOLOGY);
             return file;
         });
     }
@@ -196,7 +196,7 @@ class InferenceFileTest {
     @Test
     void testHeader() throws IOException {
         try (InferenceFileReader reader = InferenceFileReader.fromFile(FILE)) {
-            assertEquals(InferenceWriter.Type.DL_MACRO_ACTION, reader.type());
+            assertEquals(InferenceWriter.Type.RL_MACRO_ACTION, reader.type());
             assertEquals(WORLD_MODEL_SPEC, reader.worldSpec());
             assertEquals(TOPOLOGY.center(), reader.topology().center());
             assertEquals(TOPOLOGY.width(), reader.topology().width());

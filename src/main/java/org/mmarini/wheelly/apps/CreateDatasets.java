@@ -72,7 +72,7 @@ import static org.mmarini.yaml.Utils.fromFile;
  */
 public class CreateDatasets {
     public static final int PROGRESS_INTERVAL = 1000;
-    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.4";
+    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(CreateDatasets.class);
 
     static {
@@ -156,14 +156,15 @@ public class CreateDatasets {
         JsonNode config = loadConfiguration();
 
         // Creates robot
+        logger.atInfo().log("Creating robot ...");
         RobotApi robot = AppYaml.robotFromJson(config);
 
         // Creates controller
         logger.atInfo().log("Creating controller ...");
         ControllerApi controller = AppYaml.controllerFromJson(config);
 
-        // Creates modeller
-        logger.atInfo().log("Creating modeller ...");
+        // Creates perceptor
+        logger.atInfo().log("Creating perceptor ...");
         this.perceptor = AppYaml.perceptorFromJson(config);
 
         // Create behaviour
@@ -174,6 +175,7 @@ public class CreateDatasets {
         logger.atInfo().log("Creating RL adapter ...");
         this.adapter = AppYaml.adapterFromFile(config);
 
+        // Creates reward function
         logger.atInfo().log("Create reward function ...");
         RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
 
@@ -183,9 +185,9 @@ public class CreateDatasets {
         perceptor.decisionMaker(behaviour);
 
         behaviour.decisionMaker(adapter);
-        // TODO modeller.connectController(controller);
 
         adapter.rewardFunc(rewardFunc);
+        adapter.worldModelSpec(perceptor.worldModelSpec());
 
         // Creates random number generator
         Random random = Nd4j.getRandomFactory().getNewRandomInstance();

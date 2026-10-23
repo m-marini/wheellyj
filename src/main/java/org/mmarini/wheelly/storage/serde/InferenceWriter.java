@@ -321,9 +321,11 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
         return (T) this;
     }
 
-    default <T extends InferenceWriter> T write(BehaviourState macroEnvState, BehaviourAction agentAction) throws IOException {
-        write(macroEnvState)
-                .write(agentAction);
+    default <T extends InferenceWriter> T write(BehaviourState state, BehaviourAction action) throws IOException {
+        WorldModel worldModel = state.worldModel();
+        writeHeader(worldModel.worldSpec(), worldModel.radarMap().topology())
+                .write(state)
+                .write(action);
         return (T) this;
     }
 
@@ -333,15 +335,9 @@ public interface InferenceWriter extends AutoCloseable, DataWriter {
      * @param spec     the world spec
      * @param topology the grid topology
      */
-    default <T extends InferenceWriter> T writeHeader(Type type, WorldModelSpec spec, GridTopology topology) throws IOException {
-        write(type.ordinal());
-        write(spec);
-        write(topology);
-        return (T) this;
-    }
+    <T extends InferenceWriter> T writeHeader(WorldModelSpec spec, GridTopology topology) throws IOException;
 
     enum Type {
-        DL_ENVIRONMENT,
-        DL_MACRO_ACTION
+        RL_MACRO_ACTION
     }
 }
