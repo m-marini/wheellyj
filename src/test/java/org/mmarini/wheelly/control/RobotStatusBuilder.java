@@ -38,11 +38,10 @@ import static org.mmarini.wheelly.robots.HeadStatusId.FIX_DIRECTION;
 import static org.mmarini.wheelly.robots.MotionStatusId.*;
 import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.robots.RobotSpec.UNKNOWN_MARKER;
-import static org.mmarini.wheelly.utils.Utils.m2cm;
+import static org.mmarini.wheelly.utils.Utils.m2mm;
 
 public class RobotStatusBuilder {
     public static final double GRID_SIZE = 0.2;
-    public static final double EPSILON = 1e-5;
 
     private long time;
     private int robotDirDeg;
@@ -101,7 +100,7 @@ public class RobotStatusBuilder {
                 xTarget, yTarget);
         WheellyContactsMessage contacts = new WheellyContactsMessage(time, frontSensor, rearSensor, canMoveForward, canMoveBackward);
         CameraEvent camera = new CameraEvent(time, markerId, 3, 4, null, Angle.DEG0);
-        WheellyLidarMessage lidars = new WheellyLidarMessage(lidarTime, m2cm(frontDistance), m2cm(rearDistance),
+        WheellyLidarMessage lidars = new WheellyLidarMessage(lidarTime, m2mm(frontDistance), m2mm(rearDistance),
                 xPulses, yPulses, robotDirDeg, headAngle, headStatus, headTargetDeg,
                 xHeadTarget, yHeadTarget);
         return new RobotStatus(DEFAULT_ROBOT_SPEC, time, motion, contacts,

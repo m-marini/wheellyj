@@ -35,6 +35,7 @@ import org.mmarini.wheelly.utils.WithShutdownCompletable;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
+import java.util.function.Consumer;
 
 public interface Agent extends AdapterConnector, BatchAgent, AutoCloseable, WithShutdownCompletable {
 
@@ -75,6 +76,8 @@ public interface Agent extends AdapterConnector, BatchAgent, AutoCloseable, With
     void learning(boolean learning);
 
     void validate(WithSignalsSpec adapter) throws Throwable;
+
+    RLAgent onKpis(Consumer<TrainingKpis> callback);
 
     /**
      * Saves the model

@@ -52,7 +52,8 @@ import static org.mmarini.Matchers.pointCloseTo;
 import static org.mmarini.Utils.add;
 import static org.mmarini.Utils.mul;
 import static org.mmarini.wheelly.robots.RobotSpec.*;
-import static org.mmarini.wheelly.utils.Utils.*;
+import static org.mmarini.wheelly.utils.Utils.MM;
+import static org.mmarini.wheelly.utils.Utils.mm2m;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class MarkerLocatorTest {
@@ -114,7 +115,7 @@ public class MarkerLocatorTest {
                 .uniform(-2.0, 2.0, 9) // yRobot
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90) // headDeg
-                .exponential(40, 150, 5) // distance
+                .exponential(400, 1500, 5) // distance
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2, DEFAULT_LIDAR_FOV_DEG / 2) // labelDeg
                 .uniform(0, 3000, 17) //  dTimeMarker
                 .uniform(0, 359) // markerDeg
@@ -128,7 +129,7 @@ public class MarkerLocatorTest {
                 .uniform(-2.0, 2.0, 9) // yRobot
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90) // headDeg
-                .exponential(100, 200, 5) // distance
+                .exponential(1000, 2000, 5) // distance
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2, DEFAULT_LIDAR_FOV_DEG / 2) // labelDeg
                 .uniform(DEFAULT_LIDAR_FOV_DEG / 2 + 1, 360 - DEFAULT_LIDAR_FOV_DEG / 2 - 1) // markerRange
                 .exponential(0.3, 1, 5) // distance
@@ -141,7 +142,7 @@ public class MarkerLocatorTest {
                 .uniform(-2.0, 2.0, 9) // yRobot
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90) // headDeg
-                .exponential(100, 200, 5) // distance
+                .exponential(1000, 2000, 5) // distance
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2, DEFAULT_LIDAR_FOV_DEG / 2) // labelDeg
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2 + 2, DEFAULT_LIDAR_FOV_DEG / 2 - 2) // markerRange
                 .exponential(0.3, 1, 5) // distance
@@ -154,7 +155,7 @@ public class MarkerLocatorTest {
                 .uniform(-2.0, 2.0, 9) // yRobot
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90) // headDeg
-                .exponential(30, 100, 17) // distance
+                .exponential(300, 1000, 17) // distance
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2, DEFAULT_LIDAR_FOV_DEG / 2) // labelDeg
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2 + 2, DEFAULT_LIDAR_FOV_DEG / 2 - 2) // markerRange
                 .exponential(1.001 + MARKER_SIZE / 2, 2, 17) // distance
@@ -167,7 +168,7 @@ public class MarkerLocatorTest {
                 .uniform(-2.0, 2.0, 9) // yRobot
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90) // headDeg
-                .exponential(40, 150, 5) // distance
+                .exponential(400, 1500, 5) // distance
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2, DEFAULT_LIDAR_FOV_DEG / 2) // labelDeg
                 .build(NUM_RANDOM_TEST_CASES);
     }
@@ -247,7 +248,7 @@ public class MarkerLocatorTest {
                 .uniform(-2.0, 2.0, 9) // yRobot
                 .uniform(0, 359) // robotDeg
                 .uniform(-90, 90) // headDeg
-                .uniform(100, 200) // distance
+                .uniform(1000, 2000) // distance
                 .uniform(-DEFAULT_LIDAR_FOV_DEG / 2 + 2, DEFAULT_LIDAR_FOV_DEG / 2 - 2) // markerDeg
                 .exponential(0.3, 0.999) // markerDistance
                 .build(NUM_RANDOM_TEST_CASES);
@@ -307,7 +308,7 @@ public class MarkerLocatorTest {
         Point2D lidarLocation = DEFAULT_ROBOT_SPEC.frontLidarLocation(robotLocation,
                 robotDir, headDir);
         Angle labelDir = robotDir.add(headDir).add(Angle.fromDeg(labelDeg));
-        Point2D labelLocation = labelDir.at(lidarLocation, cm2m(distance));
+        Point2D labelLocation = labelDir.at(lidarLocation, mm2m(distance));
 
         Point2D expectedMarker = add(
                 mul(marker.location(), gamma),
@@ -351,7 +352,7 @@ public class MarkerLocatorTest {
         Point2D lidarLocation = DEFAULT_ROBOT_SPEC.frontLidarLocation(robotLocation,
                 robotDir, headDir);
         Angle labelDir = robotDir.add(headDir).add(Angle.fromDeg(labelDeg));
-        Point2D expected = labelDir.at(lidarLocation, cm2m(distance));
+        Point2D expected = labelDir.at(lidarLocation, mm2m(distance));
         assertThat(marker.location(), pointCloseTo(expected, MM));
     }
 
@@ -398,7 +399,7 @@ public class MarkerLocatorTest {
         Point2D lidarLocation = DEFAULT_ROBOT_SPEC.frontLidarLocation(robotLocation,
                 robotDir, headDir);
         Angle labelDir = robotDir.add(headDir).add(Angle.fromDeg(labelDeg));
-        Point2D expected = labelDir.at(lidarLocation, cm2m(distance));
+        Point2D expected = labelDir.at(lidarLocation, mm2m(distance));
         assertThat(markerB.location(), pointCloseTo(expected, MM));
     }
 
@@ -437,7 +438,7 @@ public class MarkerLocatorTest {
         Point2D cameraLocation = DEFAULT_ROBOT_SPEC.cameraLocation(robotLocation,
                 robotDir, headDir);
         Angle labelDir = robotDir.add(headDir).add(Angle.fromDeg(labelDeg));
-        Point2D expected = labelDir.at(cameraLocation, cm2m(distance));
+        Point2D expected = labelDir.at(cameraLocation, mm2m(distance));
         assertThat(marker.location(), pointCloseTo(expected, MM));
     }
 

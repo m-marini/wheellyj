@@ -41,7 +41,7 @@ import static java.lang.Math.max;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.robots.MotionStatusId.HALT;
 import static org.mmarini.wheelly.robots.RobotSpec.UNKNOWN_MARKER;
-import static org.mmarini.wheelly.utils.Utils.cm2m;
+import static org.mmarini.wheelly.utils.Utils.mm2m;
 
 /**
  * Creates the robot status
@@ -126,7 +126,7 @@ public record RobotStatus(RobotSpec robotSpec, long robotTime, WheellyMotionMess
      * Returns the front distance (m)
      */
     public double frontDistance() {
-        return cm2m(lidarMessage.frontDistance());
+        return mm2m(lidarMessage.frontDistance());
     }
 
     /**
@@ -229,7 +229,7 @@ public record RobotStatus(RobotSpec robotSpec, long robotTime, WheellyMotionMess
      * Returns the rear distance (m)
      */
     public double rearDistance() {
-        return cm2m(lidarMessage.rearDistance());
+        return mm2m(lidarMessage.rearDistance());
     }
 
     /**

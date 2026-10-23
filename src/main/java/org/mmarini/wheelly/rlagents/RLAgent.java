@@ -53,7 +53,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -104,29 +107,8 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
         AtomicReference<RLAgentStatus> status = new AtomicReference<>(new RLAgentStatus(network, null,
                 trajectoryBuffer, null, false, avgReward, false, true));
         return new RLAgent(filePath, random, numEpochs, batchSize, beta, alphas, concurrentTraining,
-                status, new ArrayList<>(), new ArrayList<>());
+                status);
     }
-
-    /**
-     * Returns the agent
-     *
-     * @param network            the network
-     * @param random             the random number generator
-     * @param numEpochs          the number of epochs to train
-     * @param numSteps           the minimum length of training trajectory
-     * @param batchSize          the mini batch size
-     * @param alphas             the policy change factors
-     * @param beta               the average rewards factor
-     * @param filePath           the file path for the agent save
-     * @param concurrentTraining true if concurrent training
-     */
-    /*
-    public static RLAgent create(ComputationGraph network, Random random, int numEpochs, int numSteps, int batchSize, Map<String, Float> alphas, float beta, File filePath, boolean concurrentTraining) {
-        RLAgent agent = create(filePath, network, random, numEpochs, numSteps, batchSize, alphas, beta, 0, concurrentTraining);
-        return agent;
-    }
-
-     */
 
     /**
      * Returns the agent from the file path
@@ -158,9 +140,9 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
     private final float beta;
     private final boolean concurrentTraining;
     private final AtomicReference<RLAgentStatus> status;
-    private final List<Consumer<TrainingKpis>> onKpis;
-    private final List<Consumer<INDArray>> onRewards;
     private final CompletableSubject shutdownProcessor;
+    private Consumer<TrainingKpis> onKpis;
+    private Consumer<INDArray> onRewards;
 
     /**
      * Creates the agent
@@ -173,13 +155,10 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      * @param alphas             the policy action factors
      * @param concurrentTraining true if concurrent training
      * @param status             the agent status
-     * @param onKpis             the KPIS callback list
-     * @param onRewards          the rewards callback list
      */
     protected RLAgent(File filePath, Random random, int numEpochs, int batchSize,
                       float beta, Map<String, Float> alphas, boolean concurrentTraining,
-                      AtomicReference<RLAgentStatus> status, List<Consumer<TrainingKpis>> onKpis,
-                      List<Consumer<INDArray>> onRewards) {
+                      AtomicReference<RLAgentStatus> status) {
         this.filePath = requireNonNull(filePath);
         this.random = requireNonNull(random);
         this.numEpochs = numEpochs;
@@ -188,8 +167,6 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
         this.alphas = alphas;
         this.concurrentTraining = concurrentTraining;
         this.status = requireNonNull(status);
-        this.onKpis = onKpis;
-        this.onRewards = onRewards;
         this.shutdownProcessor = CompletableSubject.create();
     }
 
@@ -253,8 +230,8 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      * @param kpis the KPIS
      */
     private void callOnKpis(TrainingKpis kpis) {
-        for (Consumer<TrainingKpis> callback : onKpis) {
-            callback.accept(kpis);
+        if (onKpis != null) {
+            onKpis.accept(kpis);
         }
     }
 
@@ -264,8 +241,8 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      * @param rewards the rewards
      */
     private void callOnRewards(INDArray rewards) {
-        for (Consumer<INDArray> callback : onRewards) {
-            callback.accept(rewards);
+        if (onRewards != null) {
+            onRewards.accept(rewards);
         }
     }
 
@@ -285,7 +262,7 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      */
     public RLAgent concurrentTraining(boolean concurrentTraining) {
         return this.concurrentTraining != concurrentTraining
-                ? new RLAgent(filePath, random, numEpochs, batchSize, beta, alphas, concurrentTraining, status, onKpis, onRewards)
+                ? new RLAgent(filePath, random, numEpochs, batchSize, beta, alphas, concurrentTraining, status)
                 : this;
     }
 
@@ -390,8 +367,9 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      *
      * @param callback the callback function
      */
+    @Override
     public RLAgent onKpis(Consumer<TrainingKpis> callback) {
-        this.onKpis.add(callback);
+        this.onKpis = onKpis == null ? callback : onKpis.andThen(callback);
         return this;
     }
 
@@ -401,7 +379,7 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      * @param callback the callback function
      */
     public RLAgent onRewards(Consumer<INDArray> callback) {
-        this.onRewards.add(callback);
+        this.onRewards = onRewards == null ? callback : onRewards.andThen(callback);
         return this;
     }
 

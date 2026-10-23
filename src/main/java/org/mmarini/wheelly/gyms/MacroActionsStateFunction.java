@@ -52,7 +52,7 @@ import java.util.function.Function;
 
 import static java.lang.Math.clamp;
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.utils.Utils.cm2m;
+import static org.mmarini.wheelly.utils.Utils.mm2m;
 
 /**
  * Computes and structures the multi-input state feature vectors for Deep Learning
@@ -284,8 +284,8 @@ public class MacroActionsStateFunction implements StateFunction {
             WheellyLidarMessage message = robot.lidarMessage();
 
             double sinHeadDir = message.headDirection().sin();
-            double front = clamp(cm2m(message.frontDistance()) / maxDistance, 0, 1);
-            double rear = clamp(cm2m(message.rearDistance()) / maxDistance, 0, 1);
+            double front = clamp(mm2m(message.frontDistance()) / maxDistance, 0, 1);
+            double rear = clamp(mm2m(message.rearDistance()) / maxDistance, 0, 1);
             Point2D egoTarget = robot.egocentric(message.target());
             double xTarget = clamp(egoTarget.getX() / maxDistance, -1f, 1f);
             double yTarget = clamp(egoTarget.getY() / maxDistance, -1f, 1f);

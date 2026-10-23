@@ -45,7 +45,6 @@ import static java.lang.Math.round;
 public interface Utils {
     Logger logger = LoggerFactory.getLogger(Utils.class);
     double MM = 1e-3;
-    double CM = 10e-3;
 
     /**
      * Returns a random number with exponential distribution probability
@@ -100,30 +99,12 @@ public interface Utils {
     }
 
     /**
-     * Returns the distance in meters from centimeters
-     *
-     * @param distance the distance (cm)
-     */
-    static double cm2m(int distance) {
-        return distance * CM;
-    }
-
-    /**
      * Returns the distance in meters from millimeters
      *
      * @param distance the distance (mm)
      */
     static double mm2m(int distance) {
         return distance * MM;
-    }
-
-    /**
-     * Returns the distance in centimeter from meters
-     *
-     * @param distance the distance (m)
-     */
-    static int m2cm(double distance) {
-        return (int) round(distance / CM);
     }
 
     static Vec2 vec2(float[] x) {

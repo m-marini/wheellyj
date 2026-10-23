@@ -33,13 +33,13 @@ import org.mmarini.wheelly.utils.Angle;
 import java.awt.geom.Point2D;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.utils.Utils.cm2m;
+import static org.mmarini.wheelly.utils.Utils.mm2m;
 
 /**
  * Contains the correlation between camera event and lidar message
  *
  * @param cameraEvent the camera event
- * @param lidar      the lidar message
+ * @param lidar       the lidar message
  */
 public record CorrelatedCameraEvent(CameraEvent cameraEvent, WheellyLidarMessage lidar) {
     public static final CorrelatedCameraEvent DEFAULT_MESSAGE = new CorrelatedCameraEvent(CameraEvent.DEFAULT_EVENT, WheellyLidarMessage.DEFAULT_MESSAGE);
@@ -48,7 +48,7 @@ public record CorrelatedCameraEvent(CameraEvent cameraEvent, WheellyLidarMessage
      * Creates the event
      *
      * @param cameraEvent the camera event
-     * @param lidar      the proxy message
+     * @param lidar       the proxy message
      */
     public CorrelatedCameraEvent(CameraEvent cameraEvent, WheellyLidarMessage lidar) {
         this.cameraEvent = requireNonNull(cameraEvent);
@@ -87,7 +87,7 @@ public record CorrelatedCameraEvent(CameraEvent cameraEvent, WheellyLidarMessage
      * Returns the marker distance or 0 if unable to locate the distance (m)
      */
     public double markerDistance() {
-        return cm2m(lidar.frontDistance());
+        return mm2m(lidar.frontDistance());
     }
 
     /**

@@ -64,7 +64,7 @@ import static org.mmarini.wheelly.robots.HeadStatusId.FIX_DIRECTION;
 import static org.mmarini.wheelly.robots.Obstacle.DEFAULT_OBSTACLE_RADIUS;
 import static org.mmarini.wheelly.robots.RobotSpec.*;
 import static org.mmarini.wheelly.utils.Utils.expRandom;
-import static org.mmarini.wheelly.utils.Utils.m2cm;
+import static org.mmarini.wheelly.utils.Utils.m2mm;
 
 
 /**
@@ -1271,7 +1271,7 @@ public class SimRobot implements RobotApi {
         Point2D pulses = location2Pulses(headStatus.target());
         WheellyLidarMessage msg = new WheellyLidarMessage(
                 robotTime,
-                m2cm(frontDistance), m2cm(rearDistance),
+                m2mm(frontDistance), m2mm(rearDistance),
                 xPulses, yPulses, robotYaw.toIntDeg(), headDirection.toIntDeg(),
                 headStatus.status(), headStatus.direction().toIntDeg(),
                 pulses.getX(), pulses.getY());

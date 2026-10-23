@@ -91,7 +91,7 @@ public class SimRobotLidarTest {
                 .uniform(0, 359) // robot dir
                 .uniform(-90, 90) // head dir
                 .uniform(-10, 10) // obs dir
-                .choice(m2cm(MIN_OBSTACLE_DISTANCE), m2cm(MAX_OBSTACLE_DISTANCE) - 1) // obs distance
+                .choice(m2mm(MIN_OBSTACLE_DISTANCE), m2mm(MAX_OBSTACLE_DISTANCE) - 1) // obs distance
                 .build(NUM_RANDOM_TEST_CASES);
     }
 
@@ -167,7 +167,7 @@ public class SimRobotLidarTest {
         // Given a robot location and direction and sensor direction
         // And front obstacle distance and direction
         createRobot(xRobot, yRobot, robotDir, headDir);
-        createFrontObstacle(obsDir, cm2m(obsDistance));
+        createFrontObstacle(obsDir, mm2m(obsDistance));
 
         // When connect and wait lidar message
         robot.syncConnect();
@@ -215,7 +215,7 @@ public class SimRobotLidarTest {
         // Given a robot location and direction and sensor direction
         // And front obstacle distance and direction
         createRobot(xRobot, yRobot, robotDir, headDir);
-        createRearObstacle(obsDir, cm2m(obsDistance));
+        createRearObstacle(obsDir, mm2m(obsDistance));
 
         // When connect
         robot.syncConnect();
