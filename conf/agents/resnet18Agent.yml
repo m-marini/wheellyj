@@ -28,6 +28,7 @@ network:
   l1: 1e-7
   l2: 5e-5
   graphBuilder:
+    # cnn-dense                       128
     # maxpool-out subsampling(3,3)    1024 x 1 x 1
     # resnet42 resnet(1024, k=3)      1024 x 3 x 3
     # resnet41 resnet(1024, k=3, s=2) 1024 x 3 x 3
@@ -41,6 +42,20 @@ network:
     # cnn-in cnn(32, k=7, s=2, p=3)   128 x 35 x 35
     # map(6.9m x 6.9m)                5 x 69 x 69
 
+    # robot  8 + 4 = 12
+    # head   7 + 3 = 10
+    # proxy          4
+    # camera 4 + 1 = 5
+    # fsm            25
+    # merge-sensors 56
+    # batch
+    # dense1 256
+    # batch
+    # dense2 128
+    # batch
+    # dense3 128
+
+    # merge-all 256
     inputs:
       map:
         # map 5 x 69 x 69

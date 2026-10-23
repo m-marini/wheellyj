@@ -130,6 +130,7 @@ public class MacroActionsStateFunction implements StateFunction {
      * Identifier key for the concurrent high-level FSM action flags vector.
      */
     public static final String FSM_SIGNAL_ID = "fsm";
+
     public static final int ROBOT_SIGNAL_SIZE = 8 + MotionStatusId.values().length;
     public static final int PROXY_SIGNAL_SIZE = 4;
     public static final int HEAD_SIGNAL_SIZE = 7 + HeadStatusId.values().length;
