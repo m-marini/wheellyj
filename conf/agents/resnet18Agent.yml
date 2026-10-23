@@ -5,8 +5,8 @@ numEpochs: 3
 trajectorySize: 256
 batchSize: 32
 alphas:
-  head: 1e-9
-  move: 1e-15
+  action-head: 1e-9
+  action-move: 1e-15
 beta: 3e-3
 gamma: 0.99
 avgReward: 0.5
