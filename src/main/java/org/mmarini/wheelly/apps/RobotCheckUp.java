@@ -40,6 +40,7 @@ import org.jetbrains.annotations.NotNull;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.control.ControllerApi;
 import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.mqtt.MqttRobot;
 import org.mmarini.wheelly.robots.HeadStatus;
 import org.mmarini.wheelly.robots.MotionStatus;
 import org.mmarini.wheelly.robots.RobotApi;
@@ -339,6 +340,22 @@ public class RobotCheckUp {
     }
 
     /**
+     * Processes and safely forwards sensor head orientation commands to the monitor subsystem.
+     * <p>
+     * This method schedules the dispatch of the command payload onto the Swing Event Dispatch Thread (EDT)
+     * using {@link SwingUtilities#invokeLater(Runnable)}. This ensures thread-safe updates when synchronising
+     * tracking alignment profiles with the user interface components.
+     * </p>
+     *
+     * @param headStatus the new tracking and alignment command payload for the sensor head
+     */
+    private void onHeadStatusCommand(HeadStatus headStatus) {
+        SwingUtilities.invokeLater(() ->
+                sensorMonitor.onHeadStatusCommand(headStatus)
+        );
+    }
+
+    /**
      * Handle inference
      *
      * @param status the status
@@ -357,6 +374,22 @@ public class RobotCheckUp {
                 });
             }
         }
+    }
+
+    /**
+     * Processes and safely forwards locomotion commands to the monitor subsystem.
+     * <p>
+     * This method schedules the dispatch of the motion status payload onto the Swing Event Dispatch Thread (EDT)
+     * using {@link SwingUtilities#invokeLater(Runnable)}. This ensures thread-safe updates when synchronising
+     * movement profiles with the user interface components.
+     * </p>
+     *
+     * @param motionStatus the new movement and locomotion command payload
+     */
+    private void onMotionStatusCommand(MotionStatus motionStatus) {
+        SwingUtilities.invokeLater(() ->
+                sensorMonitor.onMotionStatus(motionStatus)
+        );
     }
 
     /**
@@ -442,7 +475,7 @@ public class RobotCheckUp {
 
             SwingMarkdownWindowPreview preview = new SwingMarkdownWindowPreview(doc);
 
-            preview.setWindowTitle("My Markdown Viewer");
+            preview.setWindowTitle(Messages.getString("RobotCheckUp.result.title"));
             preview.setWindowSize(900, 700);
             preview.launchPreview();
         });
@@ -464,6 +497,9 @@ public class RobotCheckUp {
         controller = AppYaml.controllerFromJson(config);
         controller.init(robot);
 
+        if (robot instanceof MqttRobot mqttRobot) {
+            comMonitor.addRobot(mqttRobot);
+        }
         controller.readErrors()
                 .observeOn(SwingSchedulers.edt())
                 .subscribe(
@@ -489,7 +525,12 @@ public class RobotCheckUp {
                 )
         );
 
+        if (robot instanceof MqttRobot mqttRobot) {
+            comMonitor.addRobot(mqttRobot);
+        }
         controller.onInference(this::onInference);
+        controller.onHeadStatus(this::onHeadStatusCommand);
+        controller.onMotionStatus(this::onMotionStatusCommand);
         frame.setVisible(true);
         sensorFrame.setVisible(true);
         monitorFrame.setVisible(true);
