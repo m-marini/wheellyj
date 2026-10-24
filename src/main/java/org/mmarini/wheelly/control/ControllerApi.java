@@ -28,129 +28,163 @@
 
 package org.mmarini.wheelly.control;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import io.reactivex.rxjava3.core.Flowable;
+import org.mmarini.wheelly.robots.HeadStatus;
+import org.mmarini.wheelly.robots.MotionStatus;
 import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.wheelly.utils.WithErrorFlowable;
 import org.mmarini.wheelly.utils.WithShutdownCompletable;
-import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
 import java.io.File;
+import java.util.function.Consumer;
 
 /**
- * Manages the processing threads and event generation to interface the robot.
+ * Manages processing threads and event generation to interface with the robot.
  * <p>
- * The usage samples is
- * <code><pre>
- *     RobotControllerApi ctrl = ...;
+ * This controller centralises asynchronous communication, telemetry ingestion,
+ * and command processing. It uses a reactive, non-blocking model to handle high-frequency
+ * updates from the robot's hardware, sensors, and inference engines without stalling
+ * the calling thread.
+ * </p>
  *
- *     // Subscribe for required events
+ * <h3>Lifecycle Management</h3>
+ * <p>
+ * The controller adheres to a strict lifecycle sequence:
+ * </p>
+ * <ol>
+ *   <li><b>Instantiation:</b> Create the controller instance, optionally loading it from a JSON configuration via {@link #fromFile(File)}.</li>
+ *   <li><b>Initialisation:</b> Connect the physical or simulated robot instance using {@link #init(RobotApi)}.</li>
+ *   <li><b>Subscription:</b> Register callbacks and event listeners onto the respective consumer streams.</li>
+ *   <li><b>Activation:</b> Call {@link #start()} to spawn internal processing threads and establish active connection channels.</li>
+ *   <li><b>Operation:</b> Monitor the system via {@link #readReady()} and trigger {@link #reconnect()} if connection maintenance is required.</li>
+ *   <li><b>Termination:</b> Call {@link #shutdown()} to release resources, safely close communication pipelines, and synchronously await full finalisation via the shutdown completable.</li>
+ * </ol>
  *
- *     // Reactive read for status change
- *     ctrl.readRobotStatus(status -> {
- *        // Code on new status
- *         ...
+ * <h3>Usage Sample</h3>
+ * <pre>{@code
+ *     RobotApi robot = ...;
+ *     ControllerApi ctrl = ControllerApi.fromFile(new File("config.json"));
+ *
+ *     // Initialise connection with the robot backend
+ *     ctrl.init(robot);
+ *
+ *     // Register event listeners prior to activation
+ *     ctrl.addOnRobotStatus(status -> {
+ *         // Code executed on new status
  *     });
  *
- *     // Reactive read for inference
- *     ctrl.readInference(status -> {
- *        // Code on inference status
- *         ...
+ *     ctrl.onLatch(status -> {
+ *         // Code executed on latch updates
  *     });
  *
- *     // Reactive read for errors
- *     ctrl.readError(exception -> {
- *        // Code on exception
- *         ...
+ *     ctrl.onInference(status -> {
+ *         // Code executed on inference updates
+ *         ctrl.motionStatus(motionStatus);
+ *         ctrl.headStatus(headStatus);
  *     });
  *
- *     // Reactive read controller status
- *     ctrl.readControllerStatus(statusString -> {
- *        // Code on controller status
- *         ...
+ *     // Reactive stream for exception and fault handling
+ *     ctrl.readError().subscribe(exception -> {
+ *         // Code executed on error
  *     });
  *
- *     // Reactive read sent command
- *     ctrl.readCommand(command -> {
- *        // Code on command sent
- *         ...
+ *     // Reactive stream for internal controller readiness status
+ *     ctrl.readReady().subscribe(ready -> {
+ *         // Code executed on readiness status change
  *     });
  *
- *     // Reactive read on data sent
- *     ctrl.readWriteLine(lineString -> {
- *        // Code on data sent
- *         ...
- *     });
- *
- *     // Reactive read on data received
- *     ctrl.readReadLine(lineString -> {
- *        // Code on data received
- *         ...
- *     });
- *
- *      // Starts the robot controller
+ *     // Starts the robot controller and allocates threads
  *     ctrl.start();
  *     ...
  *
- *     // Shutdown the controller
+ *     // Initiates orderly shutdown of the controller
  *     ctrl.shutdown();
  *
- *     // Sending any command
- *     ctrl.execute(...);
- *
- *     // Reactive wait for shutdown
+ *     // Synchronously blocks until the shutdown sequence is fully finalised
  *     ctrl.readShutdown().blockingAwait();
- * </pre>
- * </code>
- * </p>
+ * }</pre>
+ *
+ * @see #init(RobotApi)
+ * @see #start()
+ * @see #shutdown()
+ * @see #reconnect()
  */
 public interface ControllerApi extends Controller,
         WithRobotStatusCallback, WithErrorFlowable, WithControllerStatusFlowable, WithControllerReadyFlowable,
         WithShutdownCompletable {
-    /**
-     * Returns the robot controller from configuration JSON
-     *
-     * @param config  the root document
-     * @param locator the configuration locator
-     * @param robot   the robot api
-     */
-    static ControllerApi fromConfig(JsonNode config, Locator locator, RobotApi robot) {
-        return Utils.createObject(config, locator, new Object[]{robot}, new Class[]{RobotApi.class});
-    }
 
     /**
-     * Returns the robot controller from configuration JSON
+     * Instantiates a robot controller parsed from a configuration JSON file.
      *
-     * @param file the configuration file
+     * @param file the configuration file containing the object blueprint
+     * @return the initialised controller instance
+     * @throws Throwable if parsing, structural validation, or instantiation fails
      */
     static ControllerApi fromFile(File file) throws Throwable {
         return Utils.createObject(file);
     }
 
     /**
-     * Connects the robot
+     * Initialises the controller by linking the designated robot interface.
      *
-     * @param robot the robot
+     * @param robot the target robot API dependency
+     * @return a reference to this controller instance to support method chaining
      */
     ControllerApi init(RobotApi robot);
 
+
     /**
-     * Reconnect the robot
+     * Registers a callback to be executed upon updates to the robot's head status.
+     * <p>
+     * This method appends the new listener to the existing callback chain, ensuring
+     * that all registered consumers are notified sequentially.
+     * </p>
+     *
+     * @param callback the consumer function processing the new {@link HeadStatus}
+     * @return a reference to this controller instance to support method chaining
+     */
+    RobotController onHeadStatus(Consumer<HeadStatus> callback);
+
+    /**
+     * Registers a callback to be executed upon updates to the robot's motion status.
+     * <p>
+     * This method appends the new listener to the existing callback chain, ensuring
+     * that all registered consumers are notified sequentially.
+     * </p>
+     *
+     * @param callback the consumer function processing the new {@link MotionStatus}
+     * @return a reference to this controller instance to support method chaining
+     */
+    RobotController onMotionStatus(Consumer<MotionStatus> callback);
+
+    /**
+     * Returns the flow of the controller ready status.
+     *
+     * @return a {@link Flowable} emitting {@code true} when the controller is ready,
+     * {@code false} otherwise
+     */
+    Flowable<Boolean> readReady();
+
+    /**
+     * Recovers and re-establishes the connection pipeline to the robot backend.
      */
     void reconnect();
 
     /**
-     * Shutdowns the controller
+     * Finalises active operations and safely shuts down the controller.
      */
     void shutdown();
 
     /**
-     * Returns the real simulation power
+     * Measures the real processing performance speed of the simulation loop.
+     *
+     * @return the calculated real simulation power coefficient
      */
     double simRealSpeed();
 
     /**
-     * Starts the controller
+     * Starts the internal processing loops and daemon threads.
      */
     void start();
 }

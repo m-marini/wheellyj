@@ -43,8 +43,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.IntToDoubleFunction;
@@ -56,26 +54,45 @@ import static org.mmarini.wheelly.utils.AppYaml.loadDoubleArray;
 import static org.mmarini.wheelly.utils.AppYaml.loadIntArray;
 import static org.mmarini.wheelly.utils.Utils.linear;
 
+
 /**
- * Robot controller
+ * Controls the execution loop, event pipelines, and status monitoring for a robot instance.
+ * <p>
+ * This class coordinates real-time data flow by ingestive processing of high-frequency
+ * sensor telemetry and dispatching operational commands. It integrates visual computer vision
+ * payloads from the <b>ArUco marker image recognition system</b>, correlating detected
+ * marker landmarks with concurrent LiDAR readings to feed the underlying AI inference engine.
+ * It relies on internal reactive processors to broadcast status changes, computational errors,
+ * and system lifecycles.
+ * </p>
  */
 public class RobotController implements ControllerApi {
     public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/controller-schema-2.0";
+    public static final String REACTION_INTERVAL_ID = "reactionInterval";
+    public static final String COMMAND_INTERVAL_ID = "commandInterval";
+    public static final String SUPPLY_VALUES_ID = "supplyValues";
+    public static final String VOLTAGES_ID = "voltages";
     private static final Logger logger = LoggerFactory.getLogger(RobotController.class);
 
     /**
-     * Returns the robot controller from configuration
+     * Instantiates a robot controller parsed from a JSON configuration tree.
+     * <p>
+     * This method validates the provided node tree against {@link #SCHEMA_NAME}
+     * before initialising interval thresholds and calculating the linear voltage conversion parameters.
+     * </p>
      *
-     * @param root the configuration document
-     * @param file the configuration file
+     * @param root the root node containing the configuration structure
+     * @param file the source file used for context mapping
+     * @return a fully constructed robot controller instance
+     * @throws IllegalArgumentException if the configuration array lengths fail structural constraints
      */
     public static RobotController create(JsonNode root, File file) {
         Locator locator = Locator.root();
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
-        long reactionInterval = locator.path("reactionInterval").getNode(root).asLong();
-        long commandInterval = locator.path("commandInterval").getNode(root).asLong();
-        int[] supplyValues = loadIntArray(root, locator.path("supplyValues"));
-        double[] voltages = loadDoubleArray(root, locator.path("voltages"));
+        long reactionInterval = locator.path(REACTION_INTERVAL_ID).getNode(root).asLong();
+        long commandInterval = locator.path(COMMAND_INTERVAL_ID).getNode(root).asLong();
+        int[] supplyValues = loadIntArray(root, locator.path(SUPPLY_VALUES_ID));
+        double[] voltages = loadDoubleArray(root, locator.path(VOLTAGES_ID));
         if (!(supplyValues.length == 2)) {
             throw new IllegalArgumentException(format("supplyValues must have 2 items (%d)", supplyValues.length));
         }
@@ -93,19 +110,19 @@ public class RobotController implements ControllerApi {
     private final PublishProcessor<Throwable> controllerErrors;
     private final BehaviorProcessor<ControllerStatusApi> controllerStatus;
     private final AtomicReference<RobotControllerStatus> status;
-    private final List<Consumer<RobotStatus>> onRobotStatus;
-    private final List<Consumer<RobotStatus>> onLatches;
-    private final List<Consumer<RobotStatus>> onInferences;
+    private Consumer<RobotStatus> onRobotStatus;
+    private Consumer<RobotStatus> onLatch;
+    private Consumer<RobotStatus> onInferences;
     private RobotApi robot;
     private Consumer<HeadStatus> onHeadStatus;
     private Consumer<MotionStatus> onMotionStatus;
 
     /**
-     * Creates the robot controller
+     * Initialises a new robot controller instance with structural configurations.
      *
-     * @param reactionInterval the reaction interval (ms)
-     * @param commandInterval  the command interval (ms)
-     * @param decodeVoltage    the decode voltage function
+     * @param reactionInterval the interval threshold for inference reaction times (ms)
+     * @param commandInterval  the interval threshold for hardware command dispatching (ms)
+     * @param decodeVoltage    the mathematical function mapping raw inputs to analogue voltage values
      */
     public RobotController(long reactionInterval, long commandInterval, IntToDoubleFunction decodeVoltage) {
         this.decodeVoltage = decodeVoltage;
@@ -119,22 +136,29 @@ public class RobotController implements ControllerApi {
         this.controllerStatus = BehaviorProcessor.createDefault(status.get());
         this.controllerErrors = PublishProcessor.create();
         this.shutdownCompletable = CompletableSubject.create();
-        this.onRobotStatus = new ArrayList<>();
-        this.onLatches = new ArrayList<>();
-        this.onInferences = new ArrayList<>();
     }
 
     @Override
     public void addOnRobotStatus(Consumer<RobotStatus> callback) {
-        onRobotStatus.add(callback);
+        this.onRobotStatus = onRobotStatus == null ? callback : onRobotStatus.andThen(callback);
     }
 
     /**
-     * Synchronises the robot actions
+     * Synchronises internal movement states and head alignment routines across hardware components.
      */
     private void checkForSync() {
         syncMotionStatus();
         syncHeadStatus();
+    }
+
+    @Override
+    public void headStatus(HeadStatus headStatus) {
+        status.updateAndGet(s ->
+                s.headStatus(headStatus));
+        syncHeadStatus();
+        if (onHeadStatus != null) {
+            onHeadStatus.accept(headStatus);
+        }
     }
 
     @Override
@@ -143,7 +167,9 @@ public class RobotController implements ControllerApi {
         RobotStatus robotStatus = RobotStatus.create(robot.robotSpec(), decodeVoltage);
         RobotControllerStatus st = this.status.updateAndGet(s -> s.robotStatus(robotStatus));
         this.controllerStatus.onNext(st);
-        notifyRobotStatus(robotStatus);
+        if (onRobotStatus != null) {
+            onRobotStatus.accept(robotStatus);
+        }
         this.robot.onCamera(this::onCamera);
         this.robot.addOnLidar(this::onLidarMessage);
         this.robot.addOnContacts(this::onContactsMessage);
@@ -159,16 +185,6 @@ public class RobotController implements ControllerApi {
     }
 
     @Override
-    public void headStatus(HeadStatus headStatus) {
-        status.updateAndGet(s ->
-                s.headStatus(headStatus));
-        syncHeadStatus();
-        if (onHeadStatus != null) {
-            onHeadStatus.accept(headStatus);
-        }
-    }
-
-    @Override
     public void motionStatus(MotionStatus motionStatus) {
         status.updateAndGet(s ->
                 s.motionStatus(motionStatus));
@@ -178,32 +194,15 @@ public class RobotController implements ControllerApi {
         }
     }
 
-    void notifyOnLatch(RobotStatus status) {
-        for (Consumer<RobotStatus> callback : onLatches) {
-            try {
-                callback.accept(status);
-            } catch (Throwable ex) {
-                logger.atError().setCause(ex).log("Error on latch");
-                controllerErrors.onNext(ex);
-            }
-        }
-    }
-
     /**
-     * Notify robot status
+     * Processes inbound frames capturing spatial video metadata and detection data
+     * from the ArUco marker image recognition system.
+     * <p>
+     * This method correlates the visual marker positions with the concurrent LiDAR telemetry
+     * to refine spatial awareness before triggering the next inference cycle.
+     * </p>
      *
-     * @param robotStatus the robot status
-     */
-    private void notifyRobotStatus(RobotStatus robotStatus) {
-        for (Consumer<RobotStatus> callback : onRobotStatus) {
-            callback.accept(robotStatus);
-        }
-    }
-
-    /**
-     * Handles camera events
-     *
-     * @param cameraEvent the camera event
+     * @param cameraEvent the raw event payload containing the recognised ArUco marker details
      */
     private void onCamera(CameraEvent cameraEvent) {
         RobotControllerStatus st = status.updateAndGet(s -> {
@@ -212,24 +211,29 @@ public class RobotController implements ControllerApi {
             return s.robotStatus(s1);
         });
         RobotStatus robotStatus = st.robotStatus();
-        notifyRobotStatus(robotStatus);
+        if (onRobotStatus != null) {
+            onRobotStatus.accept(robotStatus);
+        }
         scheduleInference(robotStatus);
     }
 
     /**
-     * Handles contacts messages
+     * Processes telemetry changes captured by tactile sensors on the mechanical assembly.
      *
-     * @param message the message
+     * @param message the payload tracking localised collision contact states
      */
     private void onContactsMessage(WheellyContactsMessage message) {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
                                 .setContactsMessage(message)))
                 .robotStatus();
-        notifyRobotStatus(status);
+        if (onRobotStatus != null) {
+            onRobotStatus.accept(status);
+        }
         scheduleInference(status);
     }
 
+    @Override
     public RobotController onHeadStatus(Consumer<HeadStatus> callback) {
         onHeadStatus = onHeadStatus == null ? callback : callback.andThen(onHeadStatus);
         return this;
@@ -237,51 +241,72 @@ public class RobotController implements ControllerApi {
 
     @Override
     public void onInference(Consumer<RobotStatus> callback) {
-        this.onInferences.add(callback);
+        requireNonNull(callback);
+        onInferences = onInferences == null ? callback : onInferences.andThen(callback);
     }
 
     @Override
     public void onLatch(Consumer<RobotStatus> callback) {
-        this.onLatches.add(callback);
+        requireNonNull(callback);
+        onLatch = onLatch == null ? callback : onLatch.andThen(callback);
     }
 
     /**
-     * Handles lidar messages
+     * Processes telemetry frames received from the onboard LiDAR sensor assembly.
+     * <p>
+     * This method updates the current spatial telemetry state, broadcasts the revised snapshot
+     * to active robot status consumers, schedules a new inference pass based on the updated environment,
+     * and performs a hardware synchronisation check.
+     * </p>
      *
-     * @param message the message
+     * @param message the inbound message payload containing raw distance data from the LiDAR scan
      */
     private void onLidarMessage(WheellyLidarMessage message) {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
                                 .setLidarMessage(message)))
                 .robotStatus();
-        notifyRobotStatus(status);
+        if (onRobotStatus != null) {
+            onRobotStatus.accept(status);
+        }
         scheduleInference(status);
         checkForSync();
     }
 
     /**
-     * Handles motion messages
+     * Processes telemetry updates received from the robot's motion control system and odometry sensors.
+     * <p>
+     * This method updates the internal movement state within the current snapshot, broadcasts
+     * the revised status to active consumers, schedules a subsequent inference execution pass,
+     * and performs a hardware synchronisation check.
+     * </p>
      *
-     * @param message the message
+     * @param message the inbound message payload containing locomotion and encoder data
      */
     private void onMotionMessage(WheellyMotionMessage message) {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
                                 .setMotionMessage(message)))
                 .robotStatus();
-        notifyRobotStatus(status);
+        if (onRobotStatus != null) {
+            onRobotStatus.accept(status);
+        }
         scheduleInference(status);
         checkForSync();
     }
 
+    @Override
     public RobotController onMotionStatus(Consumer<MotionStatus> callback) {
         onMotionStatus = onMotionStatus == null ? callback : callback.andThen(onMotionStatus);
         return this;
     }
-
     /**
-     * Handle the robot closure
+     * Processes the final closure of the robot connection and manages the subsystem termination.
+     * <p>
+     * This method flags the controller as no longer ready, finalises the error and status
+     * reactive processing pipelines by emitting completion signals, triggers the final shutdown
+     * completable, and logs the successful finalisation.
+     * </p>
      */
     private void onRobotClosed() {
         RobotControllerStatus st = status.updateAndGet(s -> s.ready(false));
@@ -293,9 +318,14 @@ public class RobotController implements ControllerApi {
     }
 
     /**
-     * Handles the robot connection
+     * Processes configuration status changes received from the robot hardware.
+     * <p>
+     * This method updates the internal state to reflect whether the robot has been fully
+     * and correctly configured, and subsequently broadcasts the revised operational state
+     * to all active status consumers.
+     * </p>
      *
-     * @param status the status
+     * @param status the inbound status payload representing the robot's current configuration state
      */
     private void onRobotConfigured(RobotStatusApi status) {
         logger.atDebug().log("Robot configured {}", status.configured());
@@ -304,16 +334,23 @@ public class RobotController implements ControllerApi {
     }
 
     /**
-     * Handles supply messages
+     * Processes electrical telemetry updates received from the robot's power supply subsystem.
+     * <p>
+     * This method updates the internal battery and power supply metrics within the current snapshot,
+     * broadcasts the revised status to active consumers, and schedules a subsequent inference
+     * execution pass based on the new power state.
+     * </p>
      *
-     * @param message the message
+     * @param message the inbound message payload containing voltage and power supply diagnostics
      */
     private void onSupplyMessage(WheellySupplyMessage message) {
         RobotStatus status = this.status.updateAndGet(st ->
                         st.robotStatus(st.robotStatus()
                                 .setSupplyMessage(message)))
                 .robotStatus();
-        notifyRobotStatus(status);
+        if (onRobotStatus != null) {
+            onRobotStatus.accept(status);
+        }
         scheduleInference(status);
     }
 
@@ -345,12 +382,14 @@ public class RobotController implements ControllerApi {
     }
 
     /**
-     * Schedules the inference task.
+     * Schedules and dispatches the AI and vision inference tasks.
      * <p>
-     * If no inference is already running and reaction interval has elapsed runs the latch callback and run the inference.
+     * If no inference routine is currently active and the configured reaction interval
+     * threshold has elapsed, this method triggers the latch callback, updates the state
+     * processors, fires the inference engine pipelines, and subsequently clears the inference flag.
      * </p>
      *
-     * @param currentStatus the robot status
+     * @param currentStatus the current robot telemetry snapshot to analyse
      */
     private void scheduleInference(RobotStatus currentStatus) {
         // Check for controller ready
@@ -359,18 +398,15 @@ public class RobotController implements ControllerApi {
                 s.requestInference(time, reactionInterval)
         );
         if (prevStatus.isInferenceReady(time, reactionInterval)) {
-            notifyOnLatch(currentStatus);
-            controllerStatus.onNext(status.get());
-            for (Consumer<RobotStatus> callback : onInferences) {
-                try {
-                    callback.accept(currentStatus);
-                } catch (Throwable ex) {
-                    logger.atError().setCause(ex).log("Error on inference function");
-                    throw ex;
-                }
+            if (onLatch != null) {
+                onLatch.accept(currentStatus);
             }
-            status.updateAndGet(RobotControllerStatus::clearInference);
             controllerStatus.onNext(status.get());
+            if (onInferences != null) {
+                onInferences.accept(currentStatus);
+            }
+            RobotControllerStatus st = status.updateAndGet(RobotControllerStatus::clearInference);
+            controllerStatus.onNext(st);
         }
     }
 
@@ -403,9 +439,13 @@ public class RobotController implements ControllerApi {
         }
     }
 
-
     /**
-     * Synchronises the robot status to commands
+     * Synchronises the robot's physical head and sensor orientation commands with the current state.
+     * <p>
+     * Evaluates the timestamp of the latest LiDAR message. If the designated command interval
+     * has expired, it updates the tracked head registration time and issues the appropriate hardware
+     * command (such as scanning or tracking targets) via the robot API.
+     * </p>
      */
     private void syncHeadStatus() {
         RobotControllerStatus s = status.get();
@@ -424,7 +464,13 @@ public class RobotController implements ControllerApi {
     }
 
     /**
-     * Synchronises the robot status to commands
+     * Synchronises the robot's locomotive and motion control commands with the current state.
+     * <p>
+     * Evaluates the timestamp of the latest movement telemetry message.
+     * If the command interval expires or the head alignment changes,
+     * it updates the locomotion registration time and triggers the
+     * corresponding movement action via the robot API.
+     * </p>
      */
     private void syncMotionStatus() {
         RobotControllerStatus s = status.get();

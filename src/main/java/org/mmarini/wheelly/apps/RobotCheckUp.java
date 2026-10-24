@@ -29,6 +29,7 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import hu.akarnokd.rxjava3.swing.SwingSchedulers;
 import io.github.raghultech.markdown.swing.preview.SwingMarkdownWindowPreview;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -343,15 +344,17 @@ public class RobotCheckUp {
      * @param status the status
      */
     private void onInference(RobotStatus status) {
-        sensorPanel.setStatus(status);
-        sensorMonitor.onStatus(status);
         Function<RobotStatus, FinalResult> cp = checkupProcess;
         if (cp != null) {
             FinalResult result = cp.apply(status);
             if (result != null) {
-                processResult(result);
                 checkupProcess = null;
-                sensorPanel.enableButtons(true);
+                SwingUtilities.invokeLater(() -> {
+                    processResult(result);
+                    sensorPanel.enableButtons(true);
+                    sensorPanel.setStatus(status);
+                    sensorMonitor.onStatus(status);
+                });
             }
         }
     }
@@ -413,19 +416,6 @@ public class RobotCheckUp {
      * @param result the result
      */
     private void processResult(FinalResult result) {
-        JEditorPane pane = new JEditorPane();
-        pane.setContentType("text/html");
-        pane.setEditable(false);
-        pane.addHyperlinkListener(e -> {
-            if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-                try {
-                    Desktop.getDesktop().browse(e.getURL().toURI());
-                } catch (Exception ex) {
-                    logger.atError().setCause(ex).log("Error opening browser");
-                }
-            }
-        });
-
         List<String> lines = sensorPanel.verbose()
                 ? result.getDetailsStream()
                 : result.getSummaryStream();
@@ -436,11 +426,26 @@ public class RobotCheckUp {
                         a + b + System.lineSeparator())
                 .orElse("");
 
-        SwingMarkdownWindowPreview preview = new SwingMarkdownWindowPreview(doc);
+        SwingUtilities.invokeLater(() -> {
+            JEditorPane pane = new JEditorPane();
+            pane.setContentType("text/html");
+            pane.setEditable(false);
+            pane.addHyperlinkListener(e -> {
+                if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    try {
+                        Desktop.getDesktop().browse(e.getURL().toURI());
+                    } catch (Exception ex) {
+                        logger.atError().setCause(ex).log("Error opening browser");
+                    }
+                }
+            });
 
-        preview.setWindowTitle("My Markdown Viewer");
-        preview.setWindowSize(900, 700);
-        preview.launchPreview();
+            SwingMarkdownWindowPreview preview = new SwingMarkdownWindowPreview(doc);
+
+            preview.setWindowTitle("My Markdown Viewer");
+            preview.setWindowSize(900, 700);
+            preview.launchPreview();
+        });
     }
 
     /**
@@ -459,20 +464,31 @@ public class RobotCheckUp {
         controller = AppYaml.controllerFromJson(config);
         controller.init(robot);
 
-        controller.readErrors().subscribe(
-                this::onControllerError,
-                this::onFlowError);
+        controller.readErrors()
+                .observeOn(SwingSchedulers.edt())
+                .subscribe(
+                        this::onControllerError,
+                        this::onFlowError);
 
         // Create flow
         controller.readControllerStatus()
                 .map(ControllerStatusMapper::map)
                 .distinct()
+                .observeOn(SwingSchedulers.edt())
                 .subscribe(
                         this::onControlStatus,
                         this::onFlowError);
         controller.readShutdown()
                 .subscribe(this::onShutdown,
                         this::onFlowError);
+        controller.addOnRobotStatus(status ->
+                SwingUtilities.invokeLater(() -> {
+                            sensorMonitor.onStatus(status);
+                            sensorPanel.setStatus(status);
+                        }
+                )
+        );
+
         controller.onInference(this::onInference);
         frame.setVisible(true);
         sensorFrame.setVisible(true);
@@ -597,8 +613,8 @@ public class RobotCheckUp {
                                 ? format("**Rotation check failures: %d/%d**", numRotationFailure, rotateResults.size())
                                 : format("No failed rotation checks out of %d performed", rotateResults.size()))
                         .add("")
-                        .add(format("Rotation tollerance %d DEG", ROTATION_TOLERANCE.toIntDeg()))
-                        .add(format("Centre tollerance %.2f m", DISTANCE_TOLERANCE))
+                        .add(format("Rotation tolerance %d DEG", ROTATION_TOLERANCE.toIntDeg()))
+                        .add(format("Centre tolerance %.2f m", DISTANCE_TOLERANCE))
                         .add("")
                         .add("| Direction | Result | Rotation | Duration | Direction Error | Centre Error | Rotation Speed |")
                         .add("|:-:|:-:|:-:|:-:|:-:|:-:|:-:|");
@@ -623,7 +639,7 @@ public class RobotCheckUp {
                                 ? format("**Movement checks failures: %d/%d**", numMovementFailure, moveResults.size())
                                 : format("No failed movement checks out of %d performed", moveResults.size()))
                         .add("")
-                        .add(format("Distance tollerance %.2f m", DISTANCE_TOLERANCE))
+                        .add(format("Distance tolerance %.2f m", DISTANCE_TOLERANCE))
                         .add("")
                         .add("| Movement | Result | Target | Duration | Distance error |")
                         .add("|:-:|:-:|:-:|:-:|:-:|");
@@ -858,7 +874,9 @@ public class RobotCheckUp {
                         startLocation = status.location();
                         moveStart = time;
                         controller.motionStatus(MotionStatus.backward(target));
-                        sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()));
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()))
+                        );
                     }
                     // Check for maximum distance travelled or test timeout or obstacle found
                     Point2D pos = status.location();
@@ -873,7 +891,9 @@ public class RobotCheckUp {
                                 time - moveStart,
                                 distance,
                                 status.imuFailure()));
-                        sensorPanel.setInfo("");
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo("")
+                        );
                         controller.motionStatus(MotionStatus.halt());
                         return true;
                     }
@@ -903,7 +923,9 @@ public class RobotCheckUp {
                         startLocation = status.location();
                         moveStart = time;
                         controller.motionStatus(MotionStatus.forward(target));
-                        sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()));
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()))
+                        );
                     }
                     // Check for maximum distance travelled or test timeout or obstacle found
                     Point2D pos = status.location();
@@ -913,12 +935,13 @@ public class RobotCheckUp {
                             || !(status.canMoveForward() || status.canMoveBackward())) {
                         // Test completed
                         // computes the direction error
-                        sensorPanel.setInfo("");
                         moveResults.add(new MovementResult(target, true,
                                 time - moveStart,
                                 distance,
                                 status.imuFailure()));
-                        sensorPanel.setInfo("");
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo("")
+                        );
                         controller.motionStatus(MotionStatus.halt());
                         return true;
                     }
@@ -951,7 +974,9 @@ public class RobotCheckUp {
                         startAngle = dir;
                         // Rotate to the desired direction
                         controller.motionStatus(MotionStatus.rotate(direction));
-                        sensorPanel.setInfo(format("Checking rotation to %d DEG ...", direction.toIntDeg()));
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo(format("Checking rotation to %d DEG ...", direction.toIntDeg()))
+                        );
                     }
                     // Check for rotation max duration
                     if (time >= rotationStart + ROTATION_TIMEOUT) {
@@ -965,7 +990,9 @@ public class RobotCheckUp {
                         // Stop robot
                         controller.motionStatus(MotionStatus.halt());
 
-                        sensorPanel.setInfo("");
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo("")
+                        );
                         return true;
                     }
                     // Check for robot moving
@@ -986,7 +1013,9 @@ public class RobotCheckUp {
                         // Rotation completed: generate the test result
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
                         controller.motionStatus(MotionStatus.halt());
-                        sensorPanel.setInfo("");
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo("")
+                        );
                         return true;
                     }
                     // Check for robot halt duration
@@ -994,7 +1023,9 @@ public class RobotCheckUp {
                         // Halt timeout: generate test result
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
                         controller.motionStatus(MotionStatus.halt());
-                        sensorPanel.setInfo("");
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo("")
+                        );
                         return true;
                     }
                     return false;

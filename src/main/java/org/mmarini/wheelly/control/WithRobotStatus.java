@@ -28,6 +28,18 @@
 
 package org.mmarini.wheelly.control;
 
+/**
+ * Defines a provider interface for accessing the current telemetry state of the robot.
+ * <p>
+ * This interface centralises telemetry retrieval, allowing components to poll or extract
+ * the most recent physical and operational status of the hardware.
+ * </p>
+ */
 public interface WithRobotStatus {
+    /**
+     * Retrieves the current status snapshot of the robot.
+     *
+     * @return the {@link RobotStatus} containing the latest data snapshot from the robot
+     */
     RobotStatus getRobotStatus();
 }
