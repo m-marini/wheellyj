@@ -29,15 +29,18 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.perception.FiducialMarker;
+import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.utils.Angle;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.util.Comparator;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.clamp;
@@ -73,8 +76,7 @@ public class LabelStuckState extends TimeOutState {
     public static final double DEFAULT_SEARCH_DISTANCE = 3D;
     public static final double DEFAULT_CORRELATION_DISTANCE = 0.4;
     public static final int DEFAULT_DIRECTION_RANGE = 10;
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-label-stuck-schema-1.0";
-    public static final String PATTERN_ID = "pattern";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/state-label-stuck-schema-2.0";
     private static final Logger logger = LoggerFactory.getLogger(LabelStuckState.class);
 
     /**
@@ -91,24 +93,20 @@ public class LabelStuckState extends TimeOutState {
         double minDistance = locator.path(MIN_DISTANCE_ID).getNode(root).asDouble(DEFAULT_MIN_DISTANCE);
         double searchDistance = locator.path(SEARCH_DISTANCE_ID).getNode(root).asDouble(DEFAULT_SEARCH_DISTANCE);
         double correlationDistance = locator.path(CORRELATION_DISTANCE_ID).getNode(root).asDouble(DEFAULT_CORRELATION_DISTANCE);
-        Complex directionRange = Complex.fromDeg(locator.path(DIRECTION_RANGE_ID).getNode(root).asInt(DEFAULT_DIRECTION_RANGE));
-        String labelPattern = locator.path(PATTERN_ID).getNode(root).asText("[A-Z]");
-        Predicate<String> labelFilter = Pattern.compile(labelPattern).asPredicate();
-        Predicate<LabelMarker> labelMarkerFilter = m -> labelFilter.test(m.label());
+        Angle directionRange = Angle.fromDeg(locator.path(DIRECTION_RANGE_ID).getNode(root).asInt(DEFAULT_DIRECTION_RANGE));
         ProcessorCommand onInit = ProcessorCommand.create(root, locator.path("onInit"));
         ProcessorCommand onEntry = ProcessorCommand.create(root, locator.path("onEntry"));
         ProcessorCommand onExit = ProcessorCommand.create(root, locator.path("onExit"));
         return new LabelStuckState(id, onInit, onEntry, onExit, timeout,
                 minDistance, maxDistance, searchDistance, correlationDistance,
-                directionRange, labelMarkerFilter);
+                directionRange);
     }
 
     private final double minDistance;
     private final double maxDistance;
     private final double searchDistance;
-    private final Complex directionRange;
+    private final Angle directionRange;
     private final double correlationDistance;
-    private final Predicate<LabelMarker> labelFilter;
 
     /**
      * Creates the abstract node
@@ -123,18 +121,16 @@ public class LabelStuckState extends TimeOutState {
      * @param searchDistance      the search distance of target (m)
      * @param correlationDistance the correlation distance (m)
      * @param directionRange      the direction range
-     * @param labelFilter         the label filter
      */
     protected LabelStuckState(String id, ProcessorCommand onInit, ProcessorCommand onEntry, ProcessorCommand onExit,
                               long timeout, double minDistance, double maxDistance, double searchDistance,
-                              double correlationDistance, Complex directionRange, Predicate<LabelMarker> labelFilter) {
+                              double correlationDistance, Angle directionRange) {
         super(id, onInit, onEntry, onExit, timeout);
         this.maxDistance = maxDistance;
         this.searchDistance = searchDistance;
         this.minDistance = minDistance;
         this.correlationDistance = correlationDistance;
         this.directionRange = requireNonNull(directionRange);
-        this.labelFilter = labelFilter;
     }
 
     @Override
@@ -151,8 +147,7 @@ public class LabelStuckState extends TimeOutState {
         Point2D marker = worldModel.markers()
                 .values()
                 .stream()
-                .filter(labelFilter)
-                .map(LabelMarker::location)
+                .map(FiducialMarker::location)
                 .filter(t -> robotLocation.distance(t) <= searchDistance)
                 .min(Comparator.comparingDouble(robotLocation::distanceSq))
                 .orElse(null);
@@ -164,23 +159,23 @@ public class LabelStuckState extends TimeOutState {
         // robot-marker distance
         double robotMarkerDistance = robotLocation.distance(marker);
         // robot-marker direction
-        Complex robotMarkerDir = Complex.direction(robotLocation, marker);
+        Angle robotMarkerDir = Angle.direction(robotLocation, marker);
 
         // lidar-label distance
         Point2D lidarLocation = status.frontLidarLocation();
         double lidarMarkerDistance = lidarLocation.distance(marker);
 
         // lidar-label direction
-        Complex lidarMarkerDir = Complex.direction(lidarLocation, marker);
+        Angle lidarMarkerDir = Angle.direction(lidarLocation, marker);
 
         // head-label direction
         Point2D headLocation = status.headLocation();
-        Complex headMarkerDir = Complex.direction(headLocation, marker);
+        Angle headMarkerDir = Angle.direction(headLocation, marker);
 
         // Compute lidar-label direction relative to head (sensor direction)
-        Complex robotDir = status.direction();
+        Angle robotDir = status.direction();
         double headHalfFovDeg = status.robotSpec().headFOV().toDeg() / 2;
-        Complex headAngle = Complex.fromDeg(clamp(headMarkerDir.sub(robotDir).toDeg(), -headHalfFovDeg, headHalfFovDeg));
+        Angle headAngle = Angle.fromDeg(clamp(headMarkerDir.sub(robotDir).toDeg(), -headHalfFovDeg, headHalfFovDeg));
 
         // Compute the robot optimal location.
         // Location at middle distance plus front lidar distance plus head distance in direction opposite the robot direction
@@ -193,24 +188,24 @@ public class LabelStuckState extends TimeOutState {
         if (robotMarkerDistance < minDistance) {
             // the robot is too close, move backward
             logger.atDebug().log("Robot to close {} m, move backward to {} M @{}", lidarMarkerDistance, robotOptimalLocation, marker);
-            return new StateResult(NONE_EXIT, RobotCommands.backward(headAngle, robotOptimalLocation));
+            return new StateResult(NONE_EXIT, RobotCommand.backward(robotOptimalLocation, headAngle));
         }
         // Check for label too far
         if (robotMarkerDistance > maxDistance) {
             // the robot is too far, move forward
             logger.atDebug().log("Robot to far {} m, move forward to {} M @{}", lidarMarkerDistance, robotOptimalLocation, marker);
-            return new StateResult(NONE_EXIT, RobotCommands.forward(headAngle, robotOptimalLocation));
+            return new StateResult(NONE_EXIT, RobotCommand.forward(robotOptimalLocation, headAngle));
         }
         // Check for robot not pointing label
         if (!robotMarkerDir.isCloseTo(robotDir, directionRange)) {
             // The robot is not directed to the label, rotate toward the label
             logger.atDebug().log("Rotate toward label {}", lidarMarkerDir.toIntDeg());
-            return new StateResult(NONE_EXIT, RobotCommands.rotate(headAngle, robotMarkerDir));
+            return new StateResult(NONE_EXIT, RobotCommand.rotate(robotMarkerDir, headAngle));
         }
         double frontDistance = status.frontDistance();
         // Check for sensor signal and head direction
-        Complex lidarHalfFov = status.robotSpec().lidarFOV().divAngle(2);
-        Complex headDir = status.headAbsDirection();
+        Angle lidarHalfFov = status.robotSpec().lidarFOV().div(2);
+        Angle headDir = status.headAbsDirection();
         if (headDir.isCloseTo(lidarMarkerDir, lidarHalfFov)
                 && (frontDistance == 0 || abs(lidarMarkerDistance - frontDistance) > correlationDistance)) {
             // no target or target hidden by front obstacle or sensorTargetDir
@@ -218,6 +213,6 @@ public class LabelStuckState extends TimeOutState {
             return notFound();
         }
         // halt the robot and move head toward the target label
-        return new StateResult(NONE_EXIT, RobotCommands.halt(headAngle));
+        return new StateResult(NONE_EXIT, RobotCommand.halt(headAngle));
     }
 }

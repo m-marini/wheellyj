@@ -37,7 +37,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.robots.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
+import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_ROBOT_SPEC;
 
 class MqttRobotTest {
     public static final String BROKER_URL = "tcp://localhost:1883";
@@ -56,7 +56,7 @@ class MqttRobotTest {
     public static final String USER = "wheellyj";
     public static final String PASSWORD = "wheellyj";
     public static final int CONFIGURE_TIMEOUT = 1000;
-    public static final String CAMERA_EVENT_TEXT = "0,A,200,200,0,0,0,0,0,0,0,0";
+    public static final String CAMERA_EVENT_TEXT = "0,1,200,200,0,0,0,0,0,0,0,0";
     public static final int RETRY_INTERVAL = 500;
     public static final String CLIENT_ID = "testRobot";
     public static final int TIMEOUT = 2000;
@@ -136,7 +136,7 @@ class MqttRobotTest {
 
         List<CameraEvent> msgs = cameras;
         assertThat(msgs.getFirst().time(), greaterThan(0L));
-        assertEquals("A", msgs.getFirst().qrCode());
+        assertEquals(1, msgs.getFirst().markerId());
     }
 
     @Test
@@ -354,7 +354,7 @@ class MqttRobotTest {
 
         Completable.timer(10, TimeUnit.MILLISECONDS).blockingAwait();
         long t0 = robot.robotTime();
-        mockClient.sendRobot("mt", "0,0,0,-45,0,0,0,0,0,0,0,0,0,0");
+        mockClient.sendRobot("mt", "0,0,0,-45,0,0,0,0,0,0,0,0,0,0,0,0");
         Completable.timer(MESSAGE_DELAY, TimeUnit.MILLISECONDS).blockingAwait();
 
         robot.close();

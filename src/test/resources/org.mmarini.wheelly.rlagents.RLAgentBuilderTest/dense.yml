@@ -1,0 +1,42 @@
+---
+$schema: https://mmarini.org/wheelly/rl-agent-builder-schema-2.0
+class: org.mmarini.wheelly.rlagents.RLAgentBuilder
+numEpochs: 5
+trajectorySize: 255
+batchSize: 32
+alphas:
+  action: 0.8
+beta: 0.9
+avgReward: 0.1
+path: tmp/model
+network:
+  activation: Identity
+  updater:
+    type: RmsProp
+    learningRate: 0.1
+    decayRms: 0.96
+    epsilon: 1e-3
+    optimizationAlgo:
+  weightInit:
+    type: Xavier
+  l1: 1e-7
+  l2: 5e-5
+  graphBuilder:
+    inputs:
+      map:
+        type: FeedForward
+        size: 4
+    hiddens:
+      dense:
+        type: DenseLayer
+        inputs: [ map ]
+        nOut: 8
+    vertices: { }
+    outputs:
+      action:
+        type: OutputLayer
+        lossFunction: NegativeLogLikelihood
+        inputs: [ dense ]
+        nOut: 10
+        activation: SoftMax
+        dropOut: 0.8

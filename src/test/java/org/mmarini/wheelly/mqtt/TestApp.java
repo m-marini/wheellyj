@@ -39,7 +39,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.concurrent.TimeUnit;
 
-import static org.mmarini.wheelly.apis.RobotSpec.DEFAULT_ROBOT_SPEC;
+import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_ROBOT_SPEC;
 
 public class TestApp {
     private static final Logger logger = LoggerFactory.getLogger(TestApp.class);

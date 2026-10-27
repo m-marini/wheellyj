@@ -7,7 +7,7 @@ properties:
   $schema:
     const: https://mmarini.org/wheelly/sim-robot-schema-3.3
   class:
-    const: org.mmarini.wheelly.apis.SimRobot
+    const: org.mmarini.wheelly.robots.SimRobot
   mapSeed:
     type: integer
     minimum: 1
@@ -35,6 +35,9 @@ properties:
     type: integer
     minimum: 0
   numLabels:
+    type: integer
+    minimum: 0
+  markerId:
     type: integer
     minimum: 0
   maxAngularSpeed:

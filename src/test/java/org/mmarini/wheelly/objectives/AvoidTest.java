@@ -32,9 +32,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mmarini.wheelly.TestFunctions;
-import org.mmarini.wheelly.apis.WorldModelBuilder;
-import org.mmarini.wheelly.envs.BasicEnvState;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.behaviours.BehaviourState;
+import org.mmarini.wheelly.behaviours.HeadActionId;
+import org.mmarini.wheelly.behaviours.MacroActionsState;
+import org.mmarini.wheelly.behaviours.MoveActionId;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.WorldModelBuilder;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
@@ -44,11 +47,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 
 class AvoidTest {
-    static BasicEnvState createState(boolean canMoveForward, boolean canMoveBackward) {
-        return new BasicEnvState(new WorldModelBuilder()
+    static BehaviourState createState(boolean canMoveForward, boolean canMoveBackward) {
+        return new MacroActionsState(new WorldModelBuilder()
                 .canMoveForward(canMoveForward)
                 .canMoveBackward(canMoveBackward)
-                .build());
+                .build(), MoveActionId.HALT_ACTION, HeadActionId.LOOK_STRAIGHT_ACTION);
     }
 
     @ParameterizedTest
@@ -59,15 +62,15 @@ class AvoidTest {
             "0,1,1",
     })
     void testCreate(double expected,
-                int canMoveForward,
-                int canMoveBackward) throws IOException {
+                    int canMoveForward,
+                    int canMoveBackward) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + AvoidContact.SCHEMA_NAME,
                 "class: " + AvoidContact.class.getName()));
         RewardFunction f = AvoidContact.create(root, Locator.root());
-        BasicEnvState state = createState(canMoveForward != 0, canMoveBackward != 0);
+        BehaviourState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }
@@ -80,16 +83,16 @@ class AvoidTest {
             "0,1,1",
     })
     void testCreateWithReward(double expected,
-                          int canMoveForward,
-                          int canMoveBackward) throws IOException {
+                              int canMoveForward,
+                              int canMoveBackward) throws IOException {
         JsonNode root = Utils.fromText(TestFunctions.text("---",
                 "$schema: " + AvoidContact.SCHEMA_NAME,
                 "class: " + AvoidContact.class.getName(),
                 "reward: -2"));
         RewardFunction f = AvoidContact.create(root, Locator.root());
-        BasicEnvState state = createState(canMoveForward != 0, canMoveBackward != 0);
+        BehaviourState state = createState(canMoveForward != 0, canMoveBackward != 0);
 
-        double result = f.applyAsDouble(null, null, state);
+        double result = f.reward(null, null, state);
 
         assertThat(result, closeTo(expected, 1e-4));
     }

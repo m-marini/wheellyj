@@ -1,0 +1,123 @@
+/*
+ * Copyright (c) 2023-2026 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
+package org.mmarini.wheelly.utils;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import org.mmarini.wheelly.behaviours.BehaviourApi;
+import org.mmarini.wheelly.control.ControllerApi;
+import org.mmarini.wheelly.gyms.GymAdapter;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.Perceptor;
+import org.mmarini.wheelly.perception.WorldModeller;
+import org.mmarini.wheelly.robots.RobotApi;
+import org.mmarini.yaml.Locator;
+
+import java.io.File;
+import java.io.IOException;
+
+public interface AppYaml {
+
+    String ADAPTER_ID = "adapter";
+    String BEHAVIOUR_ID = "behaviour";
+    String CONTROLLER = "controller";
+    String PERCEPTOR_ID = "perceptor";
+    String REWARD_FUNCTION_ID = "rewardFunction";
+    String ROBOT_ID = "robot";
+
+    static GymAdapter adapterFromFile(JsonNode config) throws Throwable {
+        return GymAdapter.fromFile(new File(config.path(ADAPTER_ID).asText()));
+    }
+
+    static BehaviourApi behaviourFromJson(JsonNode config) throws Throwable {
+        return BehaviourApi.fromFile(new File(config.path(BEHAVIOUR_ID).asText()));
+    }
+
+    /**
+     * Returns the controller from configuration file reading "robot" and "controller" properties
+     *
+     * @param config the root node
+     */
+    static ControllerApi controllerFromJson(JsonNode config) throws Throwable {
+        return ControllerApi.fromFile(new File(config.path(CONTROLLER).asText()));
+    }
+
+    /**
+     * Returns the double arrays from json document
+     *
+     * @param root    the JSON root
+     * @param locator the array locator
+     */
+    static double[] loadDoubleArray(JsonNode root, Locator locator) {
+        return locator.elements(root)
+                .mapToDouble(l -> l.getNode(root).asDouble())
+                .toArray();
+    }
+
+    /**
+     * Returns the int arrays from JSON document
+     *
+     * @param root    the JSON root
+     * @param locator the array locator
+     */
+    static int[] loadIntArray(JsonNode root, Locator locator) {
+        return locator.elements(root)
+                .mapToInt(l -> l.getNode(root).asInt())
+                .toArray();
+    }
+
+    /**
+     * Returns the world modeller reading the file of "modeller" property
+     *
+     * @param config the JSON configuration
+     * @throws IOException in case of error
+     */
+    static Perceptor perceptorFromJson(JsonNode config) throws Throwable {
+        return WorldModeller.fromFile(new File(config.path(PERCEPTOR_ID).asText()));
+    }
+
+    /**
+     * Returns the objective reading the file of "objective" property
+     *
+     * @param config the JSON configuration
+     * @throws IOException in case of error
+     */
+    static RewardFunction rewardFromJson(JsonNode config) throws IOException {
+        return RewardFunction.fromFile(new File(config.path(REWARD_FUNCTION_ID).asText()));
+    }
+
+    /**
+     * Returns the world modeller reading the file of "robot" property
+     *
+     * @param config the JSON configuration
+     * @throws IOException in case of error
+     */
+    static RobotApi robotFromJson(JsonNode config) throws Throwable {
+        return RobotApi.fromFile(new File(config.path(ROBOT_ID).asText()));
+    }
+}

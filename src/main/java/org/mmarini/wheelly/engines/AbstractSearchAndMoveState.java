@@ -30,8 +30,9 @@ package org.mmarini.wheelly.engines;
 
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.mmarini.wheelly.apis.RobotStatus;
-import org.mmarini.wheelly.apis.WorldModel;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.wheelly.rrt.RRTPathFinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
-import static org.mmarini.wheelly.apis.RobotCommands.forward;
 import static org.mmarini.wheelly.engines.StateResult.NONE_EXIT;
 import static org.mmarini.wheelly.engines.StateResult.notFound;
 
@@ -128,8 +128,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
                     logger.atDebug().log("Search completed");
                     return path;
                 })
-                .subscribeOn(Schedulers.computation())
-                .observeOn(Schedulers.io())
+                .subscribeOn(Schedulers.io())
                 .subscribe(path1 -> {
                             // Search completed with result
                             Object id = searchStatus.getAndUpdate(s -> null);
@@ -176,7 +175,7 @@ public abstract class AbstractSearchAndMoveState extends TimeOutState {
         return distance <= robotStatus.robotSpec().targetRange()
                 // Target reached
                 ? nextLocation(context)
-                : new StateResult(NONE_EXIT, forward(target));
+                : new StateResult(NONE_EXIT, RobotCommand.forward(target));
     }
 
     /**

@@ -1,10 +1,11 @@
 ---
-$schema: https://mmarini.org/wheelly/batch-schema-0.4
-robot: conf/robots/simRobotSmallNoObstacles.yml
-controller: conf/controllers/controller.yml
-modeller: conf/modellers/modeller.yml
-environment: conf/environments/env.yml
-rewardFunction: conf/objectives/findLabel1.yml
-agent: conf/agents/resnet18Agent.yml
+$schema: https://mmarini.org/wheelly/batch-schema-1.0
 #seed: 1234
+robot: conf/robots/simRobotSmallNoObstacles.yml
 numEpochs: 3
+controller: conf/control/controller.yml
+perceptor: conf/perception/perceptor.yml
+behaviour: conf/behaviours/macro-actions.yml
+adapter: conf/gyms/macro-actions.yml
+rewardFunction: conf/objectives/findLabel2.yml
+agent: conf/agents/tiny-resnet18Agent.yml

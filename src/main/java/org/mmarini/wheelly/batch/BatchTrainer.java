@@ -31,10 +31,10 @@ package org.mmarini.wheelly.batch;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.mmarini.rl.agents.BinArrayFile;
-import org.mmarini.rl.agents.RLDatasetIterator;
-import org.mmarini.rl.agents.TrainingKpis;
-import org.mmarini.wheelly.apis.BatchAgent;
+import org.mmarini.wheelly.rlagents.Agent;
+import org.mmarini.wheelly.rlagents.RLDatasetIterator;
+import org.mmarini.wheelly.rlagents.TrainingKpis;
+import org.mmarini.wheelly.storage.serde.BinArrayFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +66,7 @@ public class BatchTrainer {
      * @param actionMasks the action masks
      * @param rewards     the rewards
      */
-    public BatchTrainer(BatchAgent agent, Map<String, BinArrayFile> states, Map<String, BinArrayFile> actionMasks, BinArrayFile rewards) {
+    public BatchTrainer(Agent agent, Map<String, BinArrayFile> states, Map<String, BinArrayFile> actionMasks, BinArrayFile rewards) {
         this.status = new AtomicReference<>(new BatchTrainerStatus(agent, null, false));
         this.states = requireNonNull(states);
         this.actionMasks = requireNonNull(actionMasks);
@@ -108,7 +108,7 @@ public class BatchTrainer {
      */
     public BatchAgent train(int numEpochs) throws Exception {
         // Backup the agent
-        BatchAgent agent = status.get().agent();
+        Agent agent = status.get().agent();
         agent.backup();
         // Creates the dataset iterator
         /*
@@ -139,13 +139,13 @@ public class BatchTrainer {
                 return s.datasetIterator(datasetIterator);
             });
             // Train agent
-            BatchAgent trained = agent.train(datasetIterator, numEpochs);
+            agent.train(datasetIterator, numEpochs);
             // Save agent
-            trained.save();
+            agent.save();
             // Completes the progress info flow
             progressInfo.onComplete();
             // Sets the trained agent into the batch status
-            return this.status.updateAndGet(s -> s.agent(trained)).agent();
+            return this.status.updateAndGet(s -> s.agent(agent)).agent();
         }
     }
 }

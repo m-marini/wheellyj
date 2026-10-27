@@ -30,11 +30,11 @@ package org.mmarini.wheelly.rrt;
 
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.disposables.Disposable;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.apis.GridTopology;
-import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.perception.GridTopology;
+import org.mmarini.wheelly.perception.RadarMap;
+import org.mmarini.wheelly.perception.RadarMapBuilder;
 import org.mmarini.wheelly.swing.BaseShape;
 import org.mmarini.wheelly.swing.CompositeShape;
 import org.mmarini.wheelly.swing.MapPanel;
@@ -50,7 +50,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import static org.mmarini.wheelly.apis.Complex.DEG0;
 import static org.mmarini.wheelly.engines.AbstractSearchAndMoveState.DEFAULT_GROWTH_DISTANCE;
 import static org.mmarini.wheelly.engines.SearchRefreshState.FREE_PROB;
 import static org.mmarini.wheelly.engines.SearchRefreshState.NEAREST_TARGET_PROB;
@@ -59,9 +58,10 @@ import static org.mmarini.wheelly.swing.BaseShape.createCircle;
 import static org.mmarini.wheelly.swing.MapPanel.Layers.TARGETS;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontally;
+import static org.mmarini.wheelly.utils.Angle.DEG0;
 
 public class RRTPathFinderTestApp {
-    public static final int RADAR_SIZE = 33;
+    public static final int RADAR_SIZE = 17;
     public static final double GRID_SIZE = 0.2;
     public static final double MAX_RADAR_DISTANCE = 0.0;
     public static final GridTopology DEFAULT_TOPOLOGY = GridTopology.create(new Point2D.Double(), RADAR_SIZE, RADAR_SIZE, GRID_SIZE);
@@ -69,6 +69,26 @@ public class RRTPathFinderTestApp {
     public static final int TICK_INTERVAL = 10;
     public static final Color EDGE_COLOR = new Color(0f, 0.5f, 0);
     public static final double KNWON_RADIUS = 2;
+    public static final String ROBOT_ID = "^";
+    public static final String MAP_TEXT = """
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            ...+++++^++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            +++++++++++++++++
+            """;
     private static final Logger logger = LoggerFactory.getLogger(RRTPathFinderTestApp.class);
     private static final double AREA_LIMITS = 2;
 
@@ -88,24 +108,37 @@ public class RRTPathFinderTestApp {
                 );
     }
 
+    private static RadarMap createMap(String map) {
+        return new RadarMapBuilder()
+                .radarSize(DEFAULT_TOPOLOGY.width(), DEFAULT_TOPOLOGY.height())
+                .gridSize(DEFAULT_TOPOLOGY.gridSize())
+                .radarMap(map)
+                .build();
+    }
+
     public static void main(String[] args) {
         new RRTPathFinderTestApp().run();
     }
 
+    private static Point2D readRobotLocation(String map) {
+        return RadarMapBuilder.parseMap(GRID_SIZE, map)
+                .filter(t -> ROBOT_ID.equals(t._2))
+                .map(Tuple2::getV1)
+                .findAny()
+                .orElse(new Point2D.Double());
+
+    }
+
     private final MapPanel mapPanel;
-    private final Flowable<Long> ticks;
-    private final Point2D.Double robotLocation;
+    private final Point2D robotLocation;
     private final RadarMap radarMap;
     private RRTPathFinder pathFinder;
     private Disposable disposable;
 
     public RRTPathFinderTestApp() {
         mapPanel = new MapPanel();
-        this.robotLocation = new Point2D.Double();
-        radarMap = createMap(robotLocation);
-
-        ticks = Flowable.interval(TICK_INTERVAL, TimeUnit.MILLISECONDS)
-                .subscribeOn(Schedulers.computation());
+        this.robotLocation = readRobotLocation(MAP_TEXT);
+        radarMap = createMap(MAP_TEXT);
     }
 
     private void run() {
@@ -120,7 +153,8 @@ public class RRTPathFinderTestApp {
         RRTPathFinder.Config config1 = new RRTPathFinder.Config(DEFAULT_GROWTH_DISTANCE, NEAREST_TARGET_PROB, FREE_PROB, robotLocation);
         this.pathFinder = RRTPathFinder.createUnknownTargets(config1, radarMap, 0.221, random);
         pathFinder.init();
-        disposable = ticks.subscribe(this::tick);
+        disposable = Flowable.interval(TICK_INTERVAL, TimeUnit.MILLISECONDS, hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
+                .subscribe(this::tick);
     }
 
     private void tick(long t) {
@@ -167,5 +201,6 @@ public class RRTPathFinderTestApp {
         } else {
             mapPanel.path(Color.GREEN, path.stream());
         }
+//        mapPanel.radarMap(radarMap);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -341,6 +341,19 @@ public class RandomArgumentsGenerator {
             throw new IllegalArgumentException(format("minimum value (%d) should be greater then maximum value (%d)", min, max));
         }
         return add(() -> random.ints(min, max + 1).mapToObj(i -> i));
+    }
+
+    /**
+     * Generates uniform random double in the min max range
+     *
+     * @param min the minimum number
+     * @param max the maximum number
+     */
+    public RandomArgumentsGenerator uniform(long min, long max) {
+        if (min > max) {
+            throw new IllegalArgumentException(format("minimum value (%d) should be greater then maximum value (%d)", min, max));
+        }
+        return add(() -> random.longs(min, max + 1).mapToObj(i -> i));
     }
 
     /**
