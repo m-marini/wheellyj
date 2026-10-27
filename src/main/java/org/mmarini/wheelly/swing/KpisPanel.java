@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2024-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,10 +28,10 @@
 
 package org.mmarini.wheelly.swing;
 
-import io.reactivex.rxjava3.functions.Consumer;
-import org.mmarini.rl.agents.TrainingKpis;
+import io.reactivex.rxjava3.functions.Function;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.apps.DoubleReducedValue;
+import org.mmarini.wheelly.rlagents.TrainingKpis;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.slf4j.Logger;
@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.apps.DoubleReducedValue.mean;
 import static org.mmarini.wheelly.apps.DoubleReducedValue.rms;
 
@@ -51,10 +52,15 @@ import static org.mmarini.wheelly.apps.DoubleReducedValue.rms;
 public class KpisPanel extends MatrixTable {
     public static final double MICROS = 1e6;
     private static final Logger logger = LoggerFactory.getLogger(KpisPanel.class);
+
+    private static CellValue createCellValue(String key, String format, Object... arguments) {
+        return new CellValue(key, format, arguments);
+    }
+
     private final DoubleReducedValue criticMean;
     private final DoubleReducedValue advantageMean;
     private final DoubleReducedValue deltaRms;
-    private final List<Consumer<Map<String, INDArray>>> handlers;
+    private final List<Function<Map<String, INDArray>, List<CellValue>>> handlers;
 
     /**
      * Creates the kpis panel
@@ -101,7 +107,7 @@ public class KpisPanel extends MatrixTable {
         }
         for (String key : actions) {
             // Creates handler
-            Consumer<Map<String, INDArray>> handler = createActionHandler(key);
+            Function<Map<String, INDArray>, List<CellValue>> handler = createActionHandler(key);
             handlers.add(handler);
         }
     }
@@ -111,7 +117,7 @@ public class KpisPanel extends MatrixTable {
      *
      * @param key the action id
      */
-    private Consumer<Map<String, INDArray>> createActionHandler(String key) {
+    private Function<Map<String, INDArray>, List<CellValue>> createActionHandler(String key) {
         DoubleReducedValue prob = mean();
         DoubleReducedValue entropy = mean();
 
@@ -121,10 +127,12 @@ public class KpisPanel extends MatrixTable {
                 // shows the max of action probabilities
                 INDArray max = data.get(NDArrayIndex.all(), NDArrayIndex.indices(0));
                 INDArray h = data.get(NDArrayIndex.all(), NDArrayIndex.indices(1));
-                printf(key + ".prob", "%,6.1f", prob.add(max).value() * 100);
-                printf(key + ".entropy", "%,6.1f", entropy.add(h).value() * 100);
+                return List.of(
+                        createCellValue(key + ".prob", "%,6.1f", prob.add(max).value() * 100),
+                        createCellValue(key + ".entropy", "%,6.1f", entropy.add(h).value() * 100));
+            } else {
+                return List.of();
             }
-
         };
     }
 
@@ -140,10 +148,12 @@ public class KpisPanel extends MatrixTable {
      *
      * @param kpis the kpis
      */
-    private void handleCritic(Map<String, INDArray> kpis) {
+    private List<CellValue> handleCritic(Map<String, INDArray> kpis) {
         INDArray critic = kpis.get("critic");
         if (critic != null) {
-            printf("critic", "%,10.3f", criticMean.add(critic).value());
+            return List.of(createCellValue("critic", "%,10.3f", criticMean.add(critic).value()));
+        } else {
+            return List.of();
         }
     }
 
@@ -153,15 +163,31 @@ public class KpisPanel extends MatrixTable {
      * @param kpis the kpis
      */
     public void print(TrainingKpis kpis) {
-        printf("avgReward", "%,10.0f", advantageMean.add(kpis.avgReward()).value() * MICROS);
-        printf("deltaAdv", "%,10.3f", deltaRms.add(kpis.deltas()).value());
+        List<CellValue> cells = new ArrayList<>();
+        double acgReward = advantageMean.add(kpis.avgReward()).value() * MICROS;
+        cells.add(createCellValue("avgReward", "%,10.0f", acgReward));
+        double deltaAdv = deltaRms.add(kpis.deltas()).value();
+        cells.add(createCellValue("deltaAdv", "%,10.3f", deltaAdv));
         Map<String, INDArray> predictions = kpis.predictions();
-        for (Consumer<Map<String, INDArray>> handler : handlers) {
+        for (Function<Map<String, INDArray>, List<CellValue>> handler : handlers) {
             try {
-                handler.accept(predictions);
+                cells.addAll(handler.apply(predictions));
             } catch (Throwable ex) {
                 logger.atError().setCause(ex).log("Error printing kpis");
             }
+        }
+        SwingUtilities.invokeLater(() -> {
+            for (CellValue value : cells) {
+                printf(value.key, value.format, value.arguments);
+            }
+        });
+    }
+
+    private record CellValue(String key, String format, Object[] arguments) {
+        public CellValue {
+            requireNonNull(key);
+            requireNonNull(format);
+            requireNonNull(arguments);
         }
     }
 }

@@ -28,6 +28,7 @@
 
 package org.mmarini.wheelly.engines;
 
+import io.reactivex.rxjava3.core.Completable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -35,6 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mmarini.RandomArgumentsGenerator;
 
 import java.awt.geom.Point2D;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -70,8 +72,14 @@ class SearchUnknownStateTest {
     @ParameterizedTest(name = "[{index}] @({0},{1}) R{2} Head {3} DEG")
     @MethodSource("data")
     void test(double robotX, double robotY, int robotDeg, int headDeg) {
+        // Givena a specific robot pose is provided by the parameterised data source
+        // (robotX, robotY, robotDeg, headDeg).
         double distance = 2;
         Point2D robotLocation = new Point2D.Double(robotX, robotY);
+        // And an environment radar simulation with
+        // any radar cell located outside a 2m radial distance from the robot remains completely unaltered.
+        // and any radar cell within this 2-unit radius modified by adding an anechoic echo (addAnechoic)
+        // to simulate a clearance obstruction or physical object.
         ProcessorContextApi ctx = new ProcessorContextBuilder(robotX, robotY, robotDeg, headDeg)
                 .mapRadar(cell ->
                         cell.location().distance(robotLocation) > distance
@@ -79,18 +87,24 @@ class SearchUnknownStateTest {
                                 : cell.addAnechoic(ECHO_TIME, DECAY))
                 .build();
 
-        // When init state
+        // When state is initialised with the processing context (state.init(ctx)).
         state.init(ctx);
-        // And entering state
+        // state entry action is triggered
         state.entry(ctx);
-        // And stepping
+        Completable.timer(2000, TimeUnit.MILLISECONDS).blockingAwait();
+        // And an asynchronous delay of 500 milliseconds is enforced to allow the simulation clock,
+        // sensor dampening, or background loops to progress.
         StateResult result = state.step(ctx);
 
-        // Then the path should contain 2 points
+        // Then the planned path must contain exactly two coordinate points,
+        // representing the initial position and the immediate target.
         assertThat(state.path(), hasSize(2));
-        // And the result exit should be "none"
+        // And the execution outcome must yield a neutral status,
+        // confirming that the state machine did not encounter errors and has not decided to exit
+        // or transition to another state yet.
         assertEquals(NONE_EXIT, result.exitCode());
-        // And the target index should be 1
+        // And the tracking index must point directly to the first target coordinate (targetIndex == 1),
+        // confirming that the tracking system has correctly advanced its tracking sequence.
         assertEquals(1, state.targetIndex());
     }
 }

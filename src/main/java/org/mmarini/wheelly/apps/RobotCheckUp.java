@@ -29,8 +29,8 @@
 package org.mmarini.wheelly.apps;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import hu.akarnokd.rxjava3.swing.SwingObservable;
-import io.reactivex.rxjava3.core.Observable;
+import hu.akarnokd.rxjava3.swing.SwingSchedulers;
+import io.github.raghultech.markdown.swing.preview.SwingMarkdownWindowPreview;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -38,17 +38,28 @@ import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.jetbrains.annotations.NotNull;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.control.ControllerApi;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.mqtt.MqttRobot;
+import org.mmarini.wheelly.robots.HeadStatus;
+import org.mmarini.wheelly.robots.MotionStatus;
+import org.mmarini.wheelly.robots.RobotApi;
+import org.mmarini.wheelly.robots.RobotSpec;
 import org.mmarini.wheelly.swing.ComMonitor;
 import org.mmarini.wheelly.swing.ControllerStatusMapper;
 import org.mmarini.wheelly.swing.SensorMonitor;
 import org.mmarini.wheelly.swing.SensorsPanel;
+import org.mmarini.wheelly.utils.Angle;
+import org.mmarini.wheelly.utils.AppYaml;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import javax.swing.event.HyperlinkEvent;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Point2D;
 import java.io.File;
@@ -61,10 +72,11 @@ import java.util.stream.Stream;
 
 import static java.lang.Math.*;
 import static java.lang.String.format;
-import static org.mmarini.wheelly.apis.RobotSpec.DISTANCE_PER_PULSE;
-import static org.mmarini.wheelly.apis.RobotSpec.ROBOT_TRACK;
+import static org.mmarini.wheelly.robots.RobotSpec.DISTANCE_PER_PULSE;
+import static org.mmarini.wheelly.robots.RobotSpec.ROBOT_TRACK;
 import static org.mmarini.wheelly.swing.Utils.createFrame;
 import static org.mmarini.wheelly.swing.Utils.layHorizontally;
+import static org.mmarini.wheelly.utils.Angle.DEG0;
 import static org.mmarini.yaml.Utils.fromFile;
 
 /**
@@ -90,7 +102,7 @@ public class RobotCheckUp {
     public static final long EXTENSION_DURATION = 5000;
     public static final long ROTATION_TIMEOUT = round(PI * ROBOT_TRACK / DISTANCE_PER_PULSE / MAX_ROTATION_SPEED * 1000) + EXTENSION_DURATION;
     public static final long HALT_TIMEOUT = 500;
-    public static final Complex ROTATION_TOLERANCE = Complex.fromDeg(6);
+    public static final Angle ROTATION_TOLERANCE = Angle.fromDeg(6);
     public static final int TEST_SPEED = RobotSpec.MAX_PPS / 2;
     public static final double MOVEMENT_DISTANCE = 0.6;
     public static final long MOVEMENT_DURATION = round(MOVEMENT_DISTANCE / DISTANCE_PER_PULSE / TEST_SPEED * 1000) + EXTENSION_DURATION;
@@ -144,7 +156,7 @@ public class RobotCheckUp {
     private final SensorMonitor sensorMonitor;
     private final SensorsPanel sensorPanel;
     private Function<RobotStatus, FinalResult> checkupProcess;
-    private RobotControllerApi controller;
+    private ControllerApi controller;
     private Namespace parseArgs;
     private RobotApi robot;
 
@@ -155,19 +167,21 @@ public class RobotCheckUp {
         this.sensorPanel = new SensorsPanel();
         this.comMonitor = new ComMonitor();
         this.sensorMonitor = new SensorMonitor();
-        //this.motionConfigPanel = new MotionConfigPanel();
         comMonitor.setPrintTimestamp(true);
         this.frame = createFrame(Messages.getString("RobotCheckUp.title"), sensorPanel);
         this.monitorFrame = comMonitor.createFrame();
         this.sensorFrame = sensorMonitor.createFrame();
-        //this.motionControllerFrame = motionConfigPanel.createFrame();
         layHorizontally(frame, sensorFrame, monitorFrame);
-        Observable.mergeArray(
-                        SwingObservable.window(frame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(sensorFrame, SwingObservable.WINDOW_ACTIVE),
-                        SwingObservable.window(monitorFrame, SwingObservable.WINDOW_ACTIVE))
-                .filter(ev -> ev.getID() == WindowEvent.WINDOW_CLOSING)
-                .subscribe(this::onWindowClose);
+        WindowAdapter windowAdapter = new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                onWindowClose(e);
+            }
+        };
+        frame.addWindowListener(windowAdapter);
+        sensorFrame.addWindowListener(windowAdapter);
+        monitorFrame.addWindowListener(windowAdapter);
+
         sensorPanel.scanButton().addActionListener(this::onStartScan);
         sensorPanel.moveButton().addActionListener(this::onStartMove);
         sensorPanel.rotateButton().addActionListener(this::onStartRotate);
@@ -190,7 +204,7 @@ public class RobotCheckUp {
      *
      * @param directions the test directions
      */
-    private Function<RobotStatus, List<ScannerResult>> createCheckUpScanner(int... directions) {
+    private Function<RobotStatus, List<ScannerResult>> createCheckUpScanner(Angle... directions) {
         return new Function<>() {
             private final List<ScannerResult> results = new ArrayList<>();
             private int currentTest = -1;
@@ -205,7 +219,6 @@ public class RobotCheckUp {
             @Override
             public List<ScannerResult> apply(RobotStatus status) {
                 long time = status.robotTime();
-                RobotCommands command = RobotCommands.halt();
                 // Check for first sample
                 if (currentTest < 0) {
                     // First sample
@@ -213,12 +226,15 @@ public class RobotCheckUp {
                     // Check for no test required
                     if (currentTest == directions.length) {
                         // Execute a halt move command
-                        controller.execute(command);
+                        controller.motionStatus(MotionStatus.halt());
+                        controller.headStatus(HeadStatus.lookStraight());
+
                         sensorPanel.setInfo("");
                         return results;
                     }
                     // move head
-                    controller.execute(command.scanDirection(directions[currentTest]));
+                    controller.headStatus(HeadStatus.scan(directions[currentTest]));
+
                     // clean measures (time, counter, accumulator)
                     measureStart = time;
                     totFrontDistance = totRearDistance = 0;
@@ -226,12 +242,12 @@ public class RobotCheckUp {
                     measureFrontCount = measureRearCount = 0;
                     scannerMoveTime = 0;
                     // set scan command to the current test direction
-                    command = command.scanDirection(directions[currentTest]);
-                    logger.atInfo().log("Checking sensor to {} DEG ...", directions[currentTest]);
-                    sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest]));
+                    controller.headStatus(HeadStatus.scan(directions[currentTest]));
+                    logger.atInfo().log("Checking sensor to {} DEG ...", directions[currentTest].toIntDeg());
+                    sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest].toIntDeg()));
                 }
-                int sensDir = directions[currentTest];
-                Complex dir = status.headDirection();
+                Angle sensDir = directions[currentTest];
+                Angle dir = status.headDirection();
                 // Check for head to the required direction
                 if (dir.isCloseTo(sensDir)) {
                     // Increase scan counter
@@ -266,14 +282,15 @@ public class RobotCheckUp {
                     currentTest++;
                     // Check for last direction test
                     if (currentTest >= directions.length) {
-                        controller.execute(command.scanDirection(0));
+                        controller.headStatus(HeadStatus.lookStraight());
                         sensorPanel.setInfo("");
                         return results;
                     }
                     // Move head the next direction
-                    controller.execute(command.scanDirection(directions[currentTest]));
-                    logger.atInfo().log("Checking sensor to {} DEG ...", directions[currentTest]);
-                    sensorPanel.setInfo(format("Checking sensor to %d DEG ...", directions[currentTest]));
+                    controller.headStatus(HeadStatus.scan(directions[currentTest]));
+
+                    logger.atInfo().log("Checking sensor to {} ...", directions[currentTest].toIntDeg());
+                    sensorPanel.setInfo(format("Checking sensor to %d ...", directions[currentTest].toIntDeg()));
                     // reset all measures
                     measureStart = time;
                     totFrontDistance = totRearDistance = 0;
@@ -323,22 +340,56 @@ public class RobotCheckUp {
     }
 
     /**
+     * Processes and safely forwards sensor head orientation commands to the monitor subsystem.
+     * <p>
+     * This method schedules the dispatch of the command payload onto the Swing Event Dispatch Thread (EDT)
+     * using {@link SwingUtilities#invokeLater(Runnable)}. This ensures thread-safe updates when synchronising
+     * tracking alignment profiles with the user interface components.
+     * </p>
+     *
+     * @param headStatus the new tracking and alignment command payload for the sensor head
+     */
+    private void onHeadStatusCommand(HeadStatus headStatus) {
+        SwingUtilities.invokeLater(() ->
+                sensorMonitor.onHeadStatusCommand(headStatus)
+        );
+    }
+
+    /**
      * Handle inference
      *
      * @param status the status
      */
     private void onInference(RobotStatus status) {
-        sensorPanel.setStatus(status);
-        sensorMonitor.onStatus(status);
         Function<RobotStatus, FinalResult> cp = checkupProcess;
         if (cp != null) {
             FinalResult result = cp.apply(status);
             if (result != null) {
-                processResult(result);
                 checkupProcess = null;
-                sensorPanel.enableButtons(true);
+                SwingUtilities.invokeLater(() -> {
+                    processResult(result);
+                    sensorPanel.enableButtons(true);
+                    sensorPanel.setStatus(status);
+                    sensorMonitor.onStatus(status);
+                });
             }
         }
+    }
+
+    /**
+     * Processes and safely forwards locomotion commands to the monitor subsystem.
+     * <p>
+     * This method schedules the dispatch of the motion status payload onto the Swing Event Dispatch Thread (EDT)
+     * using {@link SwingUtilities#invokeLater(Runnable)}. This ensures thread-safe updates when synchronising
+     * movement profiles with the user interface components.
+     * </p>
+     *
+     * @param motionStatus the new movement and locomotion command payload
+     */
+    private void onMotionStatusCommand(MotionStatus motionStatus) {
+        SwingUtilities.invokeLater(() ->
+                sensorMonitor.onMotionStatus(motionStatus)
+        );
     }
 
     /**
@@ -384,9 +435,9 @@ public class RobotCheckUp {
     /**
      * Handles the windows close
      *
-     * @param windowEvent the event
+     * @param ignoredWindowEvent the event
      */
-    private void onWindowClose(WindowEvent windowEvent) {
+    private void onWindowClose(WindowEvent ignoredWindowEvent) {
         if (controller != null) {
             controller.shutdown();
         }
@@ -398,25 +449,36 @@ public class RobotCheckUp {
      * @param result the result
      */
     private void processResult(FinalResult result) {
-        JTextArea view = new JTextArea();
-        view.setEditable(false);
-        view.setFont(Font.decode("Monospaced"));
+        List<String> lines = sensorPanel.verbose()
+                ? result.getDetailsStream()
+                : result.getSummaryStream();
+        lines.forEach(line ->
+                logger.atInfo().log("{}", line));
+        String doc = lines.stream()
+                .reduce((a, b) ->
+                        a + b + System.lineSeparator())
+                .orElse("");
 
-        if (sensorPanel.verbose()) {
-            result.getDetailsStream().forEach(line -> {
-                logger.info(line);
-                view.append(line + System.lineSeparator());
+        SwingUtilities.invokeLater(() -> {
+            JEditorPane pane = new JEditorPane();
+            pane.setContentType("text/html");
+            pane.setEditable(false);
+            pane.addHyperlinkListener(e -> {
+                if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    try {
+                        Desktop.getDesktop().browse(e.getURL().toURI());
+                    } catch (Exception ex) {
+                        logger.atError().setCause(ex).log("Error opening browser");
+                    }
+                }
             });
-        }
-        result.getSummaryStream().forEach(line -> {
-            logger.info(line);
-            view.append(line + System.lineSeparator());
-        });
 
-        JFrame resultFrame = createFrame(Messages.getString("Result.title"), new JScrollPane(view));
-        resultFrame.setLocation(50, 50);
-        resultFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        resultFrame.setVisible(true);
+            SwingMarkdownWindowPreview preview = new SwingMarkdownWindowPreview(doc);
+
+            preview.setWindowTitle(Messages.getString("RobotCheckUp.result.title"));
+            preview.setWindowSize(900, 700);
+            preview.launchPreview();
+        });
     }
 
     /**
@@ -433,23 +495,42 @@ public class RobotCheckUp {
 
         logger.info("Creating controller ...");
         controller = AppYaml.controllerFromJson(config);
-        controller.connectRobot(robot);
+        controller.init(robot);
 
-        controller.readErrors().subscribe(
-                this::onControllerError,
-                this::onFlowError);
+        if (robot instanceof MqttRobot mqttRobot) {
+            comMonitor.addRobot(mqttRobot);
+        }
+        controller.readErrors()
+                .observeOn(SwingSchedulers.edt())
+                .subscribe(
+                        this::onControllerError,
+                        this::onFlowError);
 
         // Create flow
         controller.readControllerStatus()
                 .map(ControllerStatusMapper::map)
                 .distinct()
+                .observeOn(SwingSchedulers.edt())
                 .subscribe(
                         this::onControlStatus,
                         this::onFlowError);
         controller.readShutdown()
                 .subscribe(this::onShutdown,
                         this::onFlowError);
+        controller.addOnRobotStatus(status ->
+                SwingUtilities.invokeLater(() -> {
+                            sensorMonitor.onStatus(status);
+                            sensorPanel.setStatus(status);
+                        }
+                )
+        );
+
+        if (robot instanceof MqttRobot mqttRobot) {
+            comMonitor.addRobot(mqttRobot);
+        }
         controller.onInference(this::onInference);
+        controller.onHeadStatus(this::onHeadStatusCommand);
+        controller.onMotionStatus(this::onMotionStatusCommand);
         frame.setVisible(true);
         sensorFrame.setVisible(true);
         monitorFrame.setVisible(true);
@@ -470,19 +551,19 @@ public class RobotCheckUp {
                 .addForwardTest(NORTH_TARGET)
                 .addBackwardTest(CENTRE_TARGET)
 
-                .addRotateTest(Complex.DEG90)
+                .addRotateTest(Angle.DEG90)
                 .addForwardTest(EAST_TARGET)
                 .addBackwardTest(CENTRE_TARGET)
 
-                .addRotateTest(Complex.DEG180)
+                .addRotateTest(Angle.DEG180)
                 .addForwardTest(SOUTH_TARGET)
                 .addBackwardTest(CENTRE_TARGET)
 
-                .addRotateTest(Complex.DEG270)
+                .addRotateTest(Angle.DEG270)
                 .addForwardTest(WEST_TARGET)
                 .addBackwardTest(CENTRE_TARGET)
 
-                .addRotateTest(Complex.DEG0);
+                .addRotateTest(DEG0);
     }
 
     /**
@@ -493,15 +574,15 @@ public class RobotCheckUp {
                 // Scan from left to right for the head field of view
                 createCheckUpScanner())
                 // Rotate clockwise and counterclockwise the robot
-                .addRotateTest(Complex.DEG0)
-                .addRotateTest(Complex.DEG90)
-                .addRotateTest(Complex.DEG180)
-                .addRotateTest(Complex.DEG270)
-                .addRotateTest(Complex.DEG0)
-                .addRotateTest(Complex.DEG270)
-                .addRotateTest(Complex.DEG180)
-                .addRotateTest(Complex.DEG90)
-                .addRotateTest(Complex.DEG0);
+                .addRotateTest(DEG0)
+                .addRotateTest(Angle.DEG90)
+                .addRotateTest(Angle.DEG180)
+                .addRotateTest(Angle.DEG270)
+                .addRotateTest(DEG0)
+                .addRotateTest(Angle.DEG270)
+                .addRotateTest(Angle.DEG180)
+                .addRotateTest(Angle.DEG90)
+                .addRotateTest(DEG0);
     }
 
     /**
@@ -513,75 +594,124 @@ public class RobotCheckUp {
                 // Scan from left to right for the head field of view
                 createCheckUpScanner(
                         IntStream.range(0, SCANNER_CHECK_NUMBER)
-                                .map(i ->
-                                        (int) round(headRangeRad * 2 * i / (SCANNER_CHECK_NUMBER - 1) - headRangeRad)
-                                ).toArray())
+                                .mapToObj(i ->
+                                        Angle.fromDeg((int) round(headRangeRad * 2 * i / (SCANNER_CHECK_NUMBER - 1) - headRangeRad))
+                                ).toArray(Angle[]::new))
         );
     }
 
     record FinalResult(List<ScannerResult> scannerResults, List<RotateResult> rotateResults,
                        List<MovementResult> moveResults) {
 
-        public Stream<String> getDetailsStream() {
-            Stream.Builder<String> builder = Stream.builder();
-            builder.add("");
-            builder.add("Check up details");
-            builder.add("");
-            for (ScannerResult scannerResult : scannerResults) {
-                builder.add(format("Sensor direction check %d DEG", scannerResult.direction));
-                builder.add(format("    %s", scannerResult.valid ? "valid" : "invalid"));
-                builder.add(format("    duration %d ms", scannerResult.testDuration));
-                builder.add(format("    move localTime %d ms", scannerResult.moveTime));
-                builder.add(format("    average front distance %.3f m", scannerResult.averageFrontDistance));
-                builder.add(format("    average rear distance %.3f m", scannerResult.averageRearDistance));
-            }
-
-            for (RotateResult result : rotateResults) {
-                builder.add(format("Rotate direction %d DEG", result.targetDir.toIntDeg()));
-                builder.add(format("    rotation %d DEG", result.rotationAngle.toIntDeg()));
-                builder.add(format("    duration %d ms", result.testDuration));
-                builder.add(format("    direction error %d DEG", result.directionError.toIntDeg()));
-                builder.add(format("    location error %.2f m", result.locationError));
-            }
-            for (MovementResult result : moveResults) {
-                builder.add(format("Movement %s target %.1f, %.1f",
-                        result.forwardDirection ? "forward" : "backward",
-                        result.target.getX(), result.target.getY()));
-                builder.add(format("    duration %d ms", result.testDuration));
-                builder.add(format("    distance error %.2f m", result.distanceError));
-            }
-            return builder.build();
-        }
-
-        public Stream<String> getSummaryStream() {
-            Stream.Builder<String> builder = Stream.builder();
+        public List<String> getDetailsStream() {
             long imuFailure = scannerResults.stream().filter(r -> r.imuFailure != 0).count() +
                     rotateResults.stream().filter(r -> r.imuFailure != 0).count() +
                     moveResults.stream().filter(r -> r.imuFailure != 0).count();
+            long numScannerFailures = scannerResults.stream()
+                    .filter(Predicate.not(ScannerResult::valid))
+                    .count();
+            long numRotationFailure = rotateResults.stream()
+                    .filter(Predicate.not(RotateResult::valid))
+                    .count();
+            long numMovementFailure = moveResults.stream()
+                    .filter(Predicate.not(MovementResult::valid))
+                    .count();
 
-            builder.add("");
-            builder.add("Check summary");
-            builder.add("");
-            if (imuFailure > 0) {
-                builder.add(format("%d imu failure", imuFailure));
-            } else {
-                builder.add("No imu failure");
+            Stream.Builder<String> builder = Stream.builder();
+            builder.add("# Check up details")
+                    .add("")
+                    .add(imuFailure > 0
+                            ? format("**%d imu failure**", imuFailure)
+                            : "No imu failure");
+            if (!scannerResults.isEmpty()) {
+                builder.add("")
+                        .add("---")
+                        .add("## Scanner checks")
+                        .add("")
+                        .add(numScannerFailures > 0
+                                ? format("**Scanner check failures: %d/%d**", numScannerFailures, scannerResults.size())
+                                : format("No failed scanner checks out of %d performed", scannerResults.size()))
+                        .add("")
+                        .add("| Direction | Result | Duration | Move time | Avg. front distance | Avg. rear distance |")
+                        .add("|:-:|:-:|:-:|:-:|:-:|:-:|");
+                for (ScannerResult scannerResult : scannerResults) {
+                    builder.add(format(scannerResult.valid
+                                    ? "| %d DEG | valid | %d ms | %d ms | %.3f m | %.3f m |"
+                                    : "| **%d DEG** | **failed** | **%d ms** | **%d ms** | **%.3f m** | **%.3f m** |",
+                            scannerResult.direction().toIntDeg(),
+                            scannerResult.testDuration(),
+                            scannerResult.moveTime(),
+                            scannerResult.averageFrontDistance(),
+                            scannerResult.averageRearDistance()));
+                }
             }
+            if (!rotateResults.isEmpty()) {
+                builder.add("")
+                        .add("---")
+                        .add("## Rotation checks")
+                        .add("")
+                        .add(numRotationFailure > 0
+                                ? format("**Rotation check failures: %d/%d**", numRotationFailure, rotateResults.size())
+                                : format("No failed rotation checks out of %d performed", rotateResults.size()))
+                        .add("")
+                        .add(format("Rotation tolerance %d DEG", ROTATION_TOLERANCE.toIntDeg()))
+                        .add(format("Centre tolerance %.2f m", DISTANCE_TOLERANCE))
+                        .add("")
+                        .add("| Direction | Result | Rotation | Duration | Direction Error | Centre Error | Rotation Speed |")
+                        .add("|:-:|:-:|:-:|:-:|:-:|:-:|:-:|");
+                for (RotateResult result : rotateResults) {
+                    builder.add(format(result.valid()
+                                    ? "| %d DEG | valid | %d DEG | %d ms | %d DEG | %.2f m | %.2f DEG/s |"
+                                    : "| **%d DEG** | **failed** | **%d DEG** | **%d ms** | **%d DEG** | **%.2f m** | **%.2f DEG/s** |",
+                            result.targetDir.toIntDeg(),
+                            result.rotationAngle.toIntDeg(),
+                            result.testDuration,
+                            result.directionError.toIntDeg(),
+                            result.locationError,
+                            result.speed()));
+                }
+            }
+            if (!moveResults.isEmpty()) {
+                builder.add("")
+                        .add("---")
+                        .add("## Movement checks")
+                        .add("")
+                        .add(numMovementFailure > 0
+                                ? format("**Movement checks failures: %d/%d**", numMovementFailure, moveResults.size())
+                                : format("No failed movement checks out of %d performed", moveResults.size()))
+                        .add("")
+                        .add(format("Distance tolerance %.2f m", DISTANCE_TOLERANCE))
+                        .add("")
+                        .add("| Movement | Result | Target | Duration | Distance error |")
+                        .add("|:-:|:-:|:-:|:-:|:-:|");
+                for (MovementResult result : moveResults) {
+                    builder.add(format(result.valid()
+                                    ? "| %s | valid | %.1f, %.1f | %d ms | %.2f m |"
+                                    : "| **%s** | **failed** | **%.1f, %.1f** | **%d ms** | **%.2f m** |",
+                            result.forwardDirection ? "forward" : "backward",
+                            result.target.getX(), result.target.getY(),
+                            result.testDuration,
+                            result.distanceError));
+                }
+            }
+            return builder.build().toList();
+        }
 
+        public List<String> getSummaryStream() {
             long maxMoveDuration = scannerResults.stream()
                     .mapToLong(r -> r.moveTime)
                     .max()
                     .orElse(0);
 
             double minFrontDistance = Double.MAX_VALUE;
-            int minFrontDistanceDirection = 0;
+            Angle minFrontDistanceDirection = DEG0;
             double maxFrontDistance = 0;
-            int maxFrontDistanceDirection = 0;
+            Angle maxFrontDistanceDirection = DEG0;
             boolean validFrontSamples = false;
             double minRearDistance = Double.MAX_VALUE;
-            int minRearDistanceDirection = 0;
+            Angle minRearDistanceDirection = DEG0;
             double maxRearDistance = 0;
-            int maxRearDistanceDirection = 0;
+            Angle maxRearDistanceDirection = DEG0;
             boolean validRearSamples = false;
             for (int i = 1; i < scannerResults.size(); i++) {
                 ScannerResult r = scannerResults.get(i);
@@ -611,30 +741,16 @@ public class RobotCheckUp {
                 }
             }
 
-            long numScannerFailures = scannerResults.stream().filter(r -> !r.valid).count();
-            if (numScannerFailures > 0) {
-                builder.add(format("Scanner checks failed: %d failures", numScannerFailures));
-            } else {
-                builder.add("Scanner checks passed");
-            }
-            builder.add(format("    move localTime <= %d ms", maxMoveDuration));
-            if (validFrontSamples) {
-                builder.add(format("    min front distance = %.3f m at %d DEG",
-                        minFrontDistance, minFrontDistanceDirection));
-                builder.add(format("    max front distance = %.3f m at %d DEG",
-                        maxFrontDistance, maxFrontDistanceDirection));
-            }
-            if (validRearSamples) {
-                builder.add(format("    min rear distance = %.3f m at %d DEG",
-                        minRearDistance, minRearDistanceDirection));
-                builder.add(format("    max rear distance = %.3f m at %d DEG",
-                        maxRearDistance, maxRearDistanceDirection));
-            }
-
+            long imuFailure = scannerResults.stream().filter(r -> r.imuFailure != 0).count() +
+                    rotateResults.stream().filter(r -> r.imuFailure != 0).count() +
+                    moveResults.stream().filter(r -> r.imuFailure != 0).count();
+            long numScannerFailures = scannerResults.stream()
+                    .filter(Predicate.not(ScannerResult::valid))
+                    .count();
             long numRotationFailure = rotateResults.stream()
-                    .filter(result -> result.directionError.sub(ROTATION_TOLERANCE).positive()
-                            || result.imuFailure != 0).count();
-            Complex maxDirectionError = Complex.DEG0;
+                    .filter(Predicate.not(RotateResult::valid))
+                    .count();
+            Angle maxDirectionError = DEG0;
             double maxLocationError = 0;
             double maxRotationSpeed = 0;
             for (RotateResult r : rotateResults) {
@@ -646,18 +762,14 @@ public class RobotCheckUp {
                         maxLocationError = r.locationError;
                     }
                     if (r.testDuration > 0) {
-                        double speed = abs(r.rotationAngle.toDeg()) / r.testDuration * 1000;
-                        if (speed > maxRotationSpeed) {
-                            maxRotationSpeed = speed;
-                        }
+                        maxRotationSpeed = max(maxRotationSpeed, r.speed());
                     }
                 }
             }
 
             long numMovementFailure = moveResults.stream()
-                    .filter(result ->
-                            result.distanceError > DISTANCE_TOLERANCE
-                                    || result.imuFailure != 0).count();
+                    .filter(Predicate.not(MovementResult::valid))
+                    .count();
             double maxMoveDistanceError = 0;
             for (MovementResult r : moveResults) {
                 if (r.imuFailure == 0) {
@@ -667,43 +779,103 @@ public class RobotCheckUp {
                 }
             }
 
-            if (numRotationFailure > 0) {
-                builder.add(format("Rotation checks failed: %d failures", numRotationFailure));
-            } else {
-                builder.add("Rotation checks passed");
+            Stream.Builder<String> builder = Stream.<String>builder()
+                    .add("# Check summary")
+                    .add("")
+                    .add(imuFailure > 0
+                            ? format("**%d imu failure**", imuFailure)
+                            : "No imu failure");
+
+            if (!scannerResults.isEmpty()) {
+                builder.add("")
+                        .add("---")
+                        .add("## Scanner checks")
+                        .add("")
+                        .add(numScannerFailures > 0
+                                ? format("**Scanner check failures: %d/%d**", numScannerFailures, scannerResults.size())
+                                : format("No failed scanner checks out of %d performed", scannerResults.size()))
+                        .add("")
+                        .add(format("Move local time <= %d ms", maxMoveDuration))
+                        .add("")
+                        .add("| Min. front distance | Max. front distance |")
+                        .add("|:-:|:-:|")
+                        .add(validFrontSamples
+                                ? format("| %.3f m at %d DEG | %.3f m at %d DEG |",
+                                minFrontDistance,
+                                maxFrontDistanceDirection.toIntDeg(),
+                                maxFrontDistance,
+                                minFrontDistanceDirection.toIntDeg())
+                                : "| ? | ? |")
+                        .add("")
+                        .add("| Min. rear distance | Max. rear distance |")
+                        .add("|:-:|:-:|")
+                        .add(validRearSamples
+                                ? format("| %.3f m at %d DEG | %.3f m at %d DEG |",
+                                minRearDistance,
+                                minRearDistanceDirection.toIntDeg(),
+                                maxRearDistance,
+                                maxRearDistanceDirection.toIntDeg())
+                                : "| ? | ? |");
             }
-
-            builder.add(format("    direction error <= %d DEG", maxDirectionError.toIntDeg()));
-            builder.add(format("    location error <= %.2f m", maxLocationError));
-            builder.add(format("    rotation power <= %.2f DEG/s", maxRotationSpeed));
-
-            if (numMovementFailure > 0) {
-                builder.add(format("Movement checks failed: %d failures", numMovementFailure));
-            } else {
-                builder.add("Movement checks passed");
+            if (!rotateResults.isEmpty()) {
+                builder.add("")
+                        .add("---")
+                        .add("## Rotation checks")
+                        .add("")
+                        .add(numRotationFailure > 0
+                                ? format("**Rotation check failures: %d/%d**", numRotationFailure, rotateResults.size())
+                                : format("No failed rotation checks out of %d performed", rotateResults.size()))
+                        .add("")
+                        .add("| Direction error | Location error | Rotation speed |")
+                        .add("|:-:|:-:|:-:|")
+                        .add(format("| <= %d DEG | <= %.2f m | %.2f DEG/s |",
+                                maxDirectionError.toIntDeg(), maxLocationError, maxRotationSpeed));
             }
-
-            builder.add(format("    distance error <= %.2f m", maxMoveDistanceError));
-
-            return builder.build();
+            if (!moveResults.isEmpty()) {
+                builder.add("")
+                        .add("---")
+                        .add("## Movement checks")
+                        .add("")
+                        .add(numMovementFailure > 0
+                                ? format("**Movement checks failures: %d/%d**", numMovementFailure, moveResults.size())
+                                : format("No failed movement checks out of %d performed", moveResults.size()))
+                        .add("")
+                        .add("|:-:|")
+                        .add(format("| <= %.2f m |", maxMoveDistanceError));
+            }
+            return builder.build().toList();
         }
     }
 
     record MovementResult(Point2D target, boolean forwardDirection, long testDuration, double distanceError,
                           int imuFailure) {
+        public boolean valid() {
+            return distanceError <= DISTANCE_TOLERANCE
+                    || imuFailure != 0;
+        }
     }
 
     /**
      * Rotation result
      */
-    record RotateResult(long testDuration, Complex targetDir, Complex directionError, double locationError,
-                        Complex rotationAngle, int imuFailure) {
+    record RotateResult(long testDuration, Angle targetDir, Angle directionError, double locationError,
+                        Angle rotationAngle, int imuFailure) {
+        public double speed() {
+            return abs(rotationAngle.toDeg()) / testDuration * 1000;
+        }
+
+        public boolean valid() {
+            return directionError.isFront(ROTATION_TOLERANCE)
+                    && locationError <= DISTANCE_TOLERANCE
+                    && imuFailure == 0;
+        }
+
     }
 
     /**
      * Scanner result
      */
-    record ScannerResult(int direction, long testDuration, boolean valid, long moveTime,
+    record ScannerResult(Angle direction, long testDuration, boolean valid, long moveTime,
                          double averageFrontDistance,
                          double averageRearDistance, int imuFailure) {
     }
@@ -742,8 +914,10 @@ public class RobotCheckUp {
                         // store start location
                         startLocation = status.location();
                         moveStart = time;
-                        controller.execute(RobotCommands.backward(target));
-                        sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()));
+                        controller.motionStatus(MotionStatus.backward(target));
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()))
+                        );
                     }
                     // Check for maximum distance travelled or test timeout or obstacle found
                     Point2D pos = status.location();
@@ -758,8 +932,10 @@ public class RobotCheckUp {
                                 time - moveStart,
                                 distance,
                                 status.imuFailure()));
-                        sensorPanel.setInfo("");
-                        controller.execute(RobotCommands.halt());
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo("")
+                        );
+                        controller.motionStatus(MotionStatus.halt());
                         return true;
                     }
                     return false;
@@ -787,8 +963,10 @@ public class RobotCheckUp {
                         // store start location
                         startLocation = status.location();
                         moveStart = time;
-                        controller.execute(RobotCommands.forward(target));
-                        sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()));
+                        controller.motionStatus(MotionStatus.forward(target));
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo(format("Checking movement to %f,%f ...", target.getX(), target.getY()))
+                        );
                     }
                     // Check for maximum distance travelled or test timeout or obstacle found
                     Point2D pos = status.location();
@@ -798,13 +976,14 @@ public class RobotCheckUp {
                             || !(status.canMoveForward() || status.canMoveBackward())) {
                         // Test completed
                         // computes the direction error
-                        sensorPanel.setInfo("");
                         moveResults.add(new MovementResult(target, true,
                                 time - moveStart,
                                 distance,
                                 status.imuFailure()));
-                        sensorPanel.setInfo("");
-                        controller.execute(RobotCommands.halt());
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo("")
+                        );
+                        controller.motionStatus(MotionStatus.halt());
                         return true;
                     }
                     return false;
@@ -818,38 +997,43 @@ public class RobotCheckUp {
          *
          * @param direction the direction
          */
-        public CompositeCheckupProcess addRotateTest(Complex direction) {
+        public CompositeCheckupProcess addRotateTest(Angle direction) {
             checkList.add(new Predicate<>() {
                 private long haltTime;
                 private long rotationStart;
-                private Complex startAngle;
+                private Angle startAngle;
                 private Point2D startLocation;
 
                 @Override
                 public boolean test(RobotStatus status) {
                     long time = status.robotTime();
-                    Complex dir = status.direction();
+                    Angle dir = status.direction();
                     if (startLocation == null) {
                         // store start location, time, rotation at the beginning of test
                         startLocation = status.location();
                         rotationStart = time;
                         startAngle = dir;
                         // Rotate to the desired direction
-                        controller.execute(RobotCommands.rotate(direction));
-                        sensorPanel.setInfo(format("Checking rotation to %d DEG ...", direction.toIntDeg()));
+                        controller.motionStatus(MotionStatus.rotate(direction));
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo(format("Checking rotation to %d DEG ...", direction.toIntDeg()))
+                        );
                     }
                     // Check for rotation max duration
                     if (time >= rotationStart + ROTATION_TIMEOUT) {
                         // Rotation timeout: compute the direction error
-                        Complex directionError = dir.sub(direction);
-                        Complex rotationAngle = dir.sub(startAngle);
+                        Angle directionError = dir.sub(direction);
+                        Angle rotationAngle = dir.sub(startAngle);
                         // Computes distance error
                         double distanceError = status.location().distance(startLocation);
                         // Create the test result
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
                         // Stop robot
-                        controller.execute(RobotCommands.halt());
-                        sensorPanel.setInfo("");
+                        controller.motionStatus(MotionStatus.halt());
+
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo("")
+                        );
                         return true;
                     }
                     // Check for robot moving
@@ -862,23 +1046,27 @@ public class RobotCheckUp {
                         // Store halt time
                         haltTime = time;
                     }
-                    Complex directionError = dir.sub(direction);
-                    Complex rotationAngle = dir.sub(startAngle);
+                    Angle directionError = dir.sub(direction);
+                    Angle rotationAngle = dir.sub(startAngle);
                     double distanceError = status.location().distance(startLocation);
                     // Check for direction
-                    if (directionError.isClose0(robot.robotSpec().directionRange())) {
+                    if (directionError.isFront(robot.robotSpec().directionRange())) {
                         // Rotation completed: generate the test result
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
-                        controller.execute(RobotCommands.halt());
-                        sensorPanel.setInfo("");
+                        controller.motionStatus(MotionStatus.halt());
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo("")
+                        );
                         return true;
                     }
                     // Check for robot halt duration
                     if (time >= haltTime + HALT_TIMEOUT) {
                         // Halt timeout: generate test result
                         rotateResults.add(new RotateResult(time - rotationStart, direction, directionError, distanceError, rotationAngle, status.imuFailure()));
-                        controller.execute(RobotCommands.halt());
-                        sensorPanel.setInfo("");
+                        controller.motionStatus(MotionStatus.halt());
+                        SwingUtilities.invokeLater(() ->
+                                sensorPanel.setInfo("")
+                        );
                         return true;
                     }
                     return false;

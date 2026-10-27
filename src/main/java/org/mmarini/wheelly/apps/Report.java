@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,7 +22,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
@@ -35,11 +35,10 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.mmarini.ParallelProcess;
-import org.mmarini.rl.agents.BinArrayFile;
-import org.mmarini.rl.agents.CSVWriter;
 import org.mmarini.swing.Messages;
+import org.mmarini.wheelly.storage.csv.CSVWriter;
+import org.mmarini.wheelly.storage.serde.BinArrayFile;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +48,12 @@ import java.util.Optional;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
+import static org.mmarini.wheelly.gyms.MacroActionsAdapter.ACTION_HEAD_ID;
+import static org.mmarini.wheelly.gyms.MacroActionsAdapter.ACTION_MOVE_ID;
+import static org.mmarini.wheelly.rlagents.NNRLTrainingDataGenerator.CRITIC_ID;
+import static org.mmarini.wheelly.rlagents.TrainingKpis.AVG_REWARD_ID;
+import static org.mmarini.wheelly.rlagents.TrainingKpis.DELTAS_ID;
+
 /**
  * Runs the process to produce report data about learning kpis
  */
@@ -56,10 +61,7 @@ public class Report {
     public static final int DEFAULT_NUM_BINS = 100;
     private static final long DEFAULT_BATCH_SIZE = 256;
     private static final Logger logger = LoggerFactory.getLogger(Report.class);
-
-    static {
-        Nd4j.zeros(1);
-    }
+    public static final String REWARDS_ID = "rewards";
 
     /**
      * Returns the argument parser
@@ -206,13 +208,13 @@ public class Report {
      * Returns the tasks
      */
     private Stream<Action> createTasks() {
-        Stream<Action> actionTasks = Stream.of("head", "move")
+        Stream<Action> actionTasks = Stream.of(ACTION_MOVE_ID, ACTION_HEAD_ID)
                 .map(this::createPolicyTask);
-        Stream<Action> kpisTasks = Stream.of("avgReward", "deltas", "critic")
+        Stream<Action> kpisTasks = Stream.of(AVG_REWARD_ID, DELTAS_ID, CRITIC_ID)
                 .map(key ->
                         createLinearTask(kpisPath, key)
                 );
-        Stream<Action> rewardTasks = Stream.of(createLinearTask(rewardsFile, "rewards"));
+        Stream<Action> rewardTasks = Stream.of(createLinearTask(rewardsFile, REWARDS_ID));
         return Stream.concat(
                 Stream.concat(rewardTasks, kpisTasks),
                 actionTasks);

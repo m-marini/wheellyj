@@ -1,0 +1,267 @@
+---
+$schema: https://mmarini.org/wheelly/rl-agent-builder-schema-2.0
+class: org.mmarini.wheelly.rlagents.RLAgentBuilder
+numEpochs: 3
+trajectorySize: 256
+batchSize: 32
+alphas:
+  action-head: 1e-9
+  action-move: 1e-15
+beta: 3e-3
+gamma: 0.99
+avgReward: 0.5
+path: models/large-resnet18
+network:
+  activation: Identity
+  updater:
+    type: RmsProp
+    learningRate: 1e-6
+    decayRms: 0.96
+    epsilon: 1e-3
+  optimizationAlog: StochasticGradientDescent
+  weightInit:
+    type: He
+  #weightInit:
+  #  type: TruncatedNormalDistribution
+  #  mean: 0
+  #  stddev: 0.5
+  l1: 1e-7
+  l2: 5e-5
+  graphBuilder:
+    # cnn-dense                       256
+    # maxpool-out subsampling(3,3)    1024 x 1 x 1
+    # resnet42 resnet(1024, k=3)      1024 x 3 x 3
+    # resnet41 resnet(1024, k=3, s=2) 1024 x 3 x 3
+    # resnet32 resnet(512, k=3)       512 x 5 x 5
+    # resnet31 resnet(512, k=3, s=2)  512 x 5 x 5
+    # resnet22 resnet(256, k=3)       256 x 9 x 9
+    # resnet21 resnet(256, k=3, s=2)  256 x 9 x 9
+    # resnet12 resnet(128, k=3)       128 x 17 x 17
+    # resnet11 resnet(128, k=3)       128 x 17 x 17
+    # maxpool-in subsampling(3,3)     128 x 33 x 33
+    # cnn-in cnn(32, k=7, s=2, p=3)   128 x 35 x 35
+    # map(6.9m x 6.9m)                5 x 69 x 69
+
+    # robot  8 + 4  = 12
+    # head   7 + 3  = 10
+    # proxy            4
+    # camera 4 + 1  =  5
+    # fsm    16 + 9 = 25
+
+    # merge-sensors 56
+    # batch
+    # dense1 256
+    # batch
+    # dense2 256
+    # batch
+    # dense3 256
+
+    # merge-all 256
+    inputs:
+      state-map:
+        # map 5 x 69 x 69
+        type: Convolutional
+        width: 69
+        height: 69
+        depth: 5
+        format: NCHW
+      state-robot:
+        # 8 sensors + 4 state
+        type: FeedForward
+        size: 12
+      state-head:
+        # 7 sensors + 3 state
+        type: FeedForward
+        size: 10
+      state-proxy:
+        # 4 sensors
+        type: FeedForward
+        size: 4
+      state-camera:
+        # 4 sensors + 1 marker
+        type: FeedForward
+        size: 5
+      state-fsm:
+        # 16 motion states + 9 head state
+        type: FeedForward
+        size: 25
+    hiddens:
+      cnn-in:
+        # cnn-in cnn(128, k=7, s=2, p=3) 128 x 35 x 35
+        inputs: [ state-map ]
+        type: ConvolutionLayer
+        nOut: 128
+        kernelSize: [ 7, 7 ]
+        stride: [ 2, 2 ]
+        padding: [ 3, 3 ]
+      batch-in:
+        inputs: [ cnn-in ]
+        type: BatchNormalizationLayer
+      relu-in:
+        inputs: [ batch-in ]
+        type: ActivationLayer
+        activation: Relu
+
+      dense-sensors0:
+        type: DenseLayer
+        inputs: [ state-robot, state-head, state-proxy, state-camera, state-fsm ]
+        nOut: 256
+        weightInit:
+          type: Xavier
+      batch-sensors0:
+        inputs: [ dense-sensors0 ]
+        type: BatchNormalizationLayer
+      relu-sensors0:
+        inputs: [ batch-sensors0 ]
+        type: ActivationLayer
+        activation: Relu
+
+      dense-sensors1:
+        type: DenseLayer
+        inputs: [ relu-sensors0 ]
+        nOut: 128
+        weightInit:
+          type: Xavier
+      batch-sensors1:
+        inputs: [ dense-sensors1 ]
+        type: BatchNormalizationLayer
+      relu-sensors1:
+        inputs: [ batch-sensors1 ]
+        type: ActivationLayer
+        activation: Relu
+
+      dense-sensors2:
+        type: DenseLayer
+        inputs: [ relu-sensors1 ]
+        nOut: 128
+        weightInit:
+          type: Xavier
+      batch-sensors2:
+        inputs: [ dense-sensors2 ]
+        type: BatchNormalizationLayer
+      relu-sensor2:
+        type: ActivationLayer
+        inputs: [ batch-sensors2 ]
+        activation: Relu
+
+      dense-map-out:
+        type: DenseLayer
+        inputs: [ flattenMap ]
+        nOut: 256
+        weightInit:
+          type: Xavier
+      batch-map-out:
+        inputs: [ dense-map-out ]
+        type: BatchNormalizationLayer
+      relu-map-out:
+        inputs: [ batch-map-out ]
+        type: ActivationLayer
+        activation: Relu
+
+      dense-out:
+        type: DenseLayer
+        inputs: [ relu-sensor2, relu-map-out ]
+        nOut: 512
+        weightInit:
+          type: Xavier
+      batch-out:
+        inputs: [ dense-out ]
+        type: BatchNormalizationLayer
+      out:
+        inputs: [ batch-out ]
+        type: ActivationLayer
+        activation: Relu
+
+      maxpool-in:
+        # maxpool-in subsampling(3,3)   128 x 33 x 33
+        inputs: [ relu-in ]
+        type: SubsamplingLayer
+        kernelSize: [ 3, 3 ]
+        poolingType: Max
+      maxpool-out:
+        # maxpool-out subsampling(3,3) 1024 x 1 x 1
+        inputs: [ resnet42 ]
+        type: SubsamplingLayer
+        kernelSize: [ 3, 3 ]
+        poolingType: Max
+    blocks:
+      resnet11:
+        # resnet11 resnet(128, k=3, s=2)  128 x 17 x 17
+        inputs: [ maxpool-in ]
+        type: IdentityResNetBlock
+        depth: 128
+        kernelSize: [ 3, 3 ]
+      resnet12:
+        # resnet12 resnet(128, k=3)       128 x 17 x 17
+        inputs: [ resnet11 ]
+        type: IdentityResNetBlock
+        depth: 128
+        kernelSize: [ 3, 3 ]
+      resnet21:
+        # resnet21 resnet(256, k=3, s=2)  256 x 9 x 9
+        inputs: [ resnet12 ]
+        type: ConvolutionResNetBlock
+        depth: 256
+        kernelSize: [ 3, 3 ]
+        stride: [ 2, 2 ]
+      resnet22:
+        # resnet22 resnet(256, k=3)       256 x 9 x 9
+        inputs: [ resnet21 ]
+        type: IdentityResNetBlock
+        depth: 256
+        kernelSize: [ 3, 3 ]
+      resnet31:
+        # resnet31 resnet(512, k=3, s=2)  512 x 5 x 5
+        inputs: [ resnet22 ]
+        type: ConvolutionResNetBlock
+        depth: 512
+        kernelSize: [ 3, 3 ]
+        stride: [ 2, 2 ]
+      resnet32:
+        # resnet32 resnet(512, k=3)       512 x 5 x 5
+        inputs: [ resnet31 ]
+        type: IdentityResNetBlock
+        depth: 512
+        kernelSize: [ 3, 3 ]
+      resnet41:
+        # resnet41 resnet(1024, k=3, s=2) 1024 x 3 x 3
+        inputs: [ resnet32 ]
+        type: ConvolutionResNetBlock
+        depth: 1024
+        kernelSize: [ 3, 3 ]
+        stride: [ 2, 2 ]
+      resnet42:
+        # resnet42 resnet(1024, k=3)      1024 x 3 x 3
+        inputs: [ resnet41 ]
+        type: IdentityResNetBlock
+        depth: 1024
+        kernelSize: [ 3, 3 ]
+    outputs:
+      critic:
+        type: OutputLayer
+        inputs: [ out ]
+        nOut: 1
+        activation: Identity
+        lossFunction: SquaredLoss
+        weightInit:
+          type: Xavier
+      action-move:
+        type: OutputLayer
+        inputs: [ out ]
+        nOut: 16
+        activation: SoftMax
+        lossFunction: NegativeLogLikelihood
+        weightInit:
+          type: Xavier
+      action-head:
+        type: OutputLayer
+        inputs: [ out ]
+        nOut: 9
+        activation: SoftMax
+        lossFunction: NegativeLogLikelihood
+        weightInit:
+          type: Xavier
+    vertices:
+      flattenMap:
+        type: FlattenVertex
+        inputs: [ maxpool-out ]

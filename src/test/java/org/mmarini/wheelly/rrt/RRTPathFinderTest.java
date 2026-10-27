@@ -29,9 +29,9 @@
 package org.mmarini.wheelly.rrt;
 
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.apis.GridTopology;
-import org.mmarini.wheelly.apis.PointRadarModeller;
-import org.mmarini.wheelly.apis.RadarMap;
+import org.mmarini.wheelly.perception.GridTopology;
+import org.mmarini.wheelly.perception.PointRadarModeller;
+import org.mmarini.wheelly.perception.RadarMap;
 
 import java.awt.geom.Point2D;
 import java.util.List;

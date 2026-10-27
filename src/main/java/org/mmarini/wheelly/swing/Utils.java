@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2023 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2023-2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.swing;
 
-import org.mmarini.wheelly.apis.Complex;
+import org.mmarini.wheelly.utils.Angle;
 
 import javax.swing.*;
 import java.awt.*;
@@ -55,7 +55,7 @@ public interface Utils {
      * @param location  location in the world coordinate
      * @param direction direction
      */
-    static AffineTransform at(Point2D location, Complex direction) {
+    static AffineTransform at(Point2D location, Angle direction) {
         AffineTransform tr = AffineTransform.getTranslateInstance(location.getX(), location.getY());
         tr.rotate(-direction.toRad());
         return tr;

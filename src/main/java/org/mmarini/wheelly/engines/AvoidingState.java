@@ -29,7 +29,11 @@
 package org.mmarini.wheelly.engines;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.utils.Angle;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +41,8 @@ import org.slf4j.LoggerFactory;
 import java.awt.geom.Point2D;
 import java.util.Optional;
 
-import static org.mmarini.wheelly.apis.Utils.MM;
 import static org.mmarini.wheelly.engines.StateResult.*;
+import static org.mmarini.wheelly.utils.Utils.MM;
 
 /**
  * Generates the behaviour to avoid the contact obstacle.
@@ -82,7 +86,7 @@ public class AvoidingState extends TimeOutState {
     private final double safeDistance;
     private final double maxDistance;
     private Point2D contactPoint;
-    private Complex contactDirection;
+    private Angle contactDirection;
     private boolean forwardEscape;
     private Point2D safePoint;
     private boolean avoidingByRadar;
@@ -175,8 +179,9 @@ public class AvoidingState extends TimeOutState {
             logger.atDebug().log("Safe point at {}", safePoint);
             return new StateResult(NONE_EXIT,
                     forwardEscape
-                            ? RobotCommands.forward(safePoint)
-                            : RobotCommands.backward(safePoint));
+                            ? RobotCommand.forward(safePoint)
+                            : RobotCommand.backward(safePoint));
+
         }
         // No contacts
         if (!avoidingByRadar) {
@@ -192,8 +197,9 @@ public class AvoidingState extends TimeOutState {
             logger.atDebug().log("approaching safe point at {}", safePoint);
             return new StateResult(NONE_EXIT,
                     forwardEscape
-                            ? RobotCommands.forward(safePoint)
-                            : RobotCommands.backward(safePoint));
+                            ? RobotCommand.forward(safePoint)
+                            : RobotCommand.backward(safePoint));
+
         }
         // Robot at safe distance: halt at exit
         double contactDistance = robotLocation.distance(contactPoint);

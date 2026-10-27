@@ -50,6 +50,7 @@
         <mqtt.version>1.2.5</mqtt.version>
         <simple-openai.version>3.22.1</simple-openai.version>
         <okhttp.version>5.1.0</okhttp.version>
+        <swing-markdown-preview.version>1.0.0</swing-markdown-preview.version>
         <maven-shade-plugin.version>3.3.0</maven-shade-plugin.version>
     </properties>
     <build>
@@ -110,7 +111,7 @@
                 <version>3.0.0-M5</version>
             </plugin>
             <!-- https://mvnrepository.com/artifact/com.googlecode.mavennatives/maven-nativedependencies-plugin -->
-            <!--
+            <!--ùà
             <plugin>
                 <groupId>com.googlecode.mavennatives</groupId>
                 <artifactId>maven-nativedependencies-plugin</artifactId>
@@ -213,15 +214,22 @@
         </dependency>
         <dependency>
             <groupId>com.github.akarnokd</groupId>
-            <artifactId>rxjava3-bridge</artifactId>
-            <version>3.0.2</version>
+            <artifactId>rxjava3-swing</artifactId>
+            <version>3.1.1</version>
         </dependency>
+        <!-- Chatgpt
         <dependency>
             <groupId>io.github.sashirestela</groupId>
             <artifactId>simple-openai</artifactId>
             <version>${simple-openai.version}</version>
         </dependency>
+        -->
         <!-- OkHttp dependency is optional if you decide to use it with simple-openai -->
+        <dependency>
+            <groupId>io.github.raghul-tech</groupId>
+            <artifactId>swing-markdown-preview-all</artifactId>
+            <version>${swing-markdown-preview.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
@@ -290,6 +298,7 @@
         will occur. "nd4j-native-platform" is for CPUs only (for running on all operating systems).
         -->
         <!-- CUDA ND4J backend (required) -->
+        <!--
         <dependency>
             <groupId>org.nd4j</groupId>
             <artifactId>nd4j-cuda-11.6-platform</artifactId>
@@ -301,7 +310,7 @@
             <version>${dl4j-master.version}</version>
             <classifier>windows-x86_64</classifier>
         </dependency>
-
+-->
         <dependency>
             <groupId>org.nd4j</groupId>
             <artifactId>nd4j-native</artifactId>

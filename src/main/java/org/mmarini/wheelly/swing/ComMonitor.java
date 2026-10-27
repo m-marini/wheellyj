@@ -28,11 +28,12 @@
 
 package org.mmarini.wheelly.swing;
 
+import hu.akarnokd.rxjava3.swing.SwingSchedulers;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.mmarini.Tuple2;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.apis.RobotStatusApi;
 import org.mmarini.wheelly.mqtt.MqttRobot;
+import org.mmarini.wheelly.robots.RobotStatusApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,8 +77,10 @@ public class ComMonitor extends MatrixTable {
                 .subscribe(
                         ignoerd -> {
                             robot.robotDevice().readAllTopics()
+                                    .observeOn(SwingSchedulers.edt())
                                     .subscribe(this::onMessage);
                             robot.qrCameraDevice().readAllTopics()
+                                    .observeOn(SwingSchedulers.edt())
                                     .subscribe(this::onMessage);
                         }
                 );

@@ -35,15 +35,25 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.jetbrains.annotations.NotNull;
-import org.mmarini.Tuple2;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.apis.*;
+import org.mmarini.wheelly.control.ControllerApi;
+import org.mmarini.wheelly.control.RobotStatus;
 import org.mmarini.wheelly.engines.ProcessorContextApi;
 import org.mmarini.wheelly.engines.StateMachineAgent;
 import org.mmarini.wheelly.engines.StateNode;
 import org.mmarini.wheelly.mqtt.MqttRobot;
+import org.mmarini.wheelly.perception.FiducialMarker;
+import org.mmarini.wheelly.perception.GridMap;
+import org.mmarini.wheelly.perception.Perceptor;
+import org.mmarini.wheelly.perception.WorldModel;
+import org.mmarini.wheelly.robots.Obstacle;
+import org.mmarini.wheelly.robots.RobotApi;
+import org.mmarini.wheelly.robots.RobotCommand;
+import org.mmarini.wheelly.robots.SimRobot;
 import org.mmarini.wheelly.swing.*;
+import org.mmarini.wheelly.utils.Angle;
+import org.mmarini.wheelly.utils.AppYaml;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +64,6 @@ import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -65,64 +74,21 @@ import static org.mmarini.wheelly.swing.BaseShape.PATH_COLOR;
 import static org.mmarini.wheelly.swing.Utils.*;
 
 /**
- * Run a test to check for robot environment with random behaviour agent
+ * Runs an execution test session to evaluate the robot environment using a
+ * finite state-machine or random behaviour agent interaction model.
  */
 public class RobotExecutor {
-    public static final String EXECUTOR_SCHEMA_YML = "https://mmarini.org/wheelly/executor-schema-2.0";
+    /**
+     * The configuration target schema resource path URL utilised for validating YAML files.
+     */
+    public static final String EXECUTOR_SCHEMA_YML = "https://mmarini.org/wheelly/executor-schema-3.0";
     private static final Logger logger = LoggerFactory.getLogger(RobotExecutor.class);
-    private final EnvironmentPanel envPanel;
-    private final GridPanel gridPanel;
-    private final DoubleReducedValue reactionRobotTime;
-    private final DoubleReducedValue reactionRealTime;
-    private final ComMonitor comMonitor;
-    private final SensorMonitor sensorMonitor;
-    private final StateEngineMonitor engineMonitor;
-    private final Namespace args;
-    private final WheellyToolBar toolBar;
-    private final AtomicBoolean shuttingDown;
-    private final AtomicBoolean active;
-    private final InferenceConnector inferenceMediator;
-    private RobotApi robot;
-    private long start;
-    private long sessionDuration;
-    private StateMachineAgent agent;
-    private long robotStartTimestamp;
-    private long prevRobotStep;
-    private long prevRealStep;
-    private List<JFrame> allFrames;
-    private RobotControllerApi controller;
-    private WorldModeller modeller;
-    private InferenceFileWriter dumpFile;
 
     /**
-     * Creates the roboto executor
+     * Returns the command line arguments parser configured with application flags.
      *
-     * @param args the line command parsed arguments
+     * @return the initialised {@link ArgumentParser} instance
      */
-    public RobotExecutor(Namespace args) {
-        this.args = requireNonNull(args);
-        this.envPanel = new EnvironmentPanel();
-        this.gridPanel = new GridPanel();
-        this.comMonitor = new ComMonitor();
-        this.toolBar = new WheellyToolBar();
-        this.engineMonitor = new StateEngineMonitor();
-        this.reactionRobotTime = DoubleReducedValue.mean();
-        this.reactionRealTime = DoubleReducedValue.mean();
-        this.robotStartTimestamp = -1;
-        this.prevRobotStep = -1;
-        this.prevRealStep = -1;
-        this.sensorMonitor = new SensorMonitor();
-        this.shuttingDown = new AtomicBoolean(false);
-        this.active = new AtomicBoolean(true);
-        this.inferenceMediator = RobotExecutor.this::onInferenceProcess;
-        toolBar.resetButton().setEnabled(false);
-        toolBar.learningButton().setEnabled(false);
-    }
-
-    /**
-     * Returns the argument parser
-     */
-    @NotNull
     private static ArgumentParser createParser() {
         ArgumentParser parser = ArgumentParsers.newFor(RobotExecutor.class.getName()).build()
                 .defaultHelp(true)
@@ -131,8 +97,6 @@ public class RobotExecutor {
         parser.addArgument("-c", "--config")
                 .setDefault("executor.yml")
                 .help("specify yaml configuration file");
-        parser.addArgument("-d", "--dump")
-                .help("specify inference dump file");
         parser.addArgument("-s", "--silent")
                 .action(Arguments.storeTrue())
                 .help("specify silent shuttingDown (no window messages)");
@@ -150,9 +114,9 @@ public class RobotExecutor {
     }
 
     /**
-     * Application entry point
+     * Application entry point.
      *
-     * @param args command line arguments
+     * @param args the command line arguments array
      */
     public static void main(String[] args) {
         ArgumentParser parser = createParser();
@@ -168,8 +132,140 @@ public class RobotExecutor {
     }
 
     /**
-     * Creates the context.
-     * It consists of the robot, the controller, the modeller and the state machine agent
+     * The graphical panel rendering digital representations of obstacles and sensor sweeps.
+     */
+    private final EnvironmentPanel envPanel;
+
+    /**
+     * The graphical panel representing spatial mapping clusters over a coordinate grid matrix.
+     */
+    private final GridPanel gridPanel;
+
+    /**
+     * The telemetry data metrics tracker computing mean execution delays based on internal robot time clocks.
+     */
+    private final DoubleReducedValue reactionRobotTime;
+
+    /**
+     * The telemetry data metrics tracker computing mean execution delays based on absolute wall-clock time.
+     */
+    private final DoubleReducedValue reactionRealTime;
+
+    /**
+     * The graphical logging display dedicated to low-level communication packet diagnostic streams.
+     */
+    private final ComMonitor comMonitor;
+
+    /**
+     * The graphical panel displaying multi-parameter telemetry matrices.
+     */
+    private final SensorMonitor sensorMonitor;
+
+    /**
+     * The visual dashboard window monitoring state-machine active nodes and context evaluations.
+     */
+    private final StateEngineMonitor engineMonitor;
+
+    /**
+     * The parsed command line namespace context options mapping operational flags.
+     */
+    private final Namespace args;
+
+    /**
+     * The main window graphical toolbar organising manual action buttons.
+     */
+    private final WheellyToolBar toolBar;
+
+    /**
+     * The atomic thread-safe flag locking closing procedures during system de-allocation sweeps.
+     */
+    private final AtomicBoolean shuttingDown;
+
+    /**
+     * The atomic thread-safe flag indicating whether the background evaluation processing loop is active.
+     */
+    private final AtomicBoolean active;
+
+    /**
+     * The interface connection channel abstraction bound to either physical hardware or simulated instances.
+     */
+    private RobotApi robot;
+
+    /**
+     * The wall-clock epoch timestamp marking the exact start moment of the current operational session.
+     */
+    private long start;
+
+    /**
+     * The targeted session duration upper boundary limit transformed into milliseconds (ms).
+     */
+    private long sessionDuration;
+
+    /**
+     * The primary decision agent instance handling state-machine transitions and control logic.
+     */
+    private StateMachineAgent agent;
+
+    /**
+     * The baseline internal timeline reference coordinate marker tracked directly from the robot.
+     */
+    private long robotStartTimestamp;
+
+    /**
+     * The chronological log tracking the previous evaluated execution step in robot time.
+     */
+    private long prevRobotStep;
+
+    /**
+     * The chronological log tracking the previous evaluated execution step in real wall-clock time.
+     */
+    private long prevRealStep;
+
+    /**
+     * The collection registry holding all instantiated graphical window frames.
+     */
+    private List<JFrame> allFrames;
+
+    /**
+     * The supervisor engine managing data routing pipelines across connected actuators and modules.
+     */
+    private ControllerApi controller;
+
+    /**
+     * The sensory integration matrix model structuring dynamic safe navigation cells.
+     */
+    private Perceptor perceptor;
+
+    /**
+     * Initialises a new {@link RobotExecutor} instance, allocating visual panels, tracking structures,
+     * and default state flags.
+     *
+     * @param args the parsed command line configuration parameters namespace options
+     */
+    public RobotExecutor(Namespace args) {
+        this.args = requireNonNull(args);
+        this.envPanel = new EnvironmentPanel();
+        this.gridPanel = new GridPanel();
+        this.comMonitor = new ComMonitor();
+        this.toolBar = new WheellyToolBar();
+        this.engineMonitor = new StateEngineMonitor();
+        this.reactionRobotTime = DoubleReducedValue.mean();
+        this.reactionRealTime = DoubleReducedValue.mean();
+        this.robotStartTimestamp = -1;
+        this.prevRobotStep = -1;
+        this.prevRealStep = -1;
+        this.sensorMonitor = new SensorMonitor();
+        this.shuttingDown = new AtomicBoolean(false);
+        this.active = new AtomicBoolean(true);
+        toolBar.resetButton().setEnabled(false);
+        toolBar.learningButton().setEnabled(false);
+    }
+
+    /**
+     * Initialises the operational context components by parsing configurations, loading schemas,
+     * connecting the robot api layers, and linking the state machine decision agent pipelines.
+     *
+     * @throws Throwable if errors occur during configuration parsing, verification validations, or initialisation sequences
      */
     void createContext() throws Throwable {
         File confFile = new File(this.args.getString("config"));
@@ -181,58 +277,31 @@ public class RobotExecutor {
 
         logger.atInfo().log("Creating controller ...");
         this.controller = AppYaml.controllerFromJson(config);
-        controller.connectRobot(robot);
 
         logger.atInfo().log("Creating world modeller ...");
-        this.modeller = AppYaml.modellerFromJson(config);
-        modeller.setRobotSpec(robot.robotSpec());
-        modeller.connectController(controller);
+        this.perceptor = AppYaml.perceptorFromJson(config);
 
         logger.atInfo().log("Creating agent ...");
         this.agent = StateMachineAgent.fromFile(
                 new File(config.path("agent").asText()));
-        modeller.connect(this::onInferenceProcess);
-        agent.modeller(modeller);
+
+        controller.init(robot);
+        perceptor.init(robot.robotSpec(), controller);
+        perceptor.connectController(controller);
+        perceptor.decisionMaker(this::onDecisionProcess);
+        agent.mapClener(perceptor);
 
         this.sessionDuration = this.args.getLong("time") * 1000;
         logger.atInfo().setMessage("Session will be running for {} sec...").addArgument(sessionDuration).log();
-
-        String dumpFile = this.args.getString("dump");
-        if (dumpFile != null) {
-            File file = new File(dumpFile);
-            file.delete();
-            this.dumpFile = InferenceFileWriter.fromFile(file);
-            logger.atInfo().log("Writing dump {}", file);
-        }
         if (!(this.robot instanceof SimRobot)) {
             toolBar.relocateButton().setEnabled(false);
         }
     }
 
     /**
-     * Handles stop button
-     *
-     * @param actionEvent the action event
-     */
-    private void onStopButton(ActionEvent actionEvent) {
-        active.set(false);
-        toolBar.pauseButton().setEnabled(false);
-        toolBar.playButton().setEnabled(true);
-    }
-
-    /**
-     * Handles the start button event
-     *
-     * @param actionEvent the event
-     */
-    private void onStartButton(ActionEvent actionEvent) {
-        active.set(true);
-        toolBar.pauseButton().setEnabled(true);
-        toolBar.playButton().setEnabled(false);
-    }
-
-    /**
-     * Creates the reactive flows
+     * Initialises the reactive data streams and event flows for the execution session,
+     * binding toolbar action listeners, mapping UI updates to the Swing Event Dispatch Thread (EDT),
+     * and establishing robot-specific logging subscriptions.
      */
     private void createFlows() {
         toolBar.playButton().addActionListener(this::onStartButton);
@@ -241,8 +310,7 @@ public class RobotExecutor {
         toolBar.relocateButton().addActionListener(this::onRelocateButton);
         switch (robot) {
             case SimRobot sim:
-                sim.readObstacleMap()
-                        .subscribe(this::onObstacleMap);
+                sim.onObstacleMap(this::onObstacleMap);
                 break;
             case MqttRobot mqttRobot:
                 comMonitor.addRobot(mqttRobot);
@@ -253,32 +321,40 @@ public class RobotExecutor {
         controller.readShutdown()
                 .subscribe(this::onControllerShutdown);
         controller.readErrors()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(err -> {
                     comMonitor.onError(err);
                     logger.atError().setCause(err).log("Controller error");
                 });
         controller.readControllerStatus()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .map(ControllerStatusMapper::map)
                 .subscribe(this::onControllerStatus);
-        controller.addOnCommand(sensorMonitor::onCommand);
-        controller.addOnRobotStatus(envPanel::robotStatus);
+        controller.addOnRobotStatus(s ->
+                SwingUtilities.invokeLater(() ->
+                        envPanel.robotStatus(s)));
         agent.readState()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onState);
         agent.readStepUp()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onStepUp);
         agent.readTargets()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(t ->
                         envPanel.target(t.orElse(null)));
 
         agent.readPath()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onPath);
         agent.readTriggers()
+                .observeOn(hu.akarnokd.rxjava3.swing.SwingSchedulers.edt())
                 .subscribe(this::onTrigger);
-        modeller.addOnInference(this::onInference);
     }
 
     /**
-     * Creates the multi frames
+     * Initialises and structures individual graphical window frames for multi-window
+     * layout configurations, mapping panels across isolated window instances.
      */
     private void createMultiFrames() {
         JFrame frame = createFrame(Messages.getString("RobotExecutor.title"), new JScrollPane(envPanel));
@@ -293,7 +369,8 @@ public class RobotExecutor {
     }
 
     /**
-     * Creates single application frame
+     * Initialises and structures a single layout tabbed window frame configuration,
+     * grouping panels under independent tab views.
      */
     private void createSingleFrames() {
         JTabbedPane panel = new JTabbedPane();
@@ -308,16 +385,8 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles the clear map button event
-     *
-     * @param actionEvent the event
-     */
-    private void onClearMapButton(ActionEvent actionEvent) {
-        modeller.clearRadarMap();
-    }
-
-    /**
-     * Initializes the user interface
+     * Initialises the complete user interface canvas layout based on command-line flags,
+     * registers reactive frame closing listeners, and anchors window bounds horizontally.
      */
     private void initUI() {
         if (args.getBoolean("windows")) {
@@ -333,17 +402,19 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles the controller shutdown
+     * Handles the clear map action selection events by resetting grid cell radar memories.
+     *
+     * @param actionEvent the action event triggered by the clear map component
+     */
+    private void onClearMapButton(ActionEvent actionEvent) {
+        perceptor.clearRadarMap();
+    }
+
+    /**
+     * Handles the controller shutdown notification by closing open inference file logs
+     * and releasing graphical user interface resources.
      */
     private void onControllerShutdown() {
-        if (dumpFile != null) {
-            try {
-                dumpFile.close();
-                logger.atInfo().log("Closed dump file {}", args.getString("dump"));
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error shuttingDown dump file {}", args.getString("dump"));
-            }
-        }
         allFrames.forEach(JFrame::dispose);
         if (!args.getBoolean("silent")) {
             JOptionPane.showMessageDialog(null,
@@ -352,74 +423,89 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles controller status event
+     * Handles controller status notifications by updating multi-parameter displays
+     * across communication and sensor monitor components.
      *
-     * @param status the controller status string
+     * @param status the raw textual operational state description emitted by the controller
      */
     private void onControllerStatus(String status) {
         sensorMonitor.onControllerStatus(status);
         comMonitor.onControllerStatus(status);
     }
 
-    private RobotCommands onInferenceProcess(WorldModel state) {
-        return active.get()
-                ? agent.onInference(state)
-                : RobotCommands.halt();
-    }
-
     /**
-     * Handles the inference result
+     * Dispatches processed world state properties to the state machine decision agent,
+     * returning a baseline halt instruction if active operation mode is paused.
      *
-     * @param result the inference result
+     * @param state the active structured {@link WorldModel} tracking telemetry metrics
+     * @return the newly formulated composite {@link RobotCommand} order payload
      */
-    private void onInference(Tuple2<WorldModel, RobotCommands> result) {
-        if (dumpFile != null) {
-            WorldModel world = result._1;
-            RobotCommands commands = result._2;
-            try {
-                dumpFile.write(world, commands);
-            } catch (IOException e) {
-                logger.atError().setCause(e).log("Error writing dump file {}", args.getString("dump"));
-                try {
-                    dumpFile.close();
-                } catch (IOException ex) {
-                }
-                dumpFile = null;
-            }
-        }
+    private RobotCommand onDecisionProcess(WorldModel state) {
+        return active.get()
+                ? agent.decide(state)
+                : RobotCommand.halt();
     }
 
     /**
-     * Handles the obstacle map changes
+     * Handles real-time environmental obstacle layer adjustments by synchronising
+     * visual elements over the drawing panel canvas.
      *
-     * @param map the obstacle map
+     * @param map the new global active obstacle field layout collection snapshot
      */
     private void onObstacleMap(Collection<Obstacle> map) {
-        envPanel.obstacles(map);
+        SwingUtilities.invokeLater(() ->
+                envPanel.obstacles(map));
     }
 
     /**
-     * Handles the path event
+     * Handles agent calculated route path changes by re-rendering path vectors
+     * across the environment canvas layout.
      *
-     * @param path the path
+     * @param path the ordered list of spatial coordinate points mapping the route target
      */
     private void onPath(List<Point2D> path) {
         envPanel.path(PATH_COLOR, path.toArray(Point2D[]::new));
     }
 
     /**
-     * Handles state change event
+     * Handles relocate command action events by triggering random safe spatial coordinate
+     * displacement updates across simulated robot environments.
      *
-     * @param state the state
+     * @param actionEvent the action event triggered by the relocate toolbar button component
+     */
+    private void onRelocateButton(ActionEvent actionEvent) {
+        if (this.robot instanceof SimRobot simRobot) {
+            simRobot.safeRelocateRandom();
+        }
+    }
+
+    /**
+     * Handles active execution session play button selection events by unblocking agent
+     * state processing pipelines and modifying toolbar button states.
+     *
+     * @param actionEvent the action event triggered by the toolbar play button component
+     */
+    private void onStartButton(ActionEvent actionEvent) {
+        active.set(true);
+        toolBar.pauseButton().setEnabled(true);
+        toolBar.playButton().setEnabled(false);
+    }
+
+    /**
+     * Handles active agent state tree path changes by updating the state engine logging monitor.
+     *
+     * @param state the newly activated {@link StateNode} metadata profile
      */
     private void onState(StateNode state) {
         engineMonitor.addState(state);
     }
 
     /**
-     * Handles the step-up of agent
+     * Handles agent state validation and step metrics increments, parsing localised sensor arrays,
+     * rendering markers on the visual grid layout, calculating execution latency performance parameters,
+     * and automatically initiating a system shutdown sequence when the session duration threshold is exceeded.
      *
-     * @param ctx the context
+     * @param ctx the active {@link ProcessorContextApi} context instance tracking variables maps
      */
     private void onStepUp(ProcessorContextApi ctx) {
         WorldModel worldModel = ctx.worldModel();
@@ -428,7 +514,7 @@ public class RobotExecutor {
             robotStartTimestamp = status.robotTime();
         }
         sensorMonitor.onStatus(status);
-//      envPanel.robotStatus(status);
+        envPanel.robotStatus(status);
         envPanel.radarMap(worldModel.radarMap());
         envPanel.markers(worldModel.markers().values());
         long robotClock = status.robotTime();
@@ -442,9 +528,9 @@ public class RobotExecutor {
         prevRobotStep = robotClock;
         this.prevRealStep = clock;
 
-        Map<String, LabelMarker> markers = worldModel.markers();
+        Map<Integer, FiducialMarker> markers = worldModel.markers();
         GridMap map = worldModel.gridMap();
-        Complex robotDir = status.direction();
+        Angle robotDir = status.direction();
         /*
          * Transforms the marker locations to grid map coordinates
          */
@@ -465,38 +551,49 @@ public class RobotExecutor {
     }
 
     /**
-     * Handles the trigger event
+     * Handles the pause or stop button action selection events by blocking agent
+     * state inference loops and updating toolbar toggle button states.
      *
-     * @param trigger the trigger
+     * @param actionEvent the action event triggered by the toolbar pause component
+     */
+    private void onStopButton(ActionEvent actionEvent) {
+        active.set(false);
+        toolBar.pauseButton().setEnabled(false);
+        toolBar.playButton().setEnabled(true);
+    }
+
+    /**
+     * Handles state-machine event trigger signals by registering the corresponding
+     * text details inside the engine monitor interface panel.
+     *
+     * @param trigger the identifier text describing the triggered state transition event
      */
     private void onTrigger(String trigger) {
         engineMonitor.addTrigger(trigger);
     }
 
     /**
-     * Handles window shuttingDown
+     * Handles explicit visual frame closing events by executing a global
+     * application shutdown sequence.
      *
-     * @param windowEvent the window event
+     * @param windowEvent the window event triggered by closing any application frame container
      */
     private void onWindowClosing(WindowEvent windowEvent) {
         shutdown();
     }
 
     /**
-     * Starts the executor.
-     * <p>
-     * Creates the agent
-     * Initializes the UI components
-     * Opens the application frames (environment and radar)
+     * Executes the operational loop session by creating the context parameters, initialising reactive
+     * data flows, rendering the graphical user interface elements, writing logs file headers,
+     * and starting the controller execution loop.
+     *
+     * @throws Throwable if errors occur during file parsing, validations, or hardware interface initialisation
      */
     private void run() throws Throwable {
         createContext();
         createFlows();
         initUI();
         toolBar.playButton().setEnabled(false);
-        if (dumpFile != null) {
-            dumpFile.writeHeader(modeller.worldModelSpec(), modeller.radarModeller().topology());
-        }
 
         // Configure the user interface
         logger.atInfo().log("Starting session ...");
@@ -506,14 +603,9 @@ public class RobotExecutor {
     }
 
     /**
-     * @param actionEvent the action event
+     * Triggers a comprehensive transactional shutdown sequence across active interface controllers
+     * if the system has not already initiated resource teardown procedures.
      */
-    private void onRelocateButton(ActionEvent actionEvent) {
-        if (this.robot instanceof SimRobot simRobot) {
-            simRobot.safeRelocateRandom();
-        }
-    }
-
     private void shutdown() {
         if (!shuttingDown.getAndSet(true)) {
             controller.shutdown();

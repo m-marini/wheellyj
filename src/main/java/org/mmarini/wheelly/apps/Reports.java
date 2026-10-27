@@ -1,7 +1,7 @@
 /*
- * Copyright 2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
- * Permission is hereby granted, free of charge, to any person
+ *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
  * restriction, including without limitation the rights to use,
@@ -22,13 +22,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  *
- * END OF TERMS AND CONDITIONS
+ *    END OF TERMS AND CONDITIONS
  *
  */
 
 package org.mmarini.wheelly.apps;
 
-import org.mmarini.rl.agents.BinArrayFile;
+import org.mmarini.wheelly.storage.serde.BinArrayFile;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
@@ -38,6 +38,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.function.UnaryOperator;
+
+import static java.lang.Math.min;
 
 /**
  * Report utility functions
@@ -56,8 +58,9 @@ public interface Reports {
      * @param batchSize the batch size
      */
     static INDArray[] linReport(BinArrayFile file, UnaryOperator<INDArray> preFunc, int n, double gamma, long batchSize) throws IOException {
-        INDArray result = Nd4j.create(n, 5);
         long m = file.size();
+        n = Math.toIntExact(min(m, n));
+        INDArray result = Nd4j.create(n, 5);
         // Fills the bins
         LinearRegression regression = new LinearRegression();
         for (int binIndex = 0; binIndex < n; binIndex++) {
@@ -113,8 +116,9 @@ public interface Reports {
      * @param batchSize the batch size
      */
     static INDArray[] policyReport(BinArrayFile file, int n, double gamma, long batchSize) throws IOException {
-        INDArray result = Nd4j.create(n, 10);
         long m = file.size();
+        n = Math.toIntExact(min(m, n));
+        INDArray result = Nd4j.create(n, 10);
         // Fills the bins
         LinearRegression policyRegression = new LinearRegression();
         LinearRegression entropyRegression = new LinearRegression();
@@ -176,7 +180,7 @@ public interface Reports {
         // Read bin data
         if (file.position() < end) {
             // Computes the number of records to read
-            long numRecords = Math.min(end - file.position(), batchSize);
+            long numRecords = min(end - file.position(), batchSize);
             return file.read(numRecords);
         } else {
             return null;
@@ -216,7 +220,7 @@ public interface Reports {
         public BinStats add(INDArray records) {
             long n = records.size(0);
             numSamples += n;
-            min = Math.min(min, records.minNumber().doubleValue());
+            min = min(min, records.minNumber().doubleValue());
             max = Math.max(max, records.maxNumber().doubleValue());
             sum += records.sumNumber().doubleValue();
             if (Double.isNaN(moveExpMean)) {

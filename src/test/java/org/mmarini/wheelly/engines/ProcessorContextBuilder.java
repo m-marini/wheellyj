@@ -28,8 +28,8 @@
 
 package org.mmarini.wheelly.engines;
 
-import org.mmarini.wheelly.apis.MapCell;
-import org.mmarini.wheelly.apis.WorldModelBuilder;
+import org.mmarini.wheelly.perception.MapCell;
+import org.mmarini.wheelly.perception.WorldModelBuilder;
 
 import java.awt.geom.Point2D;
 import java.util.function.UnaryOperator;
@@ -54,12 +54,26 @@ public class ProcessorContextBuilder {
                 .headAngle(headDeg);
     }
 
-    public ProcessorContextBuilder addMarker(String id, Point2D location) {
+    public ProcessorContextBuilder addMarker(int id, Point2D location) {
         worldModelBuilder.addMarker(id, location);
         return this;
     }
 
-    public ProcessorContextBuilder addMarker(String id, int markerDeg, double markerDistance) {
+    /**
+     * Registers a new fiducial marker within the processor context by delegating the
+     * spatial calculation to the underlying world model builder.
+     * <p>
+     * This method acts as a fluent wrapper, passing the marker's relative angular and
+     * radial positioning data down to update the internal environmental map layout.
+     * </p>
+     *
+     * @param id             the unique identifier to assign to the new marker
+     * @param markerDeg      the relative angle to the marker in degrees, measured from
+     *                       the robot's current heading
+     * @param markerDistance the radial distance from the robot to the physical marker
+     * @return a reference to this builder instance to enable fluent method chaining
+     */
+    public ProcessorContextBuilder addMarker(int id, int markerDeg, double markerDistance) {
         worldModelBuilder.addMarker(id, markerDeg, markerDistance);
         return this;
     }
@@ -98,11 +112,24 @@ public class ProcessorContextBuilder {
         return this;
     }
 
-    public ProcessorContextBuilder frontDistanceAtMarker(String id) {
+    public ProcessorContextBuilder frontDistanceAtMarker(int id) {
         return frontDistanceAtMarker(id, 0);
     }
 
-    public ProcessorContextBuilder frontDistanceAtMarker(String id, double deltaFrontDistance) {
+    /**
+     * Sets the front distance relative to a specific fiducial marker within the processor context.
+     * <p>
+     * This method delegates the distance calculation and assignment directly to the underlying
+     * world model builder. It facilitates the fluent configuration of the processing environment
+     * by wrapping the world model behaviour.
+     * </p>
+     *
+     * @param id                 the unique identifier of the target fiducial marker
+     * @param deltaFrontDistance the offset value used for fine-tuning or modifying the
+     *                           calculated front distance
+     * @return a reference to this builder instance to enable fluent method chaining
+     */
+    public ProcessorContextBuilder frontDistanceAtMarker(int id, double deltaFrontDistance) {
         worldModelBuilder.frontDistanceAtMarker(id, deltaFrontDistance);
         return this;
     }

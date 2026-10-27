@@ -29,10 +29,10 @@
 package org.mmarini.wheelly.objectives;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.mmarini.wheelly.apis.MapCell;
-import org.mmarini.wheelly.apis.RadarMap;
-import org.mmarini.wheelly.apis.WheellyJsonSchemas;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.MapCell;
+import org.mmarini.wheelly.perception.RadarMap;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 
 import java.util.Arrays;

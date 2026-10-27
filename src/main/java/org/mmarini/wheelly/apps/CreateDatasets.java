@@ -36,16 +36,19 @@ import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.mmarini.rl.agents.Agent;
 import org.mmarini.swing.Messages;
-import org.mmarini.wheelly.apis.*;
 import org.mmarini.wheelly.batch.DatasetBuilder;
 import org.mmarini.wheelly.batch.ProgressInfo;
-import org.mmarini.wheelly.envs.DLEnvironment;
-import org.mmarini.wheelly.envs.EnvironmentApi;
-import org.mmarini.wheelly.envs.RewardFunction;
+import org.mmarini.wheelly.behaviours.BehaviourApi;
+import org.mmarini.wheelly.control.ControllerApi;
+import org.mmarini.wheelly.gyms.GymAdapter;
+import org.mmarini.wheelly.gyms.RewardFunction;
+import org.mmarini.wheelly.perception.Perceptor;
+import org.mmarini.wheelly.robots.RobotApi;
+import org.mmarini.wheelly.storage.serde.InferenceFileReader;
+import org.mmarini.wheelly.utils.AppYaml;
+import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
-import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
@@ -68,14 +71,8 @@ import static org.mmarini.yaml.Utils.fromFile;
  */
 public class CreateDatasets {
     public static final int PROGRESS_INTERVAL = 1000;
-    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-0.4";
+    private static final String BATCH_SCHEMA_YML = "https://mmarini.org/wheelly/batch-schema-1.0";
     private static final Logger logger = LoggerFactory.getLogger(CreateDatasets.class);
-    public static final String AGENT_ID = "agent";
-
-    static {
-        try (INDArray ignored = Nd4j.zeros(1)) {
-        }
-    }
 
     private static ArgumentParser createParser() {
         ArgumentParser parser = ArgumentParsers.newFor(CreateDatasets.class.getName()).build()
@@ -116,8 +113,8 @@ public class CreateDatasets {
     protected final Namespace args;
     private final JProgressBar progressBar;
     private final JTextField infoBar;
-    private WorldModeller modeller;
-    private DLEnvironment environment;
+    private Perceptor perceptor;
+    private GymAdapter adapter;
     private JFrame frame;
 
     /**
@@ -153,39 +150,38 @@ public class CreateDatasets {
         JsonNode config = loadConfiguration();
 
         // Creates robot
+        logger.atInfo().log("Creating robot ...");
         RobotApi robot = AppYaml.robotFromJson(config);
 
         // Creates controller
-        RobotControllerApi controller = AppYaml.controllerFromJson(config);
-        controller.connectRobot(robot);
+        logger.atInfo().log("Creating controller ...");
+        ControllerApi controller = AppYaml.controllerFromJson(config);
 
-        // Creates modeller
-        this.modeller = AppYaml.modellerFromJson(config);
-        modeller.setRobotSpec(robot.robotSpec());
-        modeller.connectController(controller);
+        // Creates perceptor
+        logger.atInfo().log("Creating perceptor ...");
+        this.perceptor = AppYaml.perceptorFromJson(config);
+
+        // Create behaviour
+        logger.atInfo().log("Creating behaviour ...");
+        BehaviourApi behaviour = AppYaml.behaviourFromJson(config);
 
         // Creates environment
-        EnvironmentApi env = AppYaml.envFromJson(config);
-        if (env instanceof DLEnvironment we) {
-            this.environment = we;
-        } else {
-            throw new IllegalArgumentException(format(
-                    "Environment must be %s (%s)",
-                    DLEnvironment.class.getSimpleName(),
-                    env.getClass().getSimpleName()
-            ));
-        }
-        environment.connect(modeller);
-        // Load reward function
-        RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
-        environment.setRewardFunc(rewardFunc);
+        logger.atInfo().log("Creating RL adapter ...");
+        this.adapter = AppYaml.adapterFromFile(config);
 
-        // Creates agent
-        BatchAgent agent = (BatchAgent) Agent.fromFile(new File(
-                Locator.locate(AGENT_ID)
-                        .getNode(config)
-                        .asText()));
-        environment.connect(agent);
+        // Creates reward function
+        logger.atInfo().log("Create reward function ...");
+        RewardFunction rewardFunc = AppYaml.rewardFromJson(config);
+
+        controller.init(robot);
+
+        perceptor.init(robot.robotSpec(), controller);
+        perceptor.decisionMaker(behaviour);
+
+        behaviour.decisionMaker(adapter);
+
+        adapter.rewardFunc(rewardFunc);
+        adapter.worldModelSpec(perceptor.worldModelSpec());
 
         // Creates random number generator
         Random random = Nd4j.getRandomFactory().getNewRandomInstance();
@@ -308,9 +304,9 @@ public class CreateDatasets {
         InferenceFileReader reader = InferenceFileReader.fromFile(new File(this.args.getString("dataset")));
         DatasetBuilder builder = new DatasetBuilder(
                 reader,
-                modeller,
+                perceptor,
                 new File(this.args.getString("temp")),
-                environment);
+                adapter);
         builder.readProgressInfo()
                 .subscribeOn(Schedulers.io())
                 .throttleLatest(PROGRESS_INTERVAL, TimeUnit.MILLISECONDS)

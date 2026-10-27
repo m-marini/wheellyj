@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,8 +28,8 @@
 
 package org.mmarini.wheelly.batch;
 
-import org.mmarini.rl.agents.RLDatasetIterator;
-import org.mmarini.wheelly.apis.BatchAgent;
+import org.mmarini.wheelly.rlagents.Agent;
+import org.mmarini.wheelly.rlagents.RLDatasetIterator;
 
 import java.util.Objects;
 
@@ -40,7 +40,7 @@ import static java.util.Objects.requireNonNull;
  * @param datasetIterator dataset iterator
  * @param stop
  */
-public record BatchTrainerStatus(BatchAgent agent, RLDatasetIterator datasetIterator, boolean stop) {
+public record BatchTrainerStatus(Agent agent, RLDatasetIterator datasetIterator, boolean stop) {
     /**
      * Creates the batch trainer status
      *
@@ -48,10 +48,8 @@ public record BatchTrainerStatus(BatchAgent agent, RLDatasetIterator datasetIter
      * @param datasetIterator dataset iterator
      * @param stop            true if stop requested
      */
-    public BatchTrainerStatus(BatchAgent agent, RLDatasetIterator datasetIterator, boolean stop) {
-        this.agent = requireNonNull(agent);
-        this.datasetIterator = datasetIterator;
-        this.stop = stop;
+    public BatchTrainerStatus {
+        requireNonNull(agent);
     }
 
     /**
@@ -59,7 +57,7 @@ public record BatchTrainerStatus(BatchAgent agent, RLDatasetIterator datasetIter
      *
      * @param agent the agent
      */
-    BatchTrainerStatus agent(BatchAgent agent) {
+    BatchTrainerStatus agent(Agent agent) {
         return !Objects.equals(agent, this.agent)
                 ? new BatchTrainerStatus(agent, datasetIterator, stop)
                 : this;

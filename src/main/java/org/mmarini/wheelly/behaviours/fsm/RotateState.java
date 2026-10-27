@@ -1,0 +1,111 @@
+/*
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
+ *
+ *  Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ *    END OF TERMS AND CONDITIONS
+ *
+ */
+
+package org.mmarini.wheelly.behaviours.fsm;
+
+import org.mmarini.wheelly.control.RobotStatus;
+import org.mmarini.wheelly.robots.MotionStatus;
+import org.mmarini.wheelly.utils.Angle;
+
+import static java.util.Objects.requireNonNull;
+
+/**
+ * Represents a finite state machine state that handles the rotational
+ * behaviour of the robot towards a specific target direction.
+ * <p>
+ * This state monitors the robot's orientation relative to a target angle and
+ * optimises transitions upon completion or when an obstacle contact occurs.
+ * </p>
+ */
+public class RotateState extends AbstractContactEventState<MotionStatus> {
+
+    /**
+     * The target motion status specifying the orientation angle.
+     */
+    private MotionStatus targetStatus;
+
+    /**
+     * Initialises a new instance of {@code RotateState}.
+     */
+    public RotateState() {
+    }
+
+    /**
+     * Guards against invalid standard state initialisation by forcing the usage of the
+     * target-specified initialiser.
+     *
+     * @param context the environment finite state machine context
+     * @throws IllegalStateException always thrown to prohibit initialisation without a valid target position
+     */
+    @Override
+    public void init(FSMContext context) {
+        throw new IllegalStateException("Initialization without target position is not allowed");
+    }
+
+    /**
+     * Initialises the state context and sets the target angle for the rotation.
+     *
+     * @param context         the environment finite state machine context
+     * @param targetDirection the target direction angle
+     * @throws NullPointerException if the provided target direction is null
+     */
+    public void init(FSMContext context, Angle targetDirection) {
+        super.init(context);
+        requireNonNull(targetDirection);
+        this.targetStatus = MotionStatus.rotate(targetDirection);
+    }
+
+    /**
+     * Evaluates the environment state on each clock tick and produces the next robot motion status.
+     * <p>
+     * This method verifies if the robot is restricted from turning due to physical obstructions,
+     * immediately triggers a contact event if movement is blocked, checks whether the active orientation
+     * falls within the acceptable target tolerance range, and issues the rotation instruction if required.
+     * </p>
+     *
+     * @param context the current finite state machine context containing the world model
+     * @return the computed {@link MotionStatus} to guide the robot's behaviour
+     */
+    @Override
+    public MotionStatus tick(FSMContext context) {
+        RobotStatus robotStatus = context.worldModel().robotStatus();
+        if (completed()) {
+            return MotionStatus.halt();
+        }
+        if (!robotStatus.canMoveForward() || !robotStatus.canMoveBackward()) {
+            complete(context, MotionStatus.halt());
+            return triggerContact(context, MotionStatus.halt());
+        }
+
+        Angle directionRange = robotStatus.robotSpec().directionRange();
+        if (robotStatus.direction().isCloseTo(targetStatus.targetDir(), directionRange.toIntDeg())) {
+            return complete(context, MotionStatus.halt());
+        }
+        return targetStatus;
+    }
+}
