@@ -108,7 +108,7 @@ public record ObstacleMap(List<ObstacleCell> cells, double gridSize) {
     public static ObstacleMap create(Map<Point, Boolean> points, double gridSize) {
         List<ObstacleCell> cells = MapStream.of(points).tuples()
                 .map(entry ->
-                        new ObstacleCell(entry._1, toPoint(entry._1, gridSize), entry._2))
+                        new ObstacleCell(entry.v1(), toPoint(entry.v1(), gridSize), entry.v2()))
                 .toList();
         return new ObstacleMap(cells, gridSize);
     }

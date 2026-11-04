@@ -168,9 +168,9 @@ public interface Matchers {
                 value1, value2)) {
             @Override
             public boolean matches(Object o) {
-                return o instanceof Tuple2<?, ?> t
-                        && value1.matches(t._1)
-                        && value2.matches(t._2);
+                return o instanceof Tuple2<?, ?>(Object v1, Object v2)
+                        && value1.matches(v1)
+                        && value2.matches(v2);
             }
         };
     }

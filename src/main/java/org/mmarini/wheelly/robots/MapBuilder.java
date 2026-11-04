@@ -233,9 +233,9 @@ public record MapBuilder(int size, double gridSize, AreaExpression exp, Map<Stri
                     String label = MapStream.of(labelAreas)
                             .tuples()
                             .filter(t ->
-                                    t._2.createParser().test(center))
+                                    t.v2().createParser().test(center))
                             .findAny()
-                            .map(Tuple2::getV1)
+                            .map(Tuple2::v1)
                             .orElse(null);
                     return new Obstacle(center, radius, label);
                 })

@@ -78,7 +78,7 @@ public record StateTransition(Pattern trigger, String from, String to, Processor
                                 .propertyNames(root)
                                 .mapKeys(trigger1 -> Tuple2.of(from1, trigger1))
                                 .mapValues((t, l1) ->
-                                        create(root, l1, t._1, t._2))
+                                        create(root, l1, t.v1(), t.v2()))
                                 .toMap()
                 )
                 .values()

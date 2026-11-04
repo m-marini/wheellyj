@@ -536,10 +536,10 @@ public class RLAgentBuilder {
         Locator graphBuilderLocator = locator.path(GRAPH_BUILDER_ID);
         List<Tuple2<String, InputType>> inputs = buildInputs(graphBuilderLocator.path(INPUTS_ID)).toList();
         String[] inputIds = inputs.stream()
-                .map(Tuple2::getV1)
+                .map(Tuple2::v1)
                 .toArray(String[]::new);
         InputType[] inputTypes = inputs.stream()
-                .map(Tuple2::getV2)
+                .map(Tuple2::v2)
                 .toArray(InputType[]::new);
         graphBuilder = graphBuilder
                 .addInputs(inputIds)

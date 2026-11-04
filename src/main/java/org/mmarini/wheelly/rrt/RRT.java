@@ -204,8 +204,8 @@ public class RRT<T> {
             return to;
         }
         for (Tuple2<T, T> edge : edges) {
-            if (edge._1.equals(from)) {
-                if (traverse(acc, edge._2, to) != null) {
+            if (edge.v1().equals(from)) {
+                if (traverse(acc, edge.v2(), to) != null) {
                     acc.add(from);
                     return from;
                 }

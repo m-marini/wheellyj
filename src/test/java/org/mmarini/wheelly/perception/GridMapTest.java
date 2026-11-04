@@ -63,7 +63,7 @@ public class GridMapTest {
         boolean[] mapCells = new boolean[MAP_SIZE * MAP_SIZE];
         mapToIndex(GRID_MAP_TOPOLOGY, stream)
                 .forEach(t ->
-                        mapCells[t._1] = "O".equals(t._2));
+                        mapCells[t.v1()] = "O".equals(t.v2()));
         return Stream.of(mapCells);
     }
 

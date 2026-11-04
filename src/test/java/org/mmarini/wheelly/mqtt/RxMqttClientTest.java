@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.mqtt;
 
 import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.subscribers.TestSubscriber;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -51,18 +50,16 @@ class RxMqttClientTest {
     public static final String MQTT_CLIENT = "testMqtt";
     private static final Logger logger = LoggerFactory.getLogger(RxMqttClientTest.class);
 
-    //@Test
+    @Test
     void testCompletion() throws MqttException {
         RxMqttClient client = RxMqttClient.create(MQTT_BROKER, MQTT_CLIENT, MQTT_USER, MQTT_PASSWORD);
 
         logger.atInfo().log("Subscribing ...");
         TestSubscriber<Tuple2<String, MqttMessage>> sub = new TestSubscriber<>();
-        client.connected().flatMapPublisher(
-                connected ->
-                        connected
-                                ? client.subscribe(MQTT_TOPIC, 0)
-                                : Flowable.empty()
-        ).subscribe(sub);
+        client.connected()
+                .toSingleDefault(true)
+                .flatMapPublisher(x -> client.subscribe(MQTT_TOPIC, 0))
+                .subscribe(sub);
 
         logger.atInfo().log("Connecting ...");
         client.connect()
@@ -106,12 +103,10 @@ class RxMqttClientTest {
 
         logger.atInfo().log("Subscribing ...");
         TestSubscriber<Tuple2<String, MqttMessage>> sub = new TestSubscriber<>();
-        client.connected().flatMapPublisher(
-                connected ->
-                        connected
-                                ? client.subscribe(MQTT_TOPIC, 0)
-                                : Flowable.empty()
-        ).subscribe(sub);
+        client.connected()
+                .toSingleDefault(true)
+                .flatMapPublisher(x -> client.subscribe(MQTT_TOPIC, 0))
+                .subscribe(sub);
 
         logger.atInfo().log("Closing ...");
         client.close();
@@ -119,8 +114,6 @@ class RxMqttClientTest {
         logger.atInfo().log("Closed");
         Completable.timer(10, TimeUnit.MILLISECONDS).blockingAwait();
 
-        sub.assertComplete();
-        sub.assertNoErrors();
-        sub.assertNoValues();
+        sub.assertError(IllegalStateException.class);
     }
 }

@@ -44,12 +44,11 @@ public class MockMqttClient implements Closeable {
     public static final String MQTT_BROKER = "tcp://localhost:1883";
     public static final String MQTT_USER = "wheellyj";
     public static final String MQTT_PASSWORD = "wheellyj";
-    private static final Logger logger = LoggerFactory.getLogger(MockMqttClient.class);
-    public static final String COMMAND_TOPIC = "cmd/+/+";
+    public static final String COMMAND_TOPIC = "cmd/#";
     public static final String SENSOR_TOPIC = "sens/+";
+    private static final Logger logger = LoggerFactory.getLogger(MockMqttClient.class);
     private static final String CAMERA_SENSOR_TOPIC = "sens/wheellycam";
     private static final String QR_SENSOR_TOPIC = "sens/wheellyqr";
-    private static final String ROBOT_SENSOR_TOPIC = "sens/wheelly";
     private final TestSubscriber<Tuple2<String, MqttMessage>> messagesSub;
     private final RxMqttClient client;
     private Flowable<Tuple2<String, MqttMessage>> commandFlow;
@@ -57,18 +56,6 @@ public class MockMqttClient implements Closeable {
     public MockMqttClient() throws MqttException {
         this.client = RxMqttClient.create(MQTT_BROKER, null, MQTT_USER, MQTT_PASSWORD);
         messagesSub = new TestSubscriber<>();
-    }
-
-    public Completable publish(String s, String message) throws MqttException {
-        return publish(s, new MqttMessage(message.getBytes()));
-    }
-
-    public Completable publish(String s, MqttMessage message) throws MqttException {
-        return client.publish(s, message);
-    }
-
-    Flowable<Tuple2<String, MqttMessage>> readCommands() {
-        return commandFlow;
     }
 
     @Override
@@ -79,6 +66,18 @@ public class MockMqttClient implements Closeable {
         } catch (MqttException e) {
             logger.atError().setCause(e).log("Error shuttingDown mqtt");
         }
+    }
+
+    public Completable publish(String s, MqttMessage message) throws MqttException {
+        return client.publish(s, message);
+    }
+
+    public Completable publish(String s, String message) throws MqttException {
+        return publish(s, new MqttMessage(message.getBytes()));
+    }
+
+    Flowable<Tuple2<String, MqttMessage>> readCommands() {
+        return commandFlow;
     }
 
     public void sendCamera(String dataType, String data) {
@@ -98,7 +97,7 @@ public class MockMqttClient implements Closeable {
     public void sendRobot(String dataType, String data) {
         logger.atDebug().log("Sending {} {} ...", dataType, data);
         if (client.isConnected()) {
-            client.publish(ROBOT_SENSOR_TOPIC + "/" + dataType, new MqttMessage(data.getBytes())).blockingAwait();
+            client.publish("sens/" + dataType, new MqttMessage(data.getBytes())).blockingAwait();
         }
     }
 

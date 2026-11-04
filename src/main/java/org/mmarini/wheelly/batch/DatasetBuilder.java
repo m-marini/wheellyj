@@ -139,8 +139,8 @@ public class DatasetBuilder {
                     // Read record
                     Tuple2<MacroActionsState, MacroAction> record = reader.readMacroActionStep();
                     n++;
-                    MacroActionsState state = record._1;
-                    MacroAction action = record._2;
+                    MacroActionsState state = record.v1();
+                    MacroAction action = record.v2();
                     // Write states
                     WorldModel w1 = perceptor.updateForInference(state.worldModel());
                     MacroActionsState s1 = new MacroActionsState(w1, state.moveActionId(), state.headActionId());

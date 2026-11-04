@@ -31,7 +31,6 @@ package org.mmarini.wheelly.apps;
 import org.mmarini.wheelly.storage.serde.BinArrayFile;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,15 +134,16 @@ public interface Reports {
             while ((batchRecords1 = readBin(file, end, batchSize)) != null) {
                 // Computes the number of records to read
                 try (INDArray batchRecords = batchRecords1) {
-                    INDArray max = batchRecords.get(NDArrayIndex.all(), NDArrayIndex.indices(0));
+                    INDArray max = batchRecords.max(true, 1);
                     try (INDArray log10 = Transforms.log(max, 10, true)) {
                         policyStats.add(log10);
                         policyRegression.add(log10);
                     }
                     // Computes the normalised entropy
-                    INDArray h = batchRecords.get(NDArrayIndex.all(), NDArrayIndex.indices(1));
-                    entropyStats.add(h);
-                    entropyRegression.add(h);
+                    try (INDArray h = batchRecords.entropy(1)) {
+                        entropyStats.add(h);
+                        entropyRegression.add(h);
+                    }
                     numActions = batchRecords.getInt(0, 2);
                 }
             }

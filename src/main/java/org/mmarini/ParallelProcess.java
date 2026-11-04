@@ -202,9 +202,9 @@ public interface ParallelProcess {
                     .runOn(scheduler)
                     .map(t -> {
                         try {
-                            return t.setV2(t._2.get());
+                            return t.v2(t.v2().get());
                         } catch (Throwable ex) {
-                            logger.atError().setCause(ex).log("Error processing task {}", t._1);
+                            logger.atError().setCause(ex).log("Error processing task {}", t.v1());
                             throw ex;
                         }
                     })
@@ -253,12 +253,12 @@ public interface ParallelProcess {
         public Single<List<V>> build() {
             return Flowable.fromIterable(zipWithIndex(tasks).toList()).parallel().runOn(scheduler).map(ti -> {
                 try {
-                    return ti.setV2(ti._2.get());
+                    return ti.v2(ti.v2().get());
                 } catch (Throwable ex) {
-                    logger.atError().setCause(ex).log("Error processing task {}", ti._1);
+                    logger.atError().setCause(ex).log("Error processing task {}", ti.v1());
                     throw ex;
                 }
-            }).sequential().sorted(Comparator.comparing(Tuple2::getV1)).map(Tuple2::getV2).toList();
+            }).sequential().sorted(Comparator.comparing(Tuple2::v1)).map(Tuple2::v2).toList();
         }
 
         /**

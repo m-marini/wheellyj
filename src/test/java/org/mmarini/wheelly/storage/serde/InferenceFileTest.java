@@ -202,7 +202,7 @@ class InferenceFileTest {
             Tuple2<MacroActionsState, MacroAction> step2 = reader.readMacroActionStep();
             assertThrows(EOFException.class, reader::readByte);
 
-            MacroActionsState state = step1._1;
+            MacroActionsState state = step1.v1();
             WorldModel model = state.worldModel();
             RadarMap radarRead = model.radarMap();
             assertEquals(MODEL.robotStatus(), model.robotStatus());
@@ -215,10 +215,10 @@ class InferenceFileTest {
             assertArrayEquals(RADAR.cells(), radarRead.cells());
             assertEquals(MACRO_ENV_STATE.headActionId(), state.headActionId());
             assertEquals(MACRO_ENV_STATE.moveActionId(), state.moveActionId());
-            assertEquals(AGENT_ACTION, step1._2);
+            assertEquals(AGENT_ACTION, step1.v2());
 
 
-            state = step2._1;
+            state = step2.v1();
             model = state.worldModel();
             radarRead = model.radarMap();
             assertEquals(MODEL.robotStatus(), model.robotStatus());
@@ -231,7 +231,7 @@ class InferenceFileTest {
             assertArrayEquals(RADAR.cells(), radarRead.cells());
             assertEquals(MACRO_ENV_STATE.headActionId(), state.headActionId());
             assertEquals(MACRO_ENV_STATE.moveActionId(), state.moveActionId());
-            assertEquals(AGENT_ACTION, step2._2);
+            assertEquals(AGENT_ACTION, step2.v2());
         }
     }
 

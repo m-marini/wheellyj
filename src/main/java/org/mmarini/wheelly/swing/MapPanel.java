@@ -82,7 +82,8 @@ public class MapPanel extends LayeredCanvas {
     public void edges(Color colour, Collection<Tuple2<Point2D, Point2D>> edges) {
         BaseShape shape = edges != null
                 ? CompositeShape.create(edges.stream()
-                .map(t -> createPolygon(colour, BORDER_STROKE, false, null, t._1, t._2))
+                .map(t -> createPolygon(colour, BORDER_STROKE, false, null,
+                        t.v1(), t.v2()))
                 .toList())
                 : null;
         setLayer(Layers.EDGES.ordinal(), shape);

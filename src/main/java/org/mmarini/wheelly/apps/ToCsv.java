@@ -121,15 +121,15 @@ public class ToCsv {
         Map<String, BinArrayFile> sources = KeyFileMap.create(new File(args.getString("sourcePath")), "");
         List<Action> tasks = MapStream.of(sources).tuples()
                 .<Action>map(t -> () -> {
-                    CSVWriter output = CSVWriter.createByKey(destPath, t._1);
+                    CSVWriter output = CSVWriter.createByKey(destPath, t.v1());
                     logger.atInfo().log("Converting {} to {} ...",
-                            t._2.file(),
+                            t.v2().file(),
                             output.file());
                     Batches.copy(output,
-                            t._2,
+                            t.v2(),
                             batchSize);
                     logger.atInfo().log("Converted {} to {}",
-                            t._2.file(),
+                            t.v2().file(),
                             output.file());
                 })
                 .toList();

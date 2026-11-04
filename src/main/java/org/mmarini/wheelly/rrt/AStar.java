@@ -134,11 +134,11 @@ public class AStar<T> {
             logger.atDebug().log("cheaper");
             openSet.stream()
                     .map(p -> Tuple2.of(p, fScores.get(p)))
-                    .sorted(Comparator.comparingDouble(Tuple2::getV2))
+                    .sorted(Comparator.comparingDouble(Tuple2::v2))
                     .limit(5)
                     .forEach(t ->
                             logger.atDebug()
-                                    .log("  {} fscore={}", t._1, t._2));
+                                    .log("  {} fscore={}", t.v1(), t.v2()));
         }
         return result;
     }

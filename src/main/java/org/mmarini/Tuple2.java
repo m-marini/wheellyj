@@ -1,7 +1,6 @@
 package org.mmarini;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.function.Function;
 import java.util.stream.Collector;
@@ -9,130 +8,116 @@ import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
-public class Tuple2<T1, T2> {
+/**
+ * Represents an immutable pair consisting of two elements.
+ *
+ * @param <T1> the type of the first value
+ * @param <T2> the type of the second value
+ * @param v1   the first value
+ * @param v2   the second value
+ */
+public record Tuple2<T1, T2>(T1 v1, T2 v2) {
 
     /**
-     * Returns the function to map the second value
+     * Returns a function to map the first value of a Tuple2.
      *
      * @param mapper the mapper function
-     * @param <T1>   the value 1 type
-     * @param <T2>   the value 2 type
-     * @param <R>    the return value 1 type
+     * @param <T1>   the original type of the first value
+     * @param <T2>   the type of the second value
+     * @param <R>    the new type of the first value
+     * @return the mapping function
      */
     public static <T1, T2, R> Function<Tuple2<T1, T2>, Tuple2<R, T2>> map1(Function<T1, R> mapper) {
-        return t -> t.setV1(mapper.apply(t._1));
+        return t -> t.v1(mapper.apply(t.v1));
     }
 
     /**
-     * Returns the function to map the second value
+     * Returns a function to map the second value of a Tuple2.
      *
      * @param mapper the mapper function
-     * @param <T1>   the value 1 type
-     * @param <T2>   the value 2 type
-     * @param <R>    the return value 2 type
+     * @param <T1>   the type of the first value
+     * @param <T2>   the original type of the second value
+     * @param <R>    the new type of the second value
+     * @return the mapping function
      */
     public static <T1, T2, R> Function<Tuple2<T1, T2>, Tuple2<T1, R>> map2(Function<T2, R> mapper) {
-        return t -> t.setV2(mapper.apply(t._2));
+        return t -> t.v2(mapper.apply(t.v2));
     }
 
     /**
-     * Returns the pair of value
+     * Returns a new Tuple2 consisting of the specified values.
      *
-     * @param v1   first value
-     * @param v2   second value
-     * @param <T1> first value type
-     * @param <T2> second value type
+     * @param v1   the first value
+     * @param v2   the second value
+     * @param <T1> the type of the first value
+     * @param <T2> the type of the second value
+     * @return the created Tuple2 instance
      */
     public static <T1, T2> Tuple2<T1, T2> of(T1 v1, T2 v2) {
         return new Tuple2<>(v1, v2);
     }
 
     /**
-     * Returns the function swapping the value of tuple2
+     * Returns a function that swaps the elements of a Tuple2.
      *
-     * @param <T1> the type of first parameter
-     * @param <T2> the type of second parameter
+     * @param <T1> the original type of the first value
+     * @param <T2> the original type of the second value
+     * @return the swapping function
      */
     public static <T1, T2> Function<Tuple2<T1, T2>, Tuple2<T2, T1>> swap() {
-        return t -> Tuple2.of(t._2, t._1);
+        return t -> Tuple2.of(t.v2, t.v1);
     }
 
     /**
-     * Returns the collector to Map
+     * Returns a collector that accumulates Tuple2 elements into a Map.
      *
      * @param <K> the key type
      * @param <V> the value type
+     * @return the collector instance
      */
     public static <K, V> Collector<Tuple2<K, V>, ?, Map<K, V>> toMap() {
-        return Collectors.toMap(Tuple2<K, V>::getV1, Tuple2<K, V>::getV2);
+        return Collectors.toMap(Tuple2::v1, Tuple2::v2);
     }
 
-    public final T1 _1;
-    public final T2 _2;
-
     /**
-     * Creates a Tuple2
+     * Creates a Tuple2 instance and validates that both values are non-null.
      *
-     * @param v1 first value
-     * @param v2 second value
+     * @param v1 the first value
+     * @param v2 the second value
+     * @throws NullPointerException if either v1 or v2 is null
      */
-    public Tuple2(T1 v1, T2 v2) {
-        this._1 = requireNonNull(v1);
-        this._2 = requireNonNull(v2);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Tuple2<?, ?> tuple2 = (Tuple2<?, ?>) o;
-        return Objects.equals(_1, tuple2._1) && Objects.equals(_2, tuple2._2);
-    }
-
-    /**
-     * Returns first value
-     */
-    public T1 getV1() {
-        return _1;
-    }
-
-    /**
-     * Returns a tuple with changed first value
-     *
-     * @param v1  the first value
-     * @param <R> the type of first value
-     */
-    public <R> Tuple2<R, T2> setV1(R v1) {
-        return new Tuple2<>(v1, _2);
-    }
-
-    /**
-     * Returns second value
-     */
-    public T2 getV2() {
-        return _2;
-    }
-
-    /**
-     * Returns a tuple with changed second value
-     *
-     * @param v2  the second value
-     * @param <R> the type of second value
-     */
-    public <R> Tuple2<T1, R> setV2(R v2) {
-        return new Tuple2<>(_1, v2);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(_1, _2);
+    public Tuple2 {
+        requireNonNull(v1);
+        requireNonNull(v2);
     }
 
     @Override
     public String toString() {
         return new StringJoiner(", ", "(", ")")
-                .add(String.valueOf(_1))
-                .add(String.valueOf(_2))
+                .add(String.valueOf(v1))
+                .add(String.valueOf(v2))
                 .toString();
+    }
+
+    /**
+     * Returns a new tuple with a modified first value.
+     *
+     * @param v1  the new first value
+     * @param <R> the new type of the first value
+     * @return a new Tuple2 containing the updated value
+     */
+    public <R> Tuple2<R, T2> v1(R v1) {
+        return new Tuple2<>(v1, v2);
+    }
+
+    /**
+     * Returns a new tuple with a modified second value.
+     *
+     * @param v2  the new second value
+     * @param <R> the new type of the second value
+     * @return a new Tuple2 containing the updated value
+     */
+    public <R> Tuple2<T1, R> v2(R v2) {
+        return new Tuple2<>(this.v1, v2);
     }
 }

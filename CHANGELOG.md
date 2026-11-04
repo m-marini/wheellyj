@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Issue [#660](https://github.com/m-marini/wheellyj/issues/660): Multi-Task Hierarchical Environment
 - Issue [#663](https://github.com/m-marini/wheellyj/issues/663): Head absolute target
 
+## Changed
+
+- Issue [#667](https://github.com/m-marini/wheellyj/issues/667): Replace Tuple2 with Java record
+
 ## [[0.28.1]](https://github.com/m-marini/wheellyj/releases/tag/v0.28.1) 2026-09-17
 
 ### Add

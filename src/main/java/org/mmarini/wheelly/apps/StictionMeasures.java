@@ -188,13 +188,13 @@ public class StictionMeasures {
                 })
                 .zipWith(IntStream.range(0, n).boxed().toList(), Tuple2::of)
                 .flatMap(t -> {
-                    Matcher matcher = t._1;
+                    Matcher matcher = t.v1();
                     if (matcher.matches()) {
                         int id = Integer.parseInt(matcher.group(1));
                         int time = Integer.parseInt(matcher.group(2));
                         int pulses = Integer.parseInt(matcher.group(3));
                         int power = Integer.parseInt(matcher.group(4));
-                        return id == t._2
+                        return id == t.v2()
                                 ? Flowable.just(new int[]{time, pulses, power})
                                 : Flowable.error(new IllegalArgumentException("Wrong data sequence"));
                     } else {

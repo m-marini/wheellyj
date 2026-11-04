@@ -51,8 +51,6 @@ import static org.mmarini.wheelly.TestFunctions.jsonFileArguments;
 
 class GeometryTest {
 
-    public static final double EPSILON = 1e-3;
-
     static Stream<Arguments> computeFilteredSafePointsDataset() throws IOException {
         return jsonFileArguments("/org/mmarini/wheelly/apis/GeometryTest/computeFilteredSafePoints.yml")
                 .addPoint("center")
@@ -173,15 +171,15 @@ class GeometryTest {
 
         // Then ...
         assertNotNull(result);
-        assertThat(result.getFirst()._1, pointCloseTo(0, 0, 1e-3));
-        assertThat(result.get(1)._1, pointCloseTo(-1, 0, 1e-3));
-        assertThat(result.get(2)._1, pointCloseTo(0, 0.5, 1e-3));
-        assertThat(result.get(3)._1, pointCloseTo(2, 0, 1e-3));
+        assertThat(result.getFirst().v1(), pointCloseTo(0, 0, 1e-3));
+        assertThat(result.get(1).v1(), pointCloseTo(-1, 0, 1e-3));
+        assertThat(result.get(2).v1(), pointCloseTo(0, 0.5, 1e-3));
+        assertThat(result.get(3).v1(), pointCloseTo(2, 0, 1e-3));
 
-        assertThat(result.getFirst()._2.sub(Angle.DEG180).abs().toDeg(), lessThan(1.0));
-        assertThat(result.get(1)._2.sub(Angle.DEG270).abs().toDeg(), lessThan(1.0));
-        assertThat(result.get(2)._2.sub(Angle.DEG0).abs().toDeg(), lessThan(1.0));
-        assertThat(result.get(3)._2.sub(Angle.DEG90).abs().toDeg(), lessThan(1.0));
+        assertThat(result.getFirst().v2().sub(Angle.DEG180).abs().toDeg(), lessThan(1.0));
+        assertThat(result.get(1).v2().sub(Angle.DEG270).abs().toDeg(), lessThan(1.0));
+        assertThat(result.get(2).v2().sub(Angle.DEG0).abs().toDeg(), lessThan(1.0));
+        assertThat(result.get(3).v2().sub(Angle.DEG90).abs().toDeg(), lessThan(1.0));
     }
 
     @Test
@@ -207,7 +205,7 @@ class GeometryTest {
         // Then ...
         assertEquals(expected.size(), result.size());
         for (int i = 0; i < expected.size(); i++) {
-            assertThat(result.get(i)._1, pointCloseTo(expected.get(i), 1e-3));
+            assertThat(result.get(i).v1(), pointCloseTo(expected.get(i), 1e-3));
         }
     }
 
@@ -253,7 +251,7 @@ class GeometryTest {
 
         List<Tuple2<Point2D, Angle>> result1 = Geometry.computeAllSafePoints(center, vertices).toList();
 
-        Point2D nearest = result1.getFirst()._1;
+        Point2D nearest = result1.getFirst().v1();
         double minDistance = nearest.distance(center);
         vertices.stream().skip(1).forEach(p -> assertThat(p.distance(center), lessThanOrEqualTo(3.001 - minDistance)));
 

@@ -37,7 +37,6 @@ import java.util.function.Supplier;
 
 public class MarkersBuilder {
     public static final double GRID_SIZE = 0.2;
-    public static final double EPSILON = 1e-5;
 
     private final List<Supplier<List<FiducialMarker>>> markerBuilders;
     private final long cleanTime;
@@ -81,9 +80,9 @@ public class MarkersBuilder {
         return addMarkers(() ->
                 RadarMapBuilder.parseMap(gridSize, mapText)
                         .filter(t ->
-                                RadarMapBuilder.isMarker(t._2))
+                                RadarMapBuilder.isMarker(t.v2()))
                         .map(t ->
-                                new FiducialMarker(t._2.charAt(0) - '0', t._1, 1, time, cleanTime))
+                                new FiducialMarker(t.v2().charAt(0) - '0', t.v1(), 1, time, cleanTime))
                         .toList());
     }
 
