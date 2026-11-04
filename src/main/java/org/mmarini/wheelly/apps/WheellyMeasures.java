@@ -256,12 +256,12 @@ public class WheellyMeasures {
                         type.equals(t.type()))
                 .tuples()
                 .sorted((a, b) ->
-                        -VOLTAGE_KEY_COMPARATOR.compare(a.getV1(), b.getV1()))
+                        -VOLTAGE_KEY_COMPARATOR.compare(a.v1(), b.v1()))
                 .forEach(t -> {
                     Object[] row = new Object[]{
-                            (int) round((double) t._1.voltage() / MAX_POWER),
-                            t._1.power(),
-                            t._2.speed()};
+                            (int) round((double) t.v1().voltage() / MAX_POWER),
+                            t.v1().power(),
+                            t.v2().speed()};
                     table.addRow(row);
                 });
     }

@@ -192,10 +192,10 @@ public class TrajectoryDataGenerator {
         // Computes the deltas and the average rewards
         Tuple2<INDArray, Float> rlData = computeTDErrors(rewards, predictions[criticIdx], avgReward);
         INDArray[] labels;
-        try (INDArray deltas = rlData._1) {
+        try (INDArray deltas = rlData.v1()) {
             // Creates the training data
             labels = createLabels(predictions, deltas);
-            avgReward = rlData._2;
+            avgReward = rlData.v2();
             // kpis
             if (onKpis != null) {
                 try (TrainingKpis kpis = TrainingKpis.create(network.getConfiguration().getNetworkOutputs(), predictions, deltas, avgReward)) {

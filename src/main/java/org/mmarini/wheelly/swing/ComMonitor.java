@@ -118,12 +118,12 @@ public class ComMonitor extends MatrixTable {
      * @param message the message (topic, message)
      */
     public void onMessage(Tuple2<String, MqttMessage> message) {
-        logger.atDebug().log("message from {}", message._1);
-        Matcher m = NAME_PATTERN.matcher(message._1);
+        logger.atDebug().log("message from {}", message.v1());
+        Matcher m = NAME_PATTERN.matcher(message.v1());
         if (m.matches()) {
             String key = "cmd".equals(m.group(1))
                     ? COMMANDS_KEY : SENSORS_KEY;
-            String raw = m.group(2) + " " + new String(message._2.getPayload());
+            String raw = m.group(2) + " " + new String(message.v2().getPayload());
             printf(key, raw);
         }
     }

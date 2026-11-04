@@ -99,8 +99,8 @@ class RemoteDeviceTest {
         busSub.assertValueCount(1);
 
         List<Tuple2<String, MqttMessage>> values = busSub.values();
-        assertEquals(commandTopic, values.getFirst()._1);
-        assertArrayEquals(PAYLOAD.getBytes(), values.getFirst()._2.getPayload());
+        assertEquals(commandTopic, values.getFirst().v1());
+        assertArrayEquals(PAYLOAD.getBytes(), values.getFirst().v2().getPayload());
     }
 
     @Test
@@ -147,8 +147,8 @@ class RemoteDeviceTest {
         busSub.assertValueCount(1);
 
         List<Tuple2<String, MqttMessage>> values = busSub.values();
-        assertEquals(commandTopic, values.getFirst()._1);
-        assertArrayEquals(PAYLOAD.getBytes(), values.getFirst()._2.getPayload());
+        assertEquals(commandTopic, values.getFirst().v1());
+        assertArrayEquals(PAYLOAD.getBytes(), values.getFirst().v2().getPayload());
     }
 
     @Test
@@ -195,8 +195,8 @@ class RemoteDeviceTest {
         busSub.assertValueCount(1);
 
         List<Tuple2<String, MqttMessage>> values = busSub.values();
-        assertEquals(commandTopic, values.getFirst()._1);
-        assertArrayEquals(PAYLOAD.getBytes(), values.getFirst()._2.getPayload());
+        assertEquals(commandTopic, values.getFirst().v1());
+        assertArrayEquals(PAYLOAD.getBytes(), values.getFirst().v2().getPayload());
     }
 
     @Test
@@ -226,8 +226,8 @@ class RemoteDeviceTest {
         busSub.assertValueCount(1);
 
         List<Tuple2<String, MqttMessage>> values = busSub.values();
-        assertEquals(commandTopic, values.getFirst()._1);
-        assertArrayEquals(PAYLOAD.getBytes(), values.getFirst()._2.getPayload());
+        assertEquals(commandTopic, values.getFirst().v1());
+        assertArrayEquals(PAYLOAD.getBytes(), values.getFirst().v2().getPayload());
     }
 
     @Test

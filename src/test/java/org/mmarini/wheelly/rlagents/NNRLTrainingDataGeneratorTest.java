@@ -94,8 +94,8 @@ class NNRLTrainingDataGeneratorTest {
         INDArray rewards = Nd4j.ones(4, 1);
         INDArray prediction = Nd4j.ones(BATCH_SIZE, 1).muli(0.5);
         Tuple2<INDArray, Float> t = NNRLTrainingDataGenerator.processRewards(rewards, prediction, REWARD0, 0.5F, 1);
-        INDArray deltas = t._1;
-        float avg = t._2;
+        INDArray deltas = t.v1();
+        float avg = t.v2();
         assertEquals(0.9375F, avg);
         assertThat(deltas, matrixCloseTo(new long[]{4, 1}, EPSILON,
                 1, 0.5F, 0.25F, 0.125F));

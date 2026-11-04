@@ -271,9 +271,9 @@ public class MDPDLTest {
             List<ExecutionResult> traj = new ArrayList<>();
             for (int i = 0; i < TRAJECTORY_SIZE; i++) {
                 Tuple2<Integer, ExecutionResult> t = mdp.interact(s0, fAction, random);
-                ExecutionResult result = t._2;
+                ExecutionResult result = t.v2();
                 traj.add(result);
-                s0 = t._1;
+                s0 = t.v1();
             }
             logTrajectory(traj);
 

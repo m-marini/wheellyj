@@ -337,8 +337,8 @@ public class MqttRobot implements RobotApi {
                 s.setRobotConfiguring().configIndex(0));
         states.onNext(status.get());
         if (!st.robotConfiguring() && !st.closed() && st.connected()) {
-            // if not robotConfiguring
-            // Send configure command
+            // not robotConfiguring
+            //Send configure command
             configureRobot();
         }
     }
@@ -528,6 +528,7 @@ public class MqttRobot implements RobotApi {
      *
      * @param message the message
      */
+
     private void onMotionMessage(WheellyMotionMessage message) {
         for (Consumer<WheellyMotionMessage> callback : onMotions) {
             callback.accept(message);

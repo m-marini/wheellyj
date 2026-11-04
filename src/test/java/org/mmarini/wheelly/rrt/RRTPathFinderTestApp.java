@@ -122,8 +122,8 @@ public class RRTPathFinderTestApp {
 
     private static Point2D readRobotLocation(String map) {
         return RadarMapBuilder.parseMap(GRID_SIZE, map)
-                .filter(t -> ROBOT_ID.equals(t._2))
-                .map(Tuple2::getV1)
+                .filter(t -> ROBOT_ID.equals(t.v2()))
+                .map(Tuple2::v1)
                 .findAny()
                 .orElse(new Point2D.Double());
 

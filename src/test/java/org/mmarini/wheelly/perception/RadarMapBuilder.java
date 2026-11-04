@@ -45,7 +45,6 @@ import static org.mmarini.Utils.mul;
 
 public class RadarMapBuilder {
     public static final double GRID_SIZE = 0.2;
-    public static final double EPSILON = 1e-5;
     public static final GridTopology TOPOLOGY = GridTopology.create(new Point2D.Double(), 51, 51, GRID_SIZE);
     public static final int DECAY = 1000;
     public static final String UNKNOWN_ID = ".";
@@ -65,8 +64,8 @@ public class RadarMapBuilder {
      */
     public static Stream<Tuple2<Point2D, String>> parseMap(double gridSize, String mapText) {
         List<Tuple2<Point, String>> result = parseMap(mapText);
-        int maxX = result.stream().mapToInt(t -> t._1.x).max().orElse(0);
-        int maxY = result.stream().mapToInt(t -> t._1.y).max().orElse(0);
+        int maxX = result.stream().mapToInt(t -> t.v1().x).max().orElse(0);
+        int maxY = result.stream().mapToInt(t -> t.v1().y).max().orElse(0);
         Point2D p0 = new Point2D.Double(
                 -gridSize * maxX / 2,
                 -gridSize * maxY / 2);
@@ -103,8 +102,8 @@ public class RadarMapBuilder {
     public static Stream<Tuple2<Integer, String>> parseMapByIndices(GridTopology topology, String mapText) {
         return parseMap(topology.gridSize(), mapText)
                 .map(t ->
-                        t.setV1(topology.indexOf(t._1)))
-                .filter(t -> t._1 >= 0);
+                        t.v1(topology.indexOf(t.v1())))
+                .filter(t -> t.v1() >= 0);
     }
 
     private UnaryOperator<RadarMap> radarMapper;
@@ -226,14 +225,14 @@ public class RadarMapBuilder {
             GridTopology topology1 = radarMap.topology();
             List<Tuple2<Integer, UnaryOperator<MapCell>>> labels = parseMapByIndices(topology1, mapText)
                     .map(t ->
-                            t.setV2(cellMappers.apply(t._2))
+                            t.v2(cellMappers.apply(t.v2()))
                     )
                     .toList();
             // Creates the resulting cell array
             MapCell[] cells = Arrays.copyOf(radarMap.cells(), radarMap.cells().length);
             // Apply the cell mappers for each index
             for (Tuple2<Integer, UnaryOperator<MapCell>> t : labels) {
-                cells[t._1] = t._2.apply(cells[t._1]);
+                cells[t.v1()] = t.v2().apply(cells[t.v1()]);
             }
             return new RadarMap(topology1, cells, radarMap.cleanTimestamp());
         });

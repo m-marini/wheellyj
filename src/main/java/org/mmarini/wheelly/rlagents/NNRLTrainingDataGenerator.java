@@ -220,7 +220,7 @@ public record NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Fl
      * @return a stream containing only policy predictions
      */
     private static Stream<Tuple2<String, INDArray>> toPolicy(Stream<Tuple2<String, INDArray>> prediction) {
-        return prediction.filter(t -> !CRITIC_ID.equals(t._1));
+        return prediction.filter(t -> !CRITIC_ID.equals(t.v1()));
     }
 
     /**
@@ -263,10 +263,10 @@ public record NNRLTrainingDataGenerator(ComputationGraph network, Map<String, Fl
      */
     private Map<String, INDArray> chooseAction(Random random, Stream<Tuple2<String, INDArray>> policies) {
         return policies.map(t -> {
-                    int[] action = chooseAction(t._2, random);
+                    int[] action = chooseAction(t.v2(), random);
                     INDArray signal = Nd4j.createFromArray(action)
                             .reshape(action.length, 1);
-                    return t.setV2(signal);
+                    return t.v2(signal);
                 })
                 .collect(Tuple2.toMap());
     }

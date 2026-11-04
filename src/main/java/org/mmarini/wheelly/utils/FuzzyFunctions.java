@@ -117,7 +117,7 @@ public class FuzzyFunctions {
      * @param delta the fuzzy interval of negativity
      */
     public static double negative(double x, double delta) {
-        return min(max(-x / delta, 0), 1);
+        return Math.clamp(-x / delta, 0, 1);
     }
 
     /**
@@ -149,7 +149,7 @@ public class FuzzyFunctions {
      * @param delta the fuzzy interval of positivity
      */
     public static double positive(double x, double delta) {
-        return min(max(x / delta, 0), 1);
+        return Math.clamp(x / delta, 0, 1);
     }
 
     interface Field<T> {
@@ -184,8 +184,8 @@ public class FuzzyFunctions {
             T result = field.identity();
             double norm = 0;
             for (Tuple2<T, Double> t : values) {
-                result = field.add(result, field.mul(t._2, t._1));
-                norm += t._2;
+                result = field.add(result, field.mul(t.v2(), t.v1()));
+                norm += t.v2();
             }
             return field.mul(1 / norm, result);
         }

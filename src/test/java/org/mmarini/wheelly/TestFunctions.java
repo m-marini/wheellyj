@@ -203,37 +203,37 @@ public interface TestFunctions {
             Predicate<String> p = Pattern.compile(regEx).asMatchPredicate();
             return stream -> mapToIndex(topology, stream)
                     .map(t ->
-                            new Object[]{t._1, p.test(t._2)});
+                            new Object[]{t.v1(), p.test(t.v2())});
         }
 
         public static Function<Stream<Tuple2<Point, String>>, Stream<Object[]>> allPointsOfValue(GridTopology topology, String regEx) {
             Predicate<String> p = Pattern.compile(regEx).asMatchPredicate();
             return stream -> mapToPoint(topology, stream)
-                    .filter(t -> p.test(t._2))
-                    .map(t -> new Object[]{t._1});
+                    .filter(t -> p.test(t.v2()))
+                    .map(t -> new Object[]{t.v1()});
         }
 
         public static Function<Stream<Tuple2<Point, String>>, Stream<Object>> anyPointOfValue(GridTopology topology, String regex) {
             Predicate<String> p = Pattern.compile(regex).asMatchPredicate();
             return stream -> Stream.of(mapToPoint(topology, stream)
-                    .filter(t -> p.test(t._2))
+                    .filter(t -> p.test(t.v2()))
                     .findAny()
-                    .map(t -> t._1)
+                    .map(Tuple2::v1)
                     .orElse(null));
         }
 
         public static Stream<Tuple2<Integer, String>> mapToIndex(GridTopology topology, Stream<Tuple2<Point, String>> stream) {
             return stream
-                    .filter(t -> t._1.x >= 0 && t._1.x < topology.width()
-                            && t._1.y >= 0 && t._1.y < topology.height())
-                    .map(t -> t.setV1(t._1.x + t._1.y * topology.width()));
+                    .filter(t -> t.v1().x >= 0 && t.v1().x < topology.width()
+                            && t.v1().y >= 0 && t.v1().y < topology.height())
+                    .map(t -> t.v1(t.v1().x + t.v1().y * topology.width()));
         }
 
         public static Stream<Tuple2<Point2D, String>> mapToPoint(GridTopology topology, Stream<Tuple2<Point, String>> stream) {
             return stream
-                    .filter(t -> t._1.x >= 0 && t._1.x < topology.width()
-                            && t._1.y >= 0 && t._1.y < topology.height())
-                    .map(t -> t.setV1(topology.location(t._1.x + t._1.y * topology.width())));
+                    .filter(t -> t.v1().x >= 0 && t.v1().x < topology.width()
+                            && t.v1().y >= 0 && t.v1().y < topology.height())
+                    .map(t -> t.v1(topology.location(t.v1().x + t.v1().y * topology.width())));
         }
 
         private final JsonNode root;
@@ -383,8 +383,8 @@ public interface TestFunctions {
                 if (data.stream().anyMatch(args -> args.length == 0)) {
                     throw new IllegalArgumentException(format("Missing data for fields %s",
                             Arrays.toString(zipWithIndex(data)
-                                    .filter(t -> t._2.length == 0)
-                                    .mapToInt(Tuple2::getV1)
+                                    .filter(t -> t.v2().length == 0)
+                                    .mapToInt(Tuple2::v1)
                                     .toArray())
                     ));
                 }

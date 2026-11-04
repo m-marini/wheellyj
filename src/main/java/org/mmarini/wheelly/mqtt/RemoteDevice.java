@@ -57,8 +57,8 @@ public class RemoteDevice {
     /**
      * Creates the remote device
      *
-     * @param id      the device id
-     * @param client  the mqtt client
+     * @param id     the device id
+     * @param client the mqtt client
      */
     public RemoteDevice(String id, RxMqttClient client) {
         this.id = requireNonNull(id);
@@ -88,13 +88,6 @@ public class RemoteDevice {
     }
 
     /**
-     * Returns the sensor topic path
-     */
-    public String id() {
-        return id;
-    }
-
-    /**
      * Executes the command
      *
      * @param command the command to execute
@@ -110,10 +103,10 @@ public class RemoteDevice {
         Maybe<R> reply = replyConnectable.firstElement()
                 .timeout(timeout, TimeUnit.MILLISECONDS)
                 .flatMap(t -> {
-                    if (t._1.equals(errorTopic)) {
-                        return Maybe.error(new DeviceException(new String(t._2.getPayload())));
+                    if (t.v1().equals(errorTopic)) {
+                        return Maybe.error(new DeviceException(new String(t.v2().getPayload())));
                     }
-                    R response = command.response(t._2);
+                    R response = command.response(t.v2());
                     return response != null
                             ? Maybe.just(response)
                             : Maybe.empty();
@@ -138,6 +131,13 @@ public class RemoteDevice {
         return result;
     }
 
+    /**
+     * Returns the sensor topic path
+     */
+    public String id() {
+        return id;
+    }
+
     public boolean isConnected() {
         return client.isConnected();
     }
@@ -160,15 +160,12 @@ public class RemoteDevice {
     public <T> Flowable<T> readData(String dataType, Function<MqttMessage, T> factory) {
         String topic = sensorTopicPath() + "/" + dataType;
         return client.connected()
-                .flatMapPublisher(connected -> {
-                    logger.atDebug().log("Subscribing for data {}", topic);
-                    return connected
-                            ? client.subscribe(topic, 0)
-                            : Flowable.empty();
-                })
+                .toSingleDefault(true)
+                .flatMapPublisher(x ->
+                        client.subscribe(topic, 0))
                 .flatMap(t -> {
-                    logger.atDebug().log("Data {}", t._2);
-                    T result = factory.apply(t._2);
+                    logger.atDebug().log("Data {}", t.v2());
+                    T result = factory.apply(t.v2());
                     return result == null
                             ? Flowable.empty()
                             : Flowable.just(result);

@@ -133,8 +133,8 @@ public record RangeRadarModeller(GridTopology topology,
             // No cell intersection
             return cell;
         }
-        double near = interval._1.distance(sensorLocation);
-        double far = interval._2.distance(sensorLocation);
+        double near = interval.v1().distance(sensorLocation);
+        double far = interval.v2().distance(sensorLocation);
         if (near > 0 && near <= robotSpec.maxRadarDistance()) {
             // intersection cell is in receptive zone
             boolean hasObstacle = signal.hasObstacle();

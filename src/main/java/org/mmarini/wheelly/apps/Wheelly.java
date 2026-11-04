@@ -292,7 +292,7 @@ public class Wheelly {
             this.inferenceWriter = InferenceFileWriter.fromFile(new File(inference));
             behaviour.onDecision(t -> {
                 try {
-                    inferenceWriter.write(t._1, t._2);
+                    inferenceWriter.write(t.v1(), t.v2());
                 } catch (IOException e) {
                     logger.atError().setCause(e).log("Error writing decision");
                 }
@@ -676,7 +676,7 @@ public class Wheelly {
      */
     private void onWorldModellerDecision(Tuple2<WorldModel, RobotCommand> inferenceResult) {
         logger.atDebug().log("on Inference");
-        WorldModel worldModel = inferenceResult._1;
+        WorldModel worldModel = inferenceResult.v1();
         RobotStatus robotStatus = worldModel.robotStatus();
         Map<Integer, FiducialMarker> markers = worldModel.markers();
         GridMap map = worldModel.gridMap();

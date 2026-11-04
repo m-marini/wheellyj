@@ -46,11 +46,11 @@ class RRTTest {
 
     private double distance(String a, String b) {
         for (Tuple2<String, String> edge : edges) {
-            if (edge._1.equals(a)) {
-                if (edge._2.equals(b)) {
+            if (edge.v1().equals(a)) {
+                if (edge.v2().equals(b)) {
                     return 1;
                 }
-                double dist = distance(edge._2, b);
+                double dist = distance(edge.v2(), b);
                 if (dist < Double.POSITIVE_INFINITY) {
                     return dist + 1;
                 }

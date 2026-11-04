@@ -34,7 +34,6 @@ import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.reactivex.rxjava3.subjects.CompletableSubject;
-import io.reactivex.rxjava3.subjects.SingleSubject;
 import org.eclipse.paho.client.mqttv3.*;
 import org.mmarini.Tuple2;
 import org.slf4j.Logger;
@@ -54,7 +53,7 @@ public class RxMqttClient implements AutoCloseable {
      *
      * @param serverUri the broker url
      * @param clientId  the client id
-     * @param userName  the user name
+     * @param userName  the username
      * @param password  the password
      */
     public static RxMqttClient create(String serverUri, String clientId, String userName, String password) throws MqttException {
@@ -83,8 +82,8 @@ public class RxMqttClient implements AutoCloseable {
     private final MqttAsyncClient client;
     private final MqttConnectOptions options;
     private final CompletableSubject closed;
-    private final SingleSubject<Boolean> connectedSubject;
-    private final Single<Boolean> connected;
+    private final CompletableSubject connectedSubject;
+    private final Completable connected;
 
     /**
      * Creates the reactive client
@@ -96,7 +95,7 @@ public class RxMqttClient implements AutoCloseable {
         this.client = requireNonNull(client);
         this.options = options;
         this.closed = CompletableSubject.create();
-        this.connectedSubject = SingleSubject.create();
+        this.connectedSubject = CompletableSubject.create();
         this.connected = connectedSubject.observeOn(Schedulers.io());
         logger.atDebug().log("Client {} created", client.hashCode());
     }
@@ -105,7 +104,7 @@ public class RxMqttClient implements AutoCloseable {
     public void close() throws MqttException {
         try {
             if (!client.isConnected()) {
-                connectedSubject.onSuccess(false);
+                connectedSubject.onError(new IllegalStateException("Client not connected"));
             } else {
                 disconnect().blockingAwait();
             }
@@ -127,34 +126,29 @@ public class RxMqttClient implements AutoCloseable {
         return closed;
     }
 
-    /**
-     * Connects the client to the broker
-     *
-     * @return the completion of connection
-     * @throws MqttException in case of error
-     */
     public Single<Boolean> connect() throws MqttException {
         logger.atDebug().log("Client {} connecting ...", client.hashCode());
-        client.connect(options, this, new IMqttActionListener() {
-            @Override
-            public void onFailure(IMqttToken iMqttToken, Throwable throwable) {
-                logger.atError().setCause(throwable).log("Client {} error connecting", client.hashCode());
-                connectedSubject.onError(throwable);
-            }
+        return Single.create(source ->
+                client.connect(options, this, new IMqttActionListener() {
+                    @Override
+                    public void onFailure(IMqttToken iMqttToken, Throwable throwable) {
+                        logger.atError().setCause(throwable).log("Client {} error connecting", client.hashCode());
+                        source.onError(throwable);
+                    }
 
-            @Override
-            public void onSuccess(IMqttToken iMqttToken) {
-                logger.atDebug().log("Client {} connected", client.hashCode());
-                connectedSubject.onSuccess(true);
-            }
-        });
-        return connected;
+                    @Override
+                    public void onSuccess(IMqttToken iMqttToken) {
+                        logger.atDebug().log("Client {} connected", client.hashCode());
+                        connectedSubject.onComplete();
+                        source.onSuccess(true);
+                    }
+                }));
     }
 
     /**
      * Returns the connection flow
      */
-    public Single<Boolean> connected() {
+    public Completable connected() {
         return connected;
     }
 
@@ -173,27 +167,28 @@ public class RxMqttClient implements AutoCloseable {
      * @return the completion of disconnection
      */
     private Completable disconnect() {
-        CompletableSubject result = CompletableSubject.create();
-        logger.atDebug().log("Client {} disconnecting ...", client.hashCode());
-        try {
-            client.disconnect(this, new IMqttActionListener() {
-                @Override
-                public void onFailure(IMqttToken iMqttToken, Throwable throwable) {
-                    logger.atError().setCause(throwable).log("Client {} error disconnecting", client.hashCode());
-                    result.onError(throwable);
-                }
+        return Completable.create(c -> {
+                    try {
+                        logger.atDebug().log("Client {} disconnecting ...", client.hashCode());
+                        client.disconnect(this, new IMqttActionListener() {
+                            @Override
+                            public void onFailure(IMqttToken iMqttToken, Throwable throwable) {
+                                logger.atError().setCause(throwable).log("Client {} error disconnecting", client.hashCode());
+                                c.onError(throwable);
+                            }
 
-                @Override
-                public void onSuccess(IMqttToken iMqttToken) {
-                    logger.atDebug().log("Client {} disconnected", client.hashCode());
-                    result.onComplete();
-                }
-            });
-        } catch (MqttException e) {
-            logger.atError().setCause(e).log("Client {} error disconnecting", client.hashCode());
-            result.onError(e);
-        }
-        return result.observeOn(Schedulers.io());
+                            @Override
+                            public void onSuccess(IMqttToken iMqttToken) {
+                                logger.atDebug().log("Client {} disconnected", client.hashCode());
+                                c.onComplete();
+                            }
+                        });
+                    } catch (MqttException e) {
+                        logger.atError().setCause(e).log("Client {} error disconnecting", client.hashCode());
+                        c.onError(e);
+                    }
+                })
+                .observeOn(Schedulers.io());
     }
 
     /**

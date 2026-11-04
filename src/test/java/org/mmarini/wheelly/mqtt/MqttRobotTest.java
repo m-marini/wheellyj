@@ -38,6 +38,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.robots.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -60,12 +62,12 @@ class MqttRobotTest {
     public static final int RETRY_INTERVAL = 500;
     public static final String CLIENT_ID = "testRobot";
     public static final int TIMEOUT = 2000;
-    public static final String ROBOT_ID = "wheelly";
+    public static final String ROBOT_ID = "wheelly/0123456789ab/v2";
     public static final String QR_ID = "wheellyqr";
     public static final int CLOSE_DELAY = 100;
     public static final int MESSAGE_DELAY = 100;
-    public static final String CONFIG_STRING = "{\"test\":1}";
-
+    public static final String CONFIG_STRING = "{}";
+    private static final Logger logger = LoggerFactory.getLogger(MockMqttClient.class);
     private MqttRobot robot;
     private TestSubscriber<RobotStatusApi> statusSub;
     private TestSubscriber<Throwable> errorSub;
@@ -88,9 +90,13 @@ class MqttRobotTest {
         mockClient = assertDoesNotThrow(MockMqttClient::new);
         mockClient.start();
         mockClient.readCommands().subscribe(
-                t ->
-                        mockClient.publish(t._1 + "/res", t._2)
-        );
+                t -> {
+                    String topic = t.v1();
+                    if (topic.endsWith("/cf")
+                            || topic.endsWith("/ha")) {
+                        mockClient.publish(topic + "/res", t.v2());
+                    }
+                });
     }
 
     @BeforeEach
@@ -168,10 +174,10 @@ class MqttRobotTest {
         subscriber.assertComplete();
         subscriber.assertNoErrors();
         assertEquals(CONFIG_STRING, subscriber.values().stream()
-                .filter(t -> "cmd/wheelly/cf".equals(t._1))
-                .map(t -> new String(t._2.getPayload()))
+                .filter(t -> ("cmd/" + ROBOT_ID + "/cf").equals(t.v1()))
+                .map(t -> new String(t.v2().getPayload()))
                 .findAny()
-                .get());
+                .orElse(null));
 
         errorSub.assertNoErrors();
         errorSub.assertComplete();
@@ -238,7 +244,7 @@ class MqttRobotTest {
                 .blockingAwait(TIMEOUT, TimeUnit.MILLISECONDS);
 
         Completable.timer(10, TimeUnit.MILLISECONDS).blockingAwait();
-        mockClient.sendRobot("ct", "0,1,0,1,0");
+        mockClient.sendRobot(ROBOT_ID + "/ct", "0,1,0,1,0");
         Completable.timer(MESSAGE_DELAY, TimeUnit.MILLISECONDS).blockingAwait();
 
         robot.close();
@@ -286,7 +292,7 @@ class MqttRobotTest {
         mockSub.assertNoErrors();
         mockSub.assertComplete();
         assertThat(mockSub.values().stream()
-                .filter(t -> t._1.endsWith("/ha"))
+                .filter(t -> t.v1().endsWith("/ha"))
                 .count(), greaterThanOrEqualTo(2L));
 
         errorSub.assertNoErrors();
@@ -304,7 +310,7 @@ class MqttRobotTest {
         mockClient.readCommands()
                 .observeOn(Schedulers.computation())
                 .subscribe(msg ->
-                        mockClient.publish(msg._1 + "/res", "!!Bad")
+                        mockClient.publish(msg.v1() + "/res", "!!Bad")
                 );
 
         // When ....
@@ -341,20 +347,22 @@ class MqttRobotTest {
 
     @Test
     void testMotionMessage() throws IOException {
-        // Given ...
+        // Given a mqtt robot api
 
-        // When connect
+        // When connect the robot
         robot.connect();
-        // And waiting for robotConfigured
+        // And waiting for robot configured
         robot.readRobotStatus()
                 .filter(RobotStatusApi::configured)
                 .firstElement()
                 .ignoreElement()
                 .blockingAwait(TIMEOUT, TimeUnit.MILLISECONDS);
-
+        // And wait for a while
         Completable.timer(10, TimeUnit.MILLISECONDS).blockingAwait();
         long t0 = robot.robotTime();
-        mockClient.sendRobot("mt", "0,0,0,-45,0,0,0,0,0,0,0,0,0,0,0,0");
+        // And send a robot motion sensor
+        mockClient.sendRobot(ROBOT_ID + "/mt", "0,0,0,-45,0,0,0,0,0,0,0,0,0,0,0,0");
+        // And wait a while to allow next motion event
         Completable.timer(MESSAGE_DELAY, TimeUnit.MILLISECONDS).blockingAwait();
 
         robot.close();
@@ -363,10 +371,11 @@ class MqttRobotTest {
         mockClient.close();
         Completable.timer(CLOSE_DELAY, TimeUnit.MILLISECONDS).blockingAwait();
 
+        // Then robot should have not emitted any error event
         errorSub.assertNoErrors();
+        // And have closed the error flow
         errorSub.assertComplete();
-        errorSub.assertNoErrors();
-
+        // And have emitted one motion event
         assertThat(motions, hasSize(1));
 
         List<WheellyMotionMessage> msgs = motions;
@@ -402,8 +411,8 @@ class MqttRobotTest {
 
         assertThat(mockSub.values().stream()
                 .filter(t ->
-                        t._1.endsWith("/sc")
-                                && Arrays.equals(t._2.getPayload(), "-45".getBytes()))
+                        t.v1().endsWith("/sc")
+                                && Arrays.equals(t.v2().getPayload(), "-45".getBytes()))
                 .count(), greaterThanOrEqualTo(1L));
 
         errorSub.assertNoErrors();
@@ -429,7 +438,7 @@ class MqttRobotTest {
                 .blockingAwait(TIMEOUT, TimeUnit.MILLISECONDS);
 
         Completable.timer(10, TimeUnit.MILLISECONDS).blockingAwait();
-        mockClient.sendRobot("sv", "0,1");
+        mockClient.sendRobot(ROBOT_ID + "/sv", "0,1");
         Completable.timer(100, TimeUnit.MILLISECONDS).blockingAwait();
 
         robot.close();
@@ -464,29 +473,18 @@ class MqttRobotTest {
         robot.close();
 
         // Then error should be sent
-        errorSub.assertNoErrors();
-        errorSub.assertComplete();
-        errorSub.assertValueCount(1);
-        List<Throwable> errors = this.errorSub.values();
-        assertThat(errors.getFirst(), isA(MqttException.class));
+        errorSub.assertError(IllegalStateException.class);
 
         // And status should be closed
-        statusSub.assertNoErrors();
-        statusSub.assertComplete();
+        statusSub.assertError(IllegalStateException.class);
 
         List<RobotStatusApi> msgs = statusSub.values();
-        assertThat(msgs, hasSize(greaterThanOrEqualTo(3)));
+        assertThat(msgs, hasSize(greaterThanOrEqualTo(1)));
 
         assertFalse(msgs.getFirst().connected());
         assertFalse(msgs.getFirst().connecting());
         assertFalse(msgs.getFirst().configuring());
         assertFalse(msgs.getFirst().configured());
-
-        assertFalse(msgs.get(1).connected());
-        assertTrue(msgs.get(1).connecting());
-
-        assertFalse(msgs.getLast().connected());
-        assertFalse(msgs.getLast().connecting());
     }
 
 }

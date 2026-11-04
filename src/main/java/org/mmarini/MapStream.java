@@ -80,7 +80,7 @@ public record MapStream<K, V>(Stream<Map.Entry<K, V>> entries) {
      * @param <V>    the value type
      */
     public static <K, V> MapStream<K, V> fromTuple2Stream(Stream<Tuple2<K, V>> stream) {
-        return new MapStream<>(stream.map(t -> Map.entry(t._1, t._2)));
+        return new MapStream<>(stream.map(t -> Map.entry(t.v1(), t.v2())));
     }
 
     /**

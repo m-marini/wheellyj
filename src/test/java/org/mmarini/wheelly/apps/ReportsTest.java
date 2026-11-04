@@ -37,9 +37,9 @@ import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.stream.DoubleStream;
 
-import static java.lang.Math.log10;
-import static java.lang.Math.max;
+import static java.lang.Math.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -58,15 +58,14 @@ class ReportsTest {
     public static final int NUM_ACTIONS = 3;
     public static final double EPSILON = 1e-3;
 
-    static double ratio(double... data) {
-        double sum = 0;
-        double max = -Double.MAX_VALUE;
-        for (double datum : data) {
-            double sum1 = log10(datum);
-            sum += sum1;
-            max = max(max, sum1);
+    private double entropyFromPrefs(double... prefs) {
+        double entropy = 0;
+        double sum = DoubleStream.of(prefs).sum();
+        for (double pre : prefs) {
+            double p = pre / sum;
+            entropy -= p * log(p);
         }
-        return max - sum / data.length;
+        return entropy;
     }
 
     @BeforeEach
@@ -77,7 +76,12 @@ class ReportsTest {
         }
         try (BinArrayFile file = new BinArrayFile(POLICY_FILE)) {
             file.clear();
-            file.write(Nd4j.arange(1, (NUM_RECORDS * NUM_ACTIONS) + 1).reshape(NUM_RECORDS, NUM_ACTIONS));
+            try (INDArray preferences = Nd4j.arange(1, (NUM_RECORDS * NUM_ACTIONS) + 1).reshape(NUM_RECORDS, NUM_ACTIONS)) {
+                try (INDArray sum = preferences.sum(true, 1)) {
+                    INDArray policy = preferences.divi(sum);
+                    file.write(policy);
+                }
+            }
         }
     }
 
@@ -159,7 +163,8 @@ class ReportsTest {
         // 1, 2, 3
         // 4, 5, 6
         // 7, 8, 9
-        // 10, 14, 15
+        // 10, 11, 12
+        // 13, 14, 15
         // 16, 17, 18
 
         // 19, 20, 21
@@ -176,44 +181,44 @@ class ReportsTest {
         INDArray[] result = Reports.policyReport(file, NUM_BINS, 0.25, BATCH_SIZE);
 
         // Then result should be 3 x 9 array
-        assertArrayEquals(new long[]{NUM_BINS, 9}, result[0].shape());
+        assertArrayEquals(new long[]{NUM_BINS, 10}, result[0].shape());
         // And next sample index should be ...
         assertThat(result[0].getDouble(0, 0), closeTo(6, EPSILON));
         // And average max log10 should be ...
-        assertThat(result[0].getDouble(0, 1), closeTo(log10(3d * 6 * 9 * 12 * 15 * 18) / 6, EPSILON));
+        assertThat(result[0].getDouble(0, 1), closeTo(log10(3d / 6d * 6d / 15d * 9d / 24d * 12d / 33d * 15d / 42d * 18d / 51d) / 6, EPSILON));
         // And min max log10 should be ...
-        assertThat(result[0].getDouble(0, 2), closeTo(log10(3), EPSILON));
+        assertThat(result[0].getDouble(0, 2), closeTo(log10(18 / 51d), EPSILON));
         // And max max log10 should be ...
-        assertThat(result[0].getDouble(0, 3), closeTo(log10(18), EPSILON));
+        assertThat(result[0].getDouble(0, 3), closeTo(log10(3d / 6d), EPSILON));
 
-        // And min ratio should be ...
-        assertThat(result[0].getDouble(0, 6), closeTo(ratio(16, 17, 18), EPSILON));
+        // And min entropy should be ...
+        assertThat(result[0].getDouble(0, 6), closeTo(entropyFromPrefs(1, 2, 3), EPSILON));
         // And max ratio should be ...
-        assertThat(result[0].getDouble(0, 7), closeTo(ratio(1, 2, 3), EPSILON));
+        assertThat(result[0].getDouble(0, 7), closeTo(entropyFromPrefs(16, 17, 18), EPSILON));
 
         // And next sample index should be ...
         assertThat(result[0].getDouble(1, 0), closeTo(12, EPSILON));
         // And average max log10 should be ...
-        assertThat(result[0].getDouble(1, 1), closeTo(log10(21d * 24 * 27 * 30 * 33 * 36) / 6, EPSILON));
+        assertThat(result[0].getDouble(1, 1), closeTo(log10(21d / 60d * 24 / 69d * 27 / 78d * 30 / 87d * 33 / 96d * 36 / 105d) / 6, EPSILON));
         // And min min log10 should be ...
-        assertThat(result[0].getDouble(1, 2), closeTo(log10(21), EPSILON));
+        assertThat(result[0].getDouble(1, 2), closeTo(log10(36 / 105d), EPSILON));
         // And max max log10 should be ...
-        assertThat(result[0].getDouble(1, 3), closeTo(log10(36), EPSILON));
+        assertThat(result[0].getDouble(1, 3), closeTo(log10(21 / 60d), EPSILON));
 
         // And min ratio should be ...
-        assertThat(result[0].getDouble(1, 6), closeTo(ratio(34, 35, 36), EPSILON));
+        assertThat(result[0].getDouble(1, 6), closeTo(entropyFromPrefs(19, 20, 21), EPSILON));
         // And max ratio should be ...
-        assertThat(result[0].getDouble(1, 7), closeTo(ratio(19, 20, 21), EPSILON));
+        assertThat(result[0].getDouble(1, 7), closeTo(entropyFromPrefs(34, 35, 36), EPSILON));
 
         assertThat(result[0].getDouble(2, 0), closeTo(19, EPSILON));
-        assertThat(result[0].getDouble(2, 1), closeTo(log10(39d * 42 * 45 * 48 * 51 * 54 * 57) / 7, EPSILON));
-        assertThat(result[0].getDouble(2, 2), closeTo(log10(39), EPSILON));
-        assertThat(result[0].getDouble(2, 3), closeTo(log10(57), EPSILON));
+        assertThat(result[0].getDouble(2, 1), closeTo(log10(39d / 114d * 42 / 123d * 45 / 132d * 48 / 141d * 51 / 150d * 54 / 159d * 57 / 168d) / 7, EPSILON));
+        assertThat(result[0].getDouble(2, 2), closeTo(log10(57 / 168d), EPSILON));
+        assertThat(result[0].getDouble(2, 3), closeTo(log10(39 / 114d), EPSILON));
 
         // And min ratio should be ...
-        assertThat(result[0].getDouble(2, 6), closeTo(ratio(55, 56, 57), EPSILON));
+        assertThat(result[0].getDouble(2, 6), closeTo(entropyFromPrefs(37, 38, 39), EPSILON));
         // And max ratio should be ...
-        assertThat(result[0].getDouble(2, 7), closeTo(ratio(37, 38, 39), EPSILON));
+        assertThat(result[0].getDouble(2, 7), closeTo(entropyFromPrefs(55, 56, 57), EPSILON));
     }
 
     @Test

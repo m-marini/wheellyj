@@ -57,8 +57,8 @@ public interface SpeedMeasures {
      */
     static SpeedMeasure computeReportSpeed(List<Tuple2<Integer, MotorStatus>> states) {
         if (states.size() >= 2) {
-            MotorStatus first = states.getFirst()._2;
-            MotorStatus last = states.getLast()._2;
+            MotorStatus first = states.getFirst().v2();
+            MotorStatus last = states.getLast().v2();
             long startTime = first.time();
             long endTime = last.time();
             int startPulses = first.pulses();
@@ -78,7 +78,7 @@ public interface SpeedMeasures {
      */
     private static int computeSupply(List<Tuple2<Integer, MotorStatus>> list) {
         return (int) round(list.stream()
-                .mapToInt(t -> t._2.supply())
+                .mapToInt(t -> t.v2().supply())
                 .average()
                 .orElse(0D));
     }
@@ -167,7 +167,7 @@ public interface SpeedMeasures {
     static Map<SampleKey, SpeedMeasure> createSamplesByType(SampleType type, Stream<MotorStatus> list) {
         Map<Integer, List<Tuple2<Integer, MotorStatus>>> map = list.map(s ->
                         Tuple2.of(s.power(), s))
-                .collect(Collectors.groupingBy(Tuple2::getV1));
+                .collect(Collectors.groupingBy(Tuple2::v1));
         return MapStream.of(map)
                 .mapKeys((pow, l) ->
                         new SampleKey(type, pow, computeSupply(l))

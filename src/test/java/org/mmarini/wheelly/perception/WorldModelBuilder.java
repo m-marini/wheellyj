@@ -287,8 +287,8 @@ public class WorldModelBuilder {
 
     public WorldModelBuilder robotLocation(String mapText, String id) {
         robotStatusBuilder.robotLocation(RadarMapBuilder.parseMap(radarMapBuilder.topology().gridSize(), mapText)
-                .filter(t -> id.equals(t._2))
-                .map(Tuple2::getV1)
+                .filter(t -> id.equals(t.v2()))
+                .map(Tuple2::v1)
                 .findAny()
                 .orElse(new Point2D.Double()));
         return this;

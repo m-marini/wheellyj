@@ -62,8 +62,8 @@ public interface Geometry {
     static Stream<Tuple2<Point2D, Angle>> computeAllSafePoints(Point2D center, List<Point2D> vertices) {
         // Finds nearest
         int nearestIndex = Utils.zipWithIndex(vertices)
-                .min(Comparator.comparingDouble(t -> center.distanceSq(t._2)))
-                .map(Tuple2::getV1)
+                .min(Comparator.comparingDouble(t -> center.distanceSq(t.v2())))
+                .map(Tuple2::v1)
                 .orElse(-1);
 
         // Computes directions and safe locations
@@ -120,19 +120,19 @@ public interface Geometry {
     static Stream<Tuple2<Point2D, QVect>> computeFilteredSafePoints(Point2D center, List<Point2D> vertices) {
         List<Tuple2<Point2D, Angle>> safePointsDirections = computeAllSafePoints(center, vertices).toList();
         List<Tuple2<Point2D, QVect>> safePoints = safePointsDirections.stream().map(t -> {
-                    QVect ineq = QVect.line(t._1, t._2.add(DEG90));
-                    return t.setV2(ineq);
+                    QVect ineq = QVect.line(t.v1(), t.v2().add(DEG90));
+                    return t.v2(ineq);
                 })
                 .toList();
         Predicate<QVect> exp = safePoints.stream()
                 .<Predicate<QVect>>map(t ->
                         x ->
-                                t._2.mmult(x) >= 0)
+                                t.v2().mmult(x) >= 0)
                 .reduce(Predicate::and)
                 .orElse(null);
         return Utils.zipWithIndex(safePoints)
-                .filter(p -> p._1 == 0 || exp.test(QVect.from(p._2._1)))
-                .map(Tuple2::getV2);
+                .filter(p -> p.v1() == 0 || exp.test(QVect.from(p.v2().v1())))
+                .map(Tuple2::v2);
     }
 
     /**
@@ -144,25 +144,25 @@ public interface Geometry {
     static Stream<Point2D> computeInnerVertices(Point2D center, List<Point2D> vertices) {
         List<Tuple2<Point2D, Angle>> safePointsDirections = computeAllSafePoints(center, vertices).toList();
         List<Tuple2<Point2D, QVect>> safePoints = safePointsDirections.stream().map(t -> {
-                    QVect ineq = QVect.line(t._1, t._2.add(DEG90));
-                    return t.setV2(ineq);
+                    QVect ineq = QVect.line(t.v1(), t.v2().add(DEG90));
+                    return t.v2(ineq);
                 })
                 .toList();
         Predicate<QVect> exp = safePoints.stream()
                 .<Predicate<QVect>>map(t ->
                         x ->
-                                t._2.mmult(x) >= -1e-4)
+                                t.v2().mmult(x) >= -1e-4)
                 .reduce(Predicate::and)
                 .orElse(null);
         int n = safePoints.size();
         Stream.Builder<Point2D> pts = Stream.builder();
         int i = 0;
-        QVect linei = safePoints.getFirst()._2;
+        QVect linei = safePoints.getFirst().v2();
         do {
             int j = i + 1;
             do {
                 int jj = j % n;
-                QVect linej = safePoints.get(jj)._2;
+                QVect linej = safePoints.get(jj).v2();
                 Point2D p = linei.intersect(linej);
                 if (p != null && exp.test(QVect.from(p))) {
                     // Add points
@@ -202,7 +202,7 @@ public interface Geometry {
         Point2D farthest = null;
         for (Tuple2<Point2D, Point2D> pt : pts) {
             if (pt != null) {
-                Point2D p = pt._2;
+                Point2D p = pt.v2();
                 double d2 = q.distanceSq(p);
                 if (d2 > distance2) {
                     farthest = p;
@@ -224,7 +224,7 @@ public interface Geometry {
         Point2D nearest = null;
         for (Tuple2<Point2D, Point2D> pt : pts) {
             if (pt != null) {
-                Point2D p = pt._1;
+                Point2D p = pt.v1();
                 double d2 = q.distanceSq(p);
                 if (d2 < distance2) {
                     nearest = p;
@@ -352,12 +352,12 @@ public interface Geometry {
                         Tuple2.of(p1, p2),
                         Tuple2.of(p2, p3),
                         Tuple2.of(p3, p0)
-                ).filter(t -> signum(t._1.getX()) != signum(t._2.getX()))
+                ).filter(t -> signum(t.v1().getX()) != signum(t.v2().getX()))
                 .map(t -> {
-                    double xp0 = t._1.getX();
-                    double yp0 = t._1.getY();
-                    double xp1 = t._2.getX();
-                    double yp1 = t._2.getY();
+                    double xp0 = t.v1().getX();
+                    double yp0 = t.v1().getY();
+                    double xp1 = t.v2().getX();
+                    double yp1 = t.v2().getY();
                     double y = (xp1 * yp0 - xp0 * yp1) / (xp1 - xp0);
                     return (Point2D) new Point2D.Double(0, y);
                 })

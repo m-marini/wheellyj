@@ -105,7 +105,7 @@ public class LearnPanel extends JPanel {
     private static Dictionary<Integer, JComponent> createLabels(String[] labelKeys) {
         Dictionary<Integer, JComponent> labels = new Hashtable<>();
         zipWithIndex(List.of(labelKeys)).forEach(t ->
-                labels.put(t._1, new JLabel(t._2)));
+                labels.put(t.v1(), new JLabel(t.v2())));
         return labels;
     }
 
