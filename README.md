@@ -7,6 +7,11 @@ The code of Webcam controller is at [Wheellycam project](https://github.com/m-ma
 
 The documentation is in the [Wiki section](https://github.com/m-marini/wheellyj/wiki).
 
+## Release [0.29.0](https://github.com/m-marini/wheellyj/releases/tag/v0.29.0)
+
+- Add Multi-Task Hierarchical Environment
+- Add Head absolute target
+
 ## Release [0.28.1](https://github.com/m-marini/wheellyj/releases/tag/v0.28.1)
 
 - Add Support Both CUDA and CPU backends
