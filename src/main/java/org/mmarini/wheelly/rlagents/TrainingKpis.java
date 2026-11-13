@@ -41,12 +41,15 @@ import java.util.Map;
 import static java.lang.Math.log;
 import static org.mmarini.wheelly.rlagents.NNRLTrainingDataGenerator.CRITIC_ID;
 
+
 /**
- * Tracks the predictions, the RL error and the average rewards of a minibatch
+ * Immutable record tracking the policy/value predictions, reinforcement learning
+ * temporal-difference errors, and average rewards for a training minibatch.
  *
- * @param predictions the predictions
- * @param deltas      the RL errors
- * @param avgReward   the average rewards
+ * @param predictions a map associating each network head identifier with its
+ *                    computed KPI matrix (or raw value predictions for the critic)
+ * @param deltas      the reinforcement learning error (advantage/TD-error) array
+ * @param avgReward   the mean reward observed across the minibatch
  */
 public record TrainingKpis(Map<String, INDArray> predictions, INDArray deltas,
                            float avgReward) implements AutoCloseable {
@@ -55,9 +58,20 @@ public record TrainingKpis(Map<String, INDArray> predictions, INDArray deltas,
     public static final String AVG_REWARD_ID = "avgReward";
 
     /**
-     * Returns policy KPIS from policy
+     * Computes policy evaluation KPIs for each sample in a policy probability matrix.
+     * <p>
+     * The returned matrix contains three columns stacked horizontally:
+     * </p>
+     * <ol>
+     *   <li>Maximum action probability across the action space.</li>
+     *   <li>Normalised Shannon entropy in the range {@code [0, 1]}.</li>
+     *   <li>Action space cardinality (number of available actions).</li>
+     * </ol>
      *
-     * @param policy the policy
+     * @param policy a 2D {@link INDArray} of shape {@code [batchSize, numActions]}
+     *               representing action probability distributions
+     * @return a 2D {@link INDArray} of shape {@code [batchSize, 3]} containing
+     *         the stacked policy KPIs
      */
     private static INDArray computePolicyKpis(INDArray policy) {
         try (INDArray size = Nd4j.ones(policy.size(0), 1).mul(policy.size(1))) {
@@ -73,12 +87,19 @@ public record TrainingKpis(Map<String, INDArray> predictions, INDArray deltas,
     }
 
     /**
-     * Returns training KPIS
+     * Creates a {@link TrainingKpis} instance from parallel lists of network
+     * output identifiers and prediction arrays.
+     * <p>
+     * Critic outputs (identified by {@link NNRLTrainingDataGenerator#CRITIC_ID})
+     * are duplicated directly, whereas actor policy outputs are transformed into
+     * summary KPIs via {@link #computePolicyKpis(INDArray)}.
+     * </p>
      *
-     * @param ids         the prediction identifiers
-     * @param predictions the predictions
-     * @param deltas      the deltas
-     * @param avgReward   the average reward
+     * @param ids         the list of network output head identifiers
+     * @param predictions the array of prediction tensors corresponding to {@code ids}
+     * @param deltas      the reinforcement learning error tensor
+     * @param avgReward   the average reward for the minibatch
+     * @return a newly constructed {@link TrainingKpis} instance
      */
     public static TrainingKpis create(List<String> ids, INDArray[] predictions, INDArray deltas, float avgReward) {
         Map<String, INDArray> predictionMap = new HashMap<>();
@@ -93,6 +114,21 @@ public record TrainingKpis(Map<String, INDArray> predictions, INDArray deltas,
         return new TrainingKpis(predictionMap, deltas.dup(), avgReward);
     }
 
+    /**
+     * Creates a {@link TrainingKpis} instance from a map of network output
+     * identifiers to prediction tensors.
+     * <p>
+     * Critic entries (identified by {@link NNRLTrainingDataGenerator#CRITIC_ID})
+     * are retained as-is, whereas policy entries are converted into summary KPIs
+     * via {@link #computePolicyKpis(INDArray)}.
+     * </p>
+     *
+     * @param predictions a map associating network output identifiers with their
+     *                    prediction tensors
+     * @param deltas      the reinforcement learning error tensor
+     * @param avgReward   the average reward for the minibatch
+     * @return a newly constructed {@link TrainingKpis} instance
+     */
     public static TrainingKpis create(Map<String, INDArray> predictions, INDArray deltas, float avgReward) {
         Map<String, INDArray> map = MapStream.of(predictions)
                 .mapValues((key, values) ->
@@ -114,9 +150,12 @@ public record TrainingKpis(Map<String, INDArray> predictions, INDArray deltas,
     }
 
     /**
-     * Writes the KPIS into KPIS writer
+     * Serialises all tracked KPIs, deltas, and average reward to the given
+     * {@link KeyBinWriter}.
      *
-     * @param writer the writer
+     * @param writer the target binary key-value writer
+     * @return this {@link TrainingKpis} instance for fluent method chaining
+     * @throws IOException if an I/O error occurs whilst writing the tensors
      */
     public TrainingKpis write(KeyBinWriter writer) throws IOException {
         writer.write(predictions);
