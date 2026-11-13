@@ -38,8 +38,8 @@ import org.mmarini.wheelly.perception.WorldModeller;
 import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.yaml.Locator;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 public interface AppYaml {
 
@@ -51,11 +51,11 @@ public interface AppYaml {
     String ROBOT_ID = "robot";
 
     static GymAdapter adapterFromFile(JsonNode config) throws Throwable {
-        return GymAdapter.fromFile(new File(config.path(ADAPTER_ID).asText()));
+        return GymAdapter.fromFile(Path.of(config.path(ADAPTER_ID).asText()));
     }
 
     static BehaviourApi behaviourFromJson(JsonNode config) throws Throwable {
-        return BehaviourApi.fromFile(new File(config.path(BEHAVIOUR_ID).asText()));
+        return BehaviourApi.fromFile(Path.of(config.path(BEHAVIOUR_ID).asText()));
     }
 
     /**
@@ -64,11 +64,11 @@ public interface AppYaml {
      * @param config the root node
      */
     static ControllerApi controllerFromJson(JsonNode config) throws Throwable {
-        return ControllerApi.fromFile(new File(config.path(CONTROLLER).asText()));
+        return ControllerApi.fromFile(Path.of(config.path(CONTROLLER).asText()));
     }
 
     /**
-     * Returns the double arrays from json document
+     * Returns the double arrays from JSON document
      *
      * @param root    the JSON root
      * @param locator the array locator
@@ -98,7 +98,7 @@ public interface AppYaml {
      * @throws IOException in case of error
      */
     static Perceptor perceptorFromJson(JsonNode config) throws Throwable {
-        return WorldModeller.fromFile(new File(config.path(PERCEPTOR_ID).asText()));
+        return WorldModeller.fromFile(Path.of(config.path(PERCEPTOR_ID).asText()));
     }
 
     /**
@@ -108,7 +108,7 @@ public interface AppYaml {
      * @throws IOException in case of error
      */
     static RewardFunction rewardFromJson(JsonNode config) throws IOException {
-        return RewardFunction.fromFile(new File(config.path(REWARD_FUNCTION_ID).asText()));
+        return RewardFunction.fromFile(Path.of(config.path(REWARD_FUNCTION_ID).asText()));
     }
 
     /**
@@ -118,6 +118,6 @@ public interface AppYaml {
      * @throws IOException in case of error
      */
     static RobotApi robotFromJson(JsonNode config) throws Throwable {
-        return RobotApi.fromFile(new File(config.path(ROBOT_ID).asText()));
+        return RobotApi.fromFile(Path.of(config.path(ROBOT_ID).asText()));
     }
 }

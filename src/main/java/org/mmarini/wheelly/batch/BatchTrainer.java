@@ -34,7 +34,8 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.mmarini.wheelly.rlagents.Agent;
 import org.mmarini.wheelly.rlagents.RLDatasetIterator;
 import org.mmarini.wheelly.rlagents.TrainingKpis;
-import org.mmarini.wheelly.storage.serde.BinArrayFile;
+import org.mmarini.wheelly.storage.serde.ArrayReader;
+import org.mmarini.wheelly.storage.serde.FileArrayReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,9 +53,9 @@ public class BatchTrainer {
     private static final Logger logger = LoggerFactory.getLogger(BatchTrainer.class);
 
     private final AtomicReference<BatchTrainerStatus> status;
-    private final Map<String, BinArrayFile> states;
-    private final Map<String, BinArrayFile> actionMasks;
-    private final BinArrayFile rewards;
+    private final Map<String, ? extends ArrayReader> states;
+    private final Map<String, ? extends ArrayReader> actionMasks;
+    private final ArrayReader rewards;
     private final PublishProcessor<ProgressInfo> progressInfo;
     private Consumer<TrainingKpis> onKpis;
 
@@ -66,7 +67,7 @@ public class BatchTrainer {
      * @param actionMasks the action masks
      * @param rewards     the rewards
      */
-    public BatchTrainer(Agent agent, Map<String, BinArrayFile> states, Map<String, BinArrayFile> actionMasks, BinArrayFile rewards) {
+    public BatchTrainer(Agent agent, Map<String, FileArrayReader> states, Map<String, FileArrayReader> actionMasks, ArrayReader rewards) {
         this.status = new AtomicReference<>(new BatchTrainerStatus(agent, null, false));
         this.states = requireNonNull(states);
         this.actionMasks = requireNonNull(actionMasks);

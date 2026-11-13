@@ -33,10 +33,12 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A csv file reader
@@ -50,12 +52,12 @@ public class CSVReader implements AutoCloseable {
      * @param path the root path
      * @param key  the kay name
      */
-    public static CSVReader createByName(File path, String key) {
+    public static CSVReader createByName(Path path, String key) {
         String[] names = key.split("\\.");
         for (String name : names) {
-            path = new File(path, name);
+            path = path.resolve(name);
         }
-        return new CSVReader(new File(path, "data.csv"));
+        return new CSVReader(path.resolve("data.csv"));
     }
 
     /**
@@ -74,7 +76,7 @@ public class CSVReader implements AutoCloseable {
                 .toArray();
     }
 
-    private final File file;
+    private final Path file;
     private long[] shape;
     private BufferedReader reader;
     private long recordSize;
@@ -84,8 +86,8 @@ public class CSVReader implements AutoCloseable {
      *
      * @param file the file
      */
-    public CSVReader(File file) {
-        this.file = file;
+    public CSVReader(Path file) {
+        this.file = requireNonNull(file);
     }
 
     @Override
@@ -98,21 +100,14 @@ public class CSVReader implements AutoCloseable {
     }
 
     /**
-     * Returns the duplicated reader
-     */
-    public CSVReader dup() {
-        return new CSVReader(file);
-    }
-
-    /**
      * Returns the file
      */
-    public File file() {
+    public Path file() {
         return file;
     }
 
     /**
-     * Initializes the reader
+     * Initialises the reader
      *
      * @throws IOException in case of error
      */
@@ -122,7 +117,7 @@ public class CSVReader implements AutoCloseable {
         for (int i = 2; i < shape.length; i++) {
             this.recordSize *= shape[i];
         }
-        this.reader = new BufferedReader(new FileReader(file));
+        this.reader = Files.newBufferedReader(file);
     }
 
     /**
@@ -160,10 +155,10 @@ public class CSVReader implements AutoCloseable {
      *
      * @param dataFile the data file
      */
-    private long[] readShape(File dataFile) throws IOException {
-        File shapeFile = new File(dataFile.getParentFile(), "shape.csv");
-        if (shapeFile.exists() && shapeFile.canRead()) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(shapeFile))) {
+    private long[] readShape(Path dataFile) throws IOException {
+        Path shapeFile = dataFile.getParent().resolve("shape.csv");
+        if (Files.exists(shapeFile) && Files.isReadable(shapeFile)) {
+            try (BufferedReader reader = Files.newBufferedReader(shapeFile)) {
                 double[] values = readLine(reader);
                 long[] shape = new long[values.length + 1];
                 for (int i = 0; i < values.length; i++) {
@@ -172,7 +167,7 @@ public class CSVReader implements AutoCloseable {
                 return shape;
             }
         } else {
-            try (BufferedReader reader = new BufferedReader(new FileReader(dataFile))) {
+            try (BufferedReader reader = Files.newBufferedReader(dataFile)) {
                 double[] values = readLine(reader);
                 return new long[]{0, values.length};
             }
@@ -189,7 +184,7 @@ public class CSVReader implements AutoCloseable {
             initialize();
         } else {
             close();
-            this.reader = new BufferedReader(new FileReader(file));
+            this.reader = Files.newBufferedReader(file);
         }
         return this;
     }

@@ -34,6 +34,7 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.Random;
 
 import static java.lang.Math.log;
@@ -45,6 +46,15 @@ import static java.lang.Math.round;
 public interface Utils {
     Logger logger = LoggerFactory.getLogger(Utils.class);
     double MM = 1e-3;
+
+    static void close(Map<String, ? extends AutoCloseable>... maps) throws Exception {
+        for (Map<?, ? extends AutoCloseable> map : maps) {
+            for (AutoCloseable closeable : map.values()) {
+                closeable.close();
+            }
+        }
+    }
+
 
     /**
      * Returns a random number with exponential distribution probability
@@ -77,7 +87,7 @@ public interface Utils {
     /**
      * Returns the string array located in the JSON document
      *
-     * @param root    the json document
+     * @param root    the JSON document
      * @param locator the locator
      */
     static String[] loadStringArray(JsonNode root, Locator locator) {

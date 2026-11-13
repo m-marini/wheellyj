@@ -34,8 +34,8 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -48,7 +48,7 @@ class CSVReaderTest {
 
     @Test
     void read() throws IOException {
-        CSVReader reader = new CSVReader(new File("src/test/resources/dataset2/data.csv"));
+        CSVReader reader = new CSVReader(Path.of("src/test/resources/dataset2/data.csv"));
 
         INDArray array = reader.read(1);
         assertEquals(Nd4j.createFromArray(1f, 2f, 3f, 4f).reshape(1, 2, 2), array);
@@ -62,7 +62,7 @@ class CSVReaderTest {
 
     @Test
     void readFlat() throws IOException {
-        CSVReader reader = new CSVReader(new File("src/test/resources/dataset1/data.csv"));
+        CSVReader reader = new CSVReader(Path.of("src/test/resources/dataset1/data.csv"));
         INDArray array = reader.read(1);
         assertThat(array, matrixCloseTo(new long[]{1, 3}, 1e-3,
                 1, 2, 3
@@ -80,7 +80,7 @@ class CSVReaderTest {
 
     @Test
     void resetTest() throws IOException {
-        CSVReader reader = new CSVReader(new File("src/test/resources/dataset2/data.csv"));
+        CSVReader reader = new CSVReader(Path.of("src/test/resources/dataset2/data.csv"));
 
         INDArray array = reader.read(1);
         assertEquals(Nd4j.createFromArray(1f, 2f, 3f, 4f).reshape(1, 2, 2), array);

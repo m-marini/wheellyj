@@ -78,8 +78,8 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -196,9 +196,9 @@ public class Wheelly {
     private GymAdapter adapter;
     private Agent agent;
     private JFrame frame;
-    private InferenceWriter inferenceWriter;
     private KeyBinWriter kpisWriter;
     private long savingInterval;
+    private InferenceWriter inferenceWriter;
 
     /**
      * Creates the server reinforcement learning engine server
@@ -254,7 +254,7 @@ public class Wheelly {
 
         logger.atInfo().log("Creating agent ...");
         this.agent = Agent.fromFile(
-                new File(Locator.locate("agent").getNode(config).asText()));
+                Path.of(Locator.locate("agent").getNode(config).asText()));
         if (agent instanceof RLAgent dlAgent) {
             dlAgent = dlAgent.concurrentTraining(args.getBoolean("parallel"))
                     .onKpis(this::onKpis)
@@ -283,13 +283,13 @@ public class Wheelly {
 
         String kpisPath = args.getString("kpis");
         if (kpisPath != null) {
-            kpisWriter = new KeyBinWriter(new File(kpisPath));
+            kpisWriter = new KeyBinWriter(Path.of(kpisPath));
         }
 
         // Creates the model dumper
         String inference = this.args.getString("inference");
         if (inference != null) {
-            this.inferenceWriter = InferenceFileWriter.fromFile(new File(inference));
+            this.inferenceWriter = InferenceFileWriter.fromFile(Path.of(inference));
             behaviour.onDecision(t -> {
                 try {
                     inferenceWriter.write(t.v1(), t.v2());
@@ -455,7 +455,7 @@ public class Wheelly {
      * @throws IOException in case of error
      */
     private JsonNode loadConfig() throws IOException {
-        File configFile = new File(this.args.getString("config"));
+        Path configFile = Path.of(this.args.getString("config"));
         JsonNode config = fromFile(configFile);
         WheellyJsonSchemas.instance().validateOrThrow(config, WHEELLY_SCHEMA_YML);
         return config;
@@ -491,7 +491,7 @@ public class Wheelly {
             try {
                 inferenceWriter.close();
             } catch (Exception e) {
-                logger.atError().setCause(e).log("Error shuttingDown model dumper");
+                logger.atError().setCause(e).log("Error closing inference writer");
             }
             logger.atInfo().log("Model dumper closed");
         }
@@ -630,7 +630,11 @@ public class Wheelly {
         });
         long now = System.currentTimeMillis();
         if (now > autosaveInstant) {
-            agent.backup();
+            try {
+                agent.backup();
+            } catch (IOException e) {
+                logger.atError().setCause(e).log("Error backing up agent");
+            }
             autosaveInstant = now + savingInterval;
         }
         long robotElapsed = status.robotTime() - robotStartTimestamp;

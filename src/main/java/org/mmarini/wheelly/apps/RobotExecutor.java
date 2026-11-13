@@ -63,7 +63,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.WindowEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -268,7 +268,7 @@ public class RobotExecutor {
      * @throws Throwable if errors occur during configuration parsing, verification validations, or initialisation sequences
      */
     void createContext() throws Throwable {
-        File confFile = new File(this.args.getString("config"));
+        Path confFile = Path.of(this.args.getString("config"));
         JsonNode config = org.mmarini.yaml.Utils.fromFile(confFile);
         WheellyJsonSchemas.instance().validateOrThrow(config, EXECUTOR_SCHEMA_YML);
 
@@ -283,13 +283,13 @@ public class RobotExecutor {
 
         logger.atInfo().log("Creating agent ...");
         this.agent = StateMachineAgent.fromFile(
-                new File(config.path("agent").asText()));
+                Path.of(config.path("agent").asText()));
 
         controller.init(robot);
         perceptor.init(robot.robotSpec(), controller);
         perceptor.connectController(controller);
         perceptor.decisionMaker(this::onDecisionProcess);
-        agent.mapClener(perceptor);
+        agent.mapCleaner(perceptor);
 
         this.sessionDuration = this.args.getLong("time") * 1000;
         logger.atInfo().setMessage("Session will be running for {} sec...").addArgument(sessionDuration).log();

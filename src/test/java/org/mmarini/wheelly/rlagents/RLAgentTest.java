@@ -28,7 +28,6 @@
 
 package org.mmarini.wheelly.rlagents;
 
-import com.google.common.io.PatternFilenameFilter;
 import org.deeplearning4j.nn.conf.ComputationGraphConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.inputs.InputType;
@@ -48,8 +47,9 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Sgd;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -79,7 +79,7 @@ class RLAgentTest {
     public static final float REWARD0 = 0F;
     public static final int NUM_STEPS = 10;
     public static final int BATCH_SIZE = 5;
-    public static final File FILE = new File("tmp/model");
+    public static final Path FILE = Path.of("tmp/model");
 
     static {
         Nd4j.getRandom().setSeed(SEED);
@@ -181,12 +181,18 @@ class RLAgentTest {
     }
 
     @Test
-    void testBackup() {
+    void testBackup() throws IOException {
         agent.save();
         agent.backup();
-        File[] list = FILE.listFiles(new PatternFilenameFilter("agent-.*\\.yml"));
+        Path[] list = Files.list(FILE)
+                .filter(p ->
+                        p.getFileName().toString().matches("agent-.*\\.yml"))
+                .toArray(Path[]::new);
         assertThat(list, arrayWithSize(greaterThan(0)));
-        list = FILE.listFiles(new PatternFilenameFilter("model-.*\\.zip"));
+        list = Files.list(FILE)
+                .filter(p ->
+                        p.getFileName().toString().matches("model-.*\\.zip"))
+                .toArray(Path[]::new);
         assertThat(list, arrayWithSize(greaterThan(0)));
     }
 

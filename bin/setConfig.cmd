@@ -4,4 +4,4 @@ SET REPORT=.\report
 SET KPIS=%WORKPATH%\kpis
 SET TEMP=%WORKPATH%\tmp
 set CSVS=%WORKPATH%\csv
-SET INFERENCE=%WORKPATH%\inference\inference.bin
+SET INFERENCE=%WORKPATH%\inference\inference.pb

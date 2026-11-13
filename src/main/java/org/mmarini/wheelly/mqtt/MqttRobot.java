@@ -51,7 +51,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
-import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -147,7 +147,7 @@ public class MqttRobot implements RobotApi {
      * @param root the configuration document
      * @param file the configuration file
      */
-    public static MqttRobot create(JsonNode root, File file) {
+    public static MqttRobot create(JsonNode root, Path file) {
         Locator locator = Locator.root();
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         String brokerUrl = locator.path("brokerUrl").getNode(root).asText(DEFAULT_BROKER_URL);

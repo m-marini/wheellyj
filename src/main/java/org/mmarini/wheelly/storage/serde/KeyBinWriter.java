@@ -30,12 +30,13 @@ package org.mmarini.wheelly.storage.serde;
 
 import io.reactivex.rxjava3.functions.Action;
 import org.mmarini.ParallelProcess;
+import org.mmarini.wheelly.utils.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,18 +46,17 @@ import static java.util.Objects.requireNonNull;
 /**
  * The data collector consumer accumulates data and returns the kpi of data
  */
-
 public class KeyBinWriter implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(KeyBinWriter.class);
 
-    private final File path;
-    private final Map<String, BinArrayFile> files;
+    private final Path path;
+    private final Map<String, ArrayWriter> files;
 
     /**
      * @param path the path of data
      */
-    public KeyBinWriter(File path) {
+    public KeyBinWriter(Path path) {
         this.path = requireNonNull(path);
         this.files = new HashMap<>();
     }
@@ -68,7 +68,7 @@ public class KeyBinWriter implements AutoCloseable {
      */
     public void close() throws Exception {
         logger.atInfo().log("Closed kpi files");
-        KeyFileMap.close(files);
+        Utils.close(files);
     }
 
     /**
@@ -81,9 +81,9 @@ public class KeyBinWriter implements AutoCloseable {
         if (!data.isEmpty()) {
             // Add file
             for (String key : data.keySet()) {
-                BinArrayFile file = files.get(key);
+                ArrayWriter file = files.get(key);
                 if (file == null) {
-                    file = BinArrayFile.createByKey(path, key);
+                    file = FileArrayWriter.createByKey(path, key);
                     file.clear();
                     files.put(key, file);
                 }

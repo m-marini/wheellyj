@@ -28,7 +28,7 @@
 
 package org.mmarini.wheelly.apps;
 
-import org.mmarini.wheelly.storage.serde.BinArrayFile;
+import org.mmarini.wheelly.storage.serde.ArrayReader;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
@@ -41,22 +41,48 @@ import java.util.function.UnaryOperator;
 import static java.lang.Math.min;
 
 /**
- * Report utility functions
+ * Utility interface providing statistical aggregation and linear regression functions
+ * for generating reinforcement learning reports from serialised array datasets.
  */
 public interface Reports {
     Logger logger = LoggerFactory.getLogger(Reports.class);
-
     /**
-     * Returns the linear report of a file (mean, min, max, exponential mean)
-     * and the linear regression initial and final values
+     * Computes a binned linear statistical summary and an overall linear regression trend
+     * for a serialised dataset.
+     * <p>
+     * The records read from {@code file} are transformed via {@code preFunc} and partitioned
+     * into at most {@code n} contiguous bins. The returned array contains two {@link INDArray} matrices:
+     * </p>
+     * <ol>
+     *   <li>A matrix of shape {@code [n, 5]} containing, for each bin:
+     *     <ul>
+     *       <li>Column 0: ending record index (file position)</li>
+     *       <li>Column 1: arithmetic mean</li>
+     *       <li>Column 2: minimum value</li>
+     *       <li>Column 3: maximum value</li>
+     *       <li>Column 4: exponential moving average (EMA)</li>
+     *     </ul>
+     *   </li>
+     *   <li>A single-row {@code FLOAT} matrix of shape {@code} defining the endpoints of the
+     *       ordinary least squares linear regression line fitted across all transformed records:
+     *     <ul>
+     *       <li>Column 0 ({@code (0, 0)}): initial fitted value at index {@code x = 0} (y-intercept {@code q})</li>
+     *       <li>Column 1 ({@code (0, 1)}): final fitted value at index {@code x = M - 1} ({@code q + m * (M - 1)}),
+     *           where {@code M} is the total number of records read</li>
+     *     </ul>
+     *   </li>
+     * </ol>
      *
-     * @param file      the file
-     * @param preFunc   the input transformation
-     * @param n         the number of bins
-     * @param gamma     the gamma decay factor
-     * @param batchSize the batch size
+     * @param file      the {@link ArrayReader} providing access to the source dataset
+     * @param preFunc   an operator applied to each batch of records prior to statistical aggregation
+     * @param n         the target number of histogram bins (capped at the total number of records)
+     * @param gamma     the smoothing factor applied to the exponential moving average within each bin
+     * @param batchSize the maximum number of records to read per batch
+     * @return a two-element {@link INDArray} array containing the {@code [n, 5]} binned statistics matrix
+     *         at index {@code 0} and the {@code} regression endpoints matrix at index {@code 1}
+     * @throws IOException if an I/O error occurs while reading from {@code file}
      */
-    static INDArray[] linReport(BinArrayFile file, UnaryOperator<INDArray> preFunc, int n, double gamma, long batchSize) throws IOException {
+    static INDArray[] linReport(ArrayReader file, UnaryOperator<INDArray> preFunc, int n, double gamma, long batchSize) throws IOException {
         long m = file.size();
         n = Math.toIntExact(min(m, n));
         INDArray result = Nd4j.create(n, 5);
@@ -72,11 +98,9 @@ public interface Reports {
             INDArray batchRecords1;
             while ((batchRecords1 = readBin(file, end, batchSize)) != null) {
                 // Computes the number of records to read
-                try (INDArray batchRecords = batchRecords1) {
-                    INDArray records = preFunc.apply(batchRecords);
-                    stats.add(records);
-                    regression.add(records);
-                }
+                INDArray records = preFunc.apply(batchRecords1);
+                stats.add(records);
+                regression.add(records);
             }
 
             // Writes the bin values
@@ -94,27 +118,38 @@ public interface Reports {
     }
 
     /**
-     * Returns the bin stats polt records.
-     * The best policy linear regression values and the entropy linear regression values
-     * <pre>
-     *  initial record number,
-     *  mean of max policy,
-     *  min of max policy,
-     *  max policy,
-     *  EMA of max policy,
-     *  mean of entropy,
-     *  min of entropy,
-     *  max of entropy,
-     *  EMA of entropy,
-     *  number of actions
-     * </pre>
+     * Computes binned policy distribution statistics and linear regression trends for both
+     * the base-10 logarithm of the maximum action probability and the normalised policy entropy.
+     * <p>
+     * The returned array contains two {@link INDArray} matrices:
+     * </p>
+     * <ol>
+     *   <li>A matrix of shape {@code [n, 10]} containing, for each bin:
+     *     <ul>
+     *       <li>Column 0: ending record index (file position)</li>
+     *       <li>Column 1: mean of {@code log10(max policy)}</li>
+     *       <li>Column 2: minimum of {@code log10(max policy)}</li>
+     *       <li>Column 3: maximum of {@code log10(max policy)}</li>
+     *       <li>Column 4: exponential moving average (EMA) of {@code log10(max policy)}</li>
+     *       <li>Column 5: mean of normalised entropy</li>
+     *       <li>Column 6: minimum of normalised entropy</li>
+     *       <li>Column 7: maximum of normalised entropy</li>
+     *       <li>Column 8: exponential moving average (EMA) of normalised entropy</li>
+     *       <li>Column 9: number of available actions</li>
+     *     </ul>
+     *   </li>
+     *   <li>A matrix of shape {@code} containing the initial and final linear regression
+     *       values for the maximum policy metric followed by those for the entropy metric.</li>
+     * </ol>
      *
-     * @param file      the file
-     * @param n         the number of bins
-     * @param gamma     the gamma decay factor
-     * @param batchSize the batch size
+     * @param file      the {@link ArrayReader} providing access to the policy probability records
+     * @param n         the target number of histogram bins (capped at the total number of records)
+     * @param gamma     the smoothing factor applied to the exponential moving average within each bin
+     * @param batchSize the maximum number of records to read per batch
+     * @return a two-element {@link INDArray} array containing the binned policy statistics and regression endpoints
+     * @throws IOException if an I/O error occurs while reading from {@code file}
      */
-    static INDArray[] policyReport(BinArrayFile file, int n, double gamma, long batchSize) throws IOException {
+    static INDArray[] policyReport(ArrayReader file, int n, double gamma, long batchSize) throws IOException {
         long m = file.size();
         n = Math.toIntExact(min(m, n));
         INDArray result = Nd4j.create(n, 10);
@@ -130,22 +165,21 @@ public interface Reports {
 
             // Read bin data
             int numActions = 0;
-            INDArray batchRecords1;
-            while ((batchRecords1 = readBin(file, end, batchSize)) != null) {
+            INDArray batchRecords;
+            while ((batchRecords = readBin(file, end, batchSize)) != null) {
                 // Computes the number of records to read
-                try (INDArray batchRecords = batchRecords1) {
-                    INDArray max = batchRecords.max(true, 1);
+                try (INDArray max = batchRecords.max(true, 1)) {
                     try (INDArray log10 = Transforms.log(max, 10, true)) {
                         policyStats.add(log10);
                         policyRegression.add(log10);
                     }
-                    // Computes the normalised entropy
-                    try (INDArray h = batchRecords.entropy(1)) {
-                        entropyStats.add(h);
-                        entropyRegression.add(h);
-                    }
-                    numActions = batchRecords.getInt(0, 2);
                 }
+                // Computes the normalised entropy
+                try (INDArray h = batchRecords.entropy(1)) {
+                    entropyStats.add(h);
+                    entropyRegression.add(h);
+                }
+                numActions = batchRecords.getInt(0, 2);
             }
 
             // Writes the bin values
@@ -170,13 +204,16 @@ public interface Reports {
     }
 
     /**
-     * Returns the data from file limited by bin size and batch size or null if end of bin
+     * Reads the next batch of records within the current bin boundary from the given reader.
      *
-     * @param file      the file
-     * @param end       the end of data bin file index
-     * @param batchSize the batch size
+     * @param file      the {@link ArrayReader} to read records from
+     * @param end       the exclusive upper record index marking the end of the current bin
+     * @param batchSize the maximum number of records to read in a single batch
+     * @return an {@link INDArray} containing the read records, or {@code null} if the reader
+     * has already reached or passed {@code end}
+     * @throws IOException if an I/O error occurs while reading from {@code file}
      */
-    static INDArray readBin(BinArrayFile file, long end, long batchSize) throws IOException {
+    static INDArray readBin(ArrayReader file, long end, long batchSize) throws IOException {
         // Read bin data
         if (file.position() < end) {
             // Computes the number of records to read
@@ -188,7 +225,8 @@ public interface Reports {
     }
 
     /**
-     * Statistics of data bin
+     * Accumulator that tracks descriptive statistics (minimum, maximum, arithmetic mean,
+     * and exponential moving average) across batches of records within a single histogram bin.
      */
     class BinStats {
         private final double notGamma;
@@ -200,9 +238,9 @@ public interface Reports {
         private double sum;
 
         /**
-         * Creates the bin statistics
+         * Initialises a new {@code BinStats} accumulator with the specified smoothing factor.
          *
-         * @param gamma the move exponential average factor
+         * @param gamma the exponential moving average weighting factor in the range {@code}
          */
         public BinStats(double gamma) {
             min = Double.MAX_VALUE;
@@ -213,9 +251,14 @@ public interface Reports {
         }
 
         /**
-         * Add data records to bin
+         * Incorporates a batch of records into the running bin statistics.
+         * <p>
+         * Updates the minimum, maximum, cumulative sum, sample count, and sequential
+         * exponential moving average using the first element of the initial batch as the seed.
+         * </p>
          *
-         * @param records the records
+         * @param records the {@link INDArray} column vector of sample values to accumulate
+         * @return this {@code BinStats} instance for method chaining
          */
         public BinStats add(INDArray records) {
             long n = records.size(0);
@@ -235,7 +278,9 @@ public interface Reports {
         }
 
         /**
-         * Returns the mean
+         * Returns the arithmetic mean of all samples accumulated in this bin.
+         *
+         * @return the arithmetic mean, or {@link Double#NaN} if no samples have been added
          */
         public double mean() {
             return sum / numSamples;
@@ -243,7 +288,8 @@ public interface Reports {
     }
 
     /**
-     * Computes the linear regression of data
+     * Online accumulator that computes an ordinary least squares (OLS) linear regression
+     * ({@code y = m * x + q}) over a sequential series of sample values indexed by {@code x = 0, 1, ..., N - 1}.
      */
     class LinearRegression {
         double sumxy;
@@ -251,9 +297,10 @@ public interface Reports {
         private double sum;
 
         /**
-         * Add data records to bin
+         * Incorporates a batch of sequential sample records into the linear regression model.
          *
-         * @param records the records
+         * @param records the {@link INDArray} column vector of sample values to accumulate
+         * @return this {@code LinearRegression} instance for method chaining
          */
         public LinearRegression add(INDArray records) {
             long n = records.size(0);
@@ -269,40 +316,55 @@ public interface Reports {
         }
 
         /**
-         * Returns the linear regression final value
+         * Returns the fitted regression value evaluated at the final sample index ({@code x = N - 1}).
+         *
+         * @return the final fitted value {@code q + m * (N - 1)}, or {@link Double#NaN} if fewer than two samples were added
          */
         public double finalValue() {
             return q() + m() * (numSamples - 1);
         }
 
         /**
-         * Returns the linear regression initial value
+         * Returns the fitted regression value evaluated at the initial sample index ({@code x = 0}).
+         *
+         * @return the initial fitted value equal to the intercept {@code q}, or {@link Double#NaN} if fewer than two samples were added
          */
         public double initialValue() {
             return q();
         }
 
         /**
-         * Returns the linear regression coefficient
+         * Returns the slope coefficient ({@code m}) of the fitted regression line.
+         *
+         * @return the slope {@code sxy() / sxx()}, or {@link Double#NaN} if fewer than two samples were added
          */
         public double m() {
             return sxy() / sxx();
         }
 
         /**
-         * Returns the mean
+         * Returns the arithmetic mean of all accumulated sample values ({@code y_m}).
+         *
+         * @return the sample mean {@code sum / N}, or {@link Double#NaN} if no samples have been added
          */
         double mean() {
             return sum / numSamples;
         }
 
         /**
-         * Returns the linear regression offset
+         * Returns the y-intercept ({@code q}) of the fitted regression line.
+         *
+         * @return the intercept {@code mean() - m() * xm()}, or {@link Double#NaN} if fewer than two samples were added
          */
         public double q() {
             return mean() - m() * xm();
         }
 
+        /**
+         * Computes the population variance of the zero-based sample indices ({@code x = 0, ..., N - 1}).
+         *
+         * @return the variance {@code (1 / N) * sum((x_i - x_m)^2)}
+         */
         double sxx() {
             double result = 0;
             double xm = xm();
@@ -314,18 +376,28 @@ public interface Reports {
         }
 
         /**
-         * Returns
+         * Computes the sample covariance between the zero-based indices and the accumulated values.
          * <p>
-         * 1 / N sum_i (xi - xm) (yi - ym)
-         * = 1 / N sum_i (xi yi - xi ym - xm yi + xm ym)
-         * = 1 / N sum_i (xi yi) - ym / N sum_i xi - xm / N sum_i yi + xm ym
-         * = 1 / N sum_i (xi yi) - ym xm - xm ym + xm ym
-         * = 1 / N sum_i (xi yi) - ym xm
+         * Derived from:
+         * </p>
+         * <pre>
+         * (1 / N) * sum_i (x_i - x_m) * (y_i - y_m)
+         *   = (1 / N) * sum_i (x_i * y_i - x_i * y_m - x_m * y_i + x_m * y_m)
+         *   = (1 / N) * sum_i (x_i * y_i) - y_m * x_m - x_m * y_m + x_m * y_m
+         *   = (1 / N) * sum_i (x_i * y_i) - x_m * y_m
+         * </pre>
+         *
+         * @return the covariance {@code sumxy / N - xm() * mean()}
          */
         double sxy() {
             return sumxy / numSamples - xm() * mean();
         }
 
+        /**
+         * Returns the arithmetic mean of the zero-based sample indices ({@code x = 0, ..., N - 1}).
+         *
+         * @return the mean index {@code (N - 1) / 2.0}
+         */
         double xm() {
             return (numSamples - 1) / 2.0;
         }

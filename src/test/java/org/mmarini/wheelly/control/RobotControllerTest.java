@@ -45,8 +45,8 @@ import org.mmarini.wheelly.robots.SimRobot;
 import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.geom.Point2D;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -86,7 +86,7 @@ class RobotControllerTest {
     void setUp() throws IOException {
         this.robotStates = new ArrayList<>();
         JsonNode root = fromResource("/simRobot0Obstacles.yml");
-        this.robot = SimRobot.create(root, new File("simRobot0Obstacles.yml"));
+        this.robot = SimRobot.create(root, Path.of("simRobot0Obstacles.yml"));
         this.controller = new RobotController(REACTION_INTERVAL, COMMAND_INTERVAL, x -> 12d)
                 .init(robot);
         this.controller.addOnRobotStatus(robotStates::add);

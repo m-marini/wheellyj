@@ -45,8 +45,8 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Random;
 import java.util.function.Consumer;
 
@@ -72,7 +72,7 @@ public class MacroActionsBehaviour implements BehaviourApi, FSMContext {
      * @return the initialised {@link MacroActionsBehaviour} instance
      * @throws IOException if a validation or reading error occurs
      */
-    public static MacroActionsBehaviour create(JsonNode root, File file) throws IOException {
+    public static MacroActionsBehaviour create(JsonNode root, Path file) throws IOException {
         return create(root, Locator.root());
     }
 

@@ -39,8 +39,9 @@ import org.mmarini.wheelly.rlagents.RLDatasetIterator;
 import org.mmarini.wheelly.rlagents.TrainingKpis;
 import org.mmarini.wheelly.rlagents.TrajectoryDataGenerator;
 import org.mmarini.wheelly.rlagents.TrajectoryTrainingData;
-import org.mmarini.wheelly.storage.serde.BinArrayFile;
-import org.mmarini.wheelly.storage.serde.KeyFileMap;
+import org.mmarini.wheelly.storage.serde.ArrayReader;
+import org.mmarini.wheelly.storage.serde.FileArrayReader;
+import org.mmarini.wheelly.storage.serde.FileArrayReaderMap;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.MultiDataSet;
 import org.nd4j.linalg.dataset.api.MultiDataSetPreProcessor;
@@ -62,7 +63,7 @@ import static java.util.Objects.requireNonNull;
  * data from binary files and exposes it as mini-batches of {@link MultiDataSet}.
  *
  * <p>The iterator reads rewards, states and action masks from the supplied
- * {@link BinArrayFile} instances. Input records are grouped into trajectories
+ * {@link FileArrayReader} instances. Input records are grouped into trajectories
  * of at most {@code trajectorySize} records. The trajectories are converted
  * into training data by {@link TrajectoryDataGenerator} and subsequently
  * split into mini-batches according to the requested batch size.</p>
@@ -77,15 +78,15 @@ import static java.util.Objects.requireNonNull;
  * <p>The iterator is synchronous and does not support asynchronous iteration.</p>
  *
  * @see RLDatasetIterator
- * @see BinArrayFile
+ * @see FileArrayReader
  * @see TrajectoryDataGenerator
  * @see TrajectoryTrainingData
  */
 public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(BinFilesDatasetIterator.class);
-    private final Map<String, BinArrayFile> statesFile;
-    private final Map<String, BinArrayFile> actionMasksFile;
-    private final BinArrayFile rewardsFile;
+    private final Map<String, ? extends ArrayReader> statesFile;
+    private final Map<String, ? extends ArrayReader> actionMasksFile;
+    private final ArrayReader rewardsFile;
     private final long trajectorySize;
     private final int batchSize;
     private final ComputationGraph network;
@@ -115,8 +116,8 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
      * @param beta           beta parameter used by the trajectory data generator
      * @param avgReward      initial average reward
      */
-    BinFilesDatasetIterator(Map<String, BinArrayFile> stateFile, Map<String, BinArrayFile> actionMaskFile,
-                            BinArrayFile rewardFile, int batchSize, long trajectorySize, ComputationGraph network,
+    BinFilesDatasetIterator(Map<String, ? extends ArrayReader> stateFile, Map<String, ? extends ArrayReader> actionMaskFile,
+                            ArrayReader rewardFile, int batchSize, long trajectorySize, ComputationGraph network,
                             Map<String, Float> alphas, float beta, float avgReward) {
         this.batchSize = batchSize;
         this.trajectorySize = trajectorySize;
@@ -218,7 +219,7 @@ public class BinFilesDatasetIterator implements RLDatasetIterator, AutoCloseable
     @Override
     public void close() throws Exception {
         disposeTrajectory();
-        KeyFileMap.close(statesFile, actionMasksFile);
+        FileArrayReaderMap.close(statesFile, actionMasksFile);
         rewardsFile.close();
     }
 

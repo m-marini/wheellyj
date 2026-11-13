@@ -55,8 +55,9 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -393,7 +394,7 @@ public class RLAgentBuilder {
      * @param root the configuration
      * @param file the configuration file
      */
-    public static RLAgent create(JsonNode root, File file) {
+    public static RLAgent create(JsonNode root, Path file) {
         try {
             return RLAgentBuilder.create(root);
         } catch (IOException e) {
@@ -450,8 +451,8 @@ public class RLAgentBuilder {
     public RLAgent build(Random random) throws IOException {
         WheellyJsonSchemas.instance().validateOrThrow(root, SCHEMA_NAME);
         String path = Locator.locate(PATH_ID).getNode(root).asText();
-        File filePath = new File(path);
-        if (filePath.exists()) {
+        Path filePath = Path.of(path);
+        if (Files.exists(filePath)) {
             return RLAgent.fromFile(filePath, random);
         }
         ComputationGraphConfiguration conf = buildConf(Locator.locate(NETWORK_ID));

@@ -38,8 +38,8 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -76,7 +76,7 @@ public class MacroActionsAdapter implements GymAdapter {
      * @return the initialised {@link MacroActionsAdapter} instance
      * @throws IOException if a validation or reading error occurs
      */
-    public static MacroActionsAdapter create(JsonNode root, File file) throws IOException {
+    public static MacroActionsAdapter create(JsonNode root, Path file) throws IOException {
         return create(root, Locator.root());
     }
 

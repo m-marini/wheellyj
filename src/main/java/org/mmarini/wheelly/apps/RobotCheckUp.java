@@ -62,7 +62,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Point2D;
-import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -486,7 +486,7 @@ public class RobotCheckUp {
      */
     private void run() throws Throwable {
         logger.info("Robot check started.");
-        File configFile = new File(parseArgs.getString("config"));
+        Path configFile = Path.of(parseArgs.getString("config"));
         JsonNode config = fromFile(configFile);
         WheellyJsonSchemas.instance().validateOrThrow(config, CHECKUP_SCHEMA_YML);
 

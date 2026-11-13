@@ -1,0 +1,192 @@
+/*
+    Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
+
+    Permission is hereby granted, free of charge, to any person
+    obtaining a copy of this software and associated documentation
+    files (the "Software"), to deal in the Software without
+    restriction, including without limitation the rights to use,
+    copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following
+    conditions:
+
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+    OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+    NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+    OTHER DEALINGS IN THE SOFTWARE.
+
+    END OF TERMS AND CONDITIONS
+*/
+
+// Message definitions for low-level robot telemetry, sensor readings,
+// and actuation commands for the Wheelly robot.
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.mmarini.wheelly.protobuf.robot";
+
+package wheelly.protobuf.robot;
+
+// Telemetry reporting the state of physical contact/bumper sensors
+// and movement safety flags.
+message ContactsTelemetry {
+  // Timestamp of the telemetry reading (in milliseconds).
+  int64 timestamp = 1;
+  // True if the front contact/bumper sensor is triggered.
+  bool frontSensor = 2;
+  // True if the rear contact/bumper sensor is triggered.
+  bool rearSensor = 3;
+  // True if forward movement is currently unobstructed and permitted.
+  bool canMoveForward = 4;
+  // True if backward movement is currently unobstructed and permitted.
+  bool canMoveBackward = 5;
+}
+
+// Operating mode of the robot's rotating head/turret.
+enum HeadStatusId {
+  // Head is locked at a fixed angle relative to the robot body.
+  FIX_DIRECTION = 0;
+  // Head is actively tracking a target using the front reference.
+  FRONT_TRACK = 1;
+  // Head is actively tracking a target using the rear reference.
+  REAR_TRACK = 2;
+}
+
+// Telemetry from the front and rear LiDAR distance sensors along with
+// associated pose and head orientation data.
+message LidarTelemetry {
+  // Timestamp of the LiDAR measurement (in milliseconds).
+  int64 timestamp = 1;
+  // Distance measured by the front LiDAR sensor.
+  int32 frontDistance = 2;
+  // Distance measured by the rear LiDAR sensor.
+  int32 rearDistance = 3;
+  // Robot X-coordinate in the world frame at the time of measurement.
+  float x = 4;
+  // Robot Y-coordinate in the world frame at the time of measurement.
+  float y = 5;
+  // Yaw angle (heading) of the robot body at the time of measurement.
+  sint32 robotYaw = 6;
+  // Current angular direction of the rotating head.
+  sint32 headDirection = 7;
+  // Current operating mode of the robot's head.
+  HeadStatusId headStatus = 8;
+  // Target angular direction for the head.
+  sint32 headTarget = 9;
+  // X-coordinate of the tracked target in the world frame.
+  float xTarget = 10;
+  // Y-coordinate of the tracked target in the world frame.
+  float yTarget = 11;
+}
+
+// Current locomotion state of the robot chassis.
+enum MotionStatusId {
+  // Robot is stationary.
+  HALT = 0;
+  // Robot is moving forward.
+  FORWARD = 1;
+  // Robot is moving backward.
+  BACKWARD = 2;
+  // Robot is rotating on the spot or turning towards a heading.
+  ROTATE = 3;
+}
+
+// Telemetry covering robot odometry, wheel speeds, motor power levels,
+// and target navigation setpoints.
+message MotionTelemetry {
+  // Timestamp of the motion telemetry reading (in milliseconds).
+  int64 timestamp = 1;
+  // Estimated X-coordinate of the robot in the world frame.
+  float x = 2;
+  // Estimated Y-coordinate of the robot in the world frame.
+  float y = 3;
+  // Current robot heading in degrees.
+  sint32 robotDeg = 4;
+  // Measured speed of the left wheel (pulses per second).
+  float leftPps = 5;
+  // Measured speed of the right wheel (pulses per second).
+  float rightPps = 6;
+  // Error code or failure status reported by the Inertial Measurement Unit (IMU).
+  sint32 imuFailure = 7;
+  // Current locomotion state of the robot.
+  MotionStatusId statusId = 8;
+  // Target heading in degrees.
+  sint32 targetDeg = 9;
+  // Target destination X-coordinate in the world frame.
+  float xTarget = 10;
+  // Target destination Y-coordinate in the world frame.
+  float yTarget = 11;
+  // Target speed setpoint for the left wheel (pulses per second).
+  sint32 leftTargetPps = 12;
+  // Target speed setpoint for the right wheel (pulses per second).
+  sint32 rightTargetPps = 13;
+  // Applied motor power/PWM level for the left wheel.
+  sint32 leftPower = 14;
+  // Applied motor power/PWM level for the right wheel.
+  sint32 rightPower = 15;
+}
+
+// Telemetry reporting the power supply / battery status.
+message SupplyTelemetry {
+  // Timestamp of the voltage reading (in milliseconds).
+  int64 timestamp = 1;
+  // Measured battery or supply voltage (typically in millivolts).
+  uint32 voltage = 2;
+}
+
+// Event generated when the vision system detects a fiducial marker in a camera frame.
+message CameraEvent {
+  // Timestamp when the camera frame was captured (in milliseconds).
+  int64 timestamp = 1;
+  // Unique identifier of the detected fiducial marker.
+  int32 markerId = 2;
+  // Width of the captured image frame in pixels.
+  int32 width = 3;
+  // Height of the captured image frame in pixels.
+  int32 height = 4;
+  // Flattened list of 2D image coordinates (e.g. corner points) of the detected marker.
+  repeated float coords = 5;
+}
+
+// Command instructing the robot to drive towards a target coordinate.
+message MoveCommand {
+  // True to move forward towards the target, false to move in reverse.
+  bool frontMove = 1;
+  // Target X-coordinate.
+  sint32 x = 2;
+  // Target Y-coordinate.
+  sint32 y = 3;
+}
+
+// Command instructing the robot to immediately stop all locomotion.
+message HaltCommand {
+}
+
+// Command instructing the robot body to rotate towards a specific heading.
+message RotateCommand {
+  // Target angular direction for the robot body.
+  sint32 direction = 1;
+}
+
+// Command instructing the robot's head to point in a fixed angular direction.
+message ScanCommand {
+  // Target angular direction for the head.
+  sint32 direction = 1;
+}
+
+// Command instructing the robot's head to continuously track a world coordinate.
+message TrackCommand {
+  // True to align the front sensor axis with the target, false for the rear axis.
+  bool frontTrack = 1;
+  // Target X-coordinate to track.
+  sint32 x = 2;
+  // Target Y-coordinate to track.
+  sint32 y = 3;
+}

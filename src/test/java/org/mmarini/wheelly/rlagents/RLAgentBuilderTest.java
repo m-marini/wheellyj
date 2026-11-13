@@ -46,8 +46,9 @@ import org.mmarini.wheelly.gyms.SignalSpec;
 import org.mmarini.wheelly.gyms.WithSignalsSpec;
 import org.mmarini.yaml.Utils;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -73,7 +74,7 @@ class RLAgentBuilderTest {
             }
         };
 
-        org.mmarini.Utils.deleteRecursive(new File("tmp/model"));
+        org.mmarini.Utils.deleteRecursive(Path.of("tmp/model"));
     }
 
     @Test
@@ -178,9 +179,9 @@ class RLAgentBuilderTest {
 
         ComputationGraph network = new ComputationGraph(conf);
         network.init();
-        File file = new File("test/network.zip");
-        file.getParentFile().mkdirs();
-        network.save(file);
+        Path file = Path.of("test/network.zip");
+        Files.createDirectories(file.getParent());
+        network.save(file.toFile());
 
         // Then
 

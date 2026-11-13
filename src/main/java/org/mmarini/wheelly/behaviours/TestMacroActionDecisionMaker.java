@@ -32,8 +32,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.mmarini.wheelly.perception.DecisionMaker;
 import org.mmarini.yaml.Locator;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.function.Supplier;
 
 import static org.mmarini.wheelly.behaviours.HeadActionId.*;
@@ -71,7 +71,7 @@ public class TestMacroActionDecisionMaker implements DecisionMaker<BehaviourStat
      * @return a fully initialised {@link TestMacroActionDecisionMaker} instance
      * @throws IOException if schema validation rules fail or data reading is disrupted
      */
-    public static TestMacroActionDecisionMaker create(JsonNode root, File file) throws IOException {
+    public static TestMacroActionDecisionMaker create(JsonNode root, Path file) throws IOException {
         return create(root, Locator.root());
     }
 

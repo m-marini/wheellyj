@@ -28,11 +28,12 @@
 
 package org.mmarini.wheelly.storage.serde;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 import static java.util.Objects.requireNonNull;
 
@@ -49,9 +50,9 @@ public class DataFileWriter implements DataWriter {
      * @param file the files
      * @throws IOException in case of error
      */
-    public static DataFileWriter fromFile(File file) throws IOException {
-        file.getCanonicalFile().getParentFile().mkdirs();
-        OutputStream stream = new FileOutputStream(file, true);
+    public static DataFileWriter fromFile(Path file) throws IOException {
+        Files.createDirectories(file.getParent());
+        OutputStream stream = Files.newOutputStream(file, StandardOpenOption.CREATE,StandardOpenOption.APPEND);
         return new DataFileWriter(stream);
     }
 

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Issue [#671](https://github.com/m-marini/wheellyj/issues/671): Protobuf inference file and java.nio files
+
+
 ## [[0.29.0]](https://github.com/m-marini/wheellyj/releases/tag/v0.29.0) 2026-09-17
 
 ### Add

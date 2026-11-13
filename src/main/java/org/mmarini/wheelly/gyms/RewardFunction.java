@@ -34,8 +34,8 @@ import org.mmarini.wheelly.behaviours.BehaviourState;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 
 import static java.lang.String.format;
@@ -88,7 +88,7 @@ public interface RewardFunction {
      * @throws IOException              if data reading is disrupted or file access fails
      * @throws IllegalArgumentException if the configuration document root node is not an array structure
      */
-    static RewardFunction fromFile(File file) throws IOException {
+    static RewardFunction fromFile(Path file) throws IOException {
         JsonNode root = Utils.fromFile(file);
         if (!root.isArray()) {
             throw new IllegalArgumentException(format("Node %s must be an array (%s)",
