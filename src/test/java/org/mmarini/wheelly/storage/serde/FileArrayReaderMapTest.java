@@ -28,50 +28,47 @@
 
 package org.mmarini.wheelly.storage.serde;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasKey;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class KeyFileMapTest {
-    private static final Logger logger = LoggerFactory.getLogger(KeyFileMapTest.class);
+class FileArrayReaderMapTest {
+    private static final Logger logger = LoggerFactory.getLogger(FileArrayReaderMapTest.class);
 
     static {
-        Nd4j.zeros(1, 1);
         logger.atDebug().log("OK");
     }
 
-    @Test
-    void testChildren() {
-        Map<String, BinArrayFile> map1 = KeyFileMap.create(new File("src/test/resources"), "f");
-        Map<String, BinArrayFile> map = KeyFileMap.children(map1, "f");
-        assertThat(map, hasKey("a"));
-        assertThat(map, hasKey("b"));
-        assertEquals(2, map.size());
-    }
-
-    @Test
-    void testChildrena() {
-        Map<String, BinArrayFile> map1 = KeyFileMap.create(new File("src/test/resources"), "f");
-        Map<String, BinArrayFile> map = KeyFileMap.children(map1, "f.a");
-        assertTrue(map.isEmpty());
+    @BeforeEach
+    void setUp() throws IOException {
+        try (FileArrayWriter f = new FileArrayWriter(Path.of("tmp/bin/f.bin"))) {
+            f.write(Nd4j.zeros(2, 10).castTo(DataType.FLOAT));
+        }
+        try (FileArrayWriter f = new FileArrayWriter(Path.of("tmp/bin/f/a.bin"))) {
+            f.write(Nd4j.zeros(2, 10).castTo(DataType.FLOAT));
+        }
+        try (FileArrayWriter f = new FileArrayWriter(Path.of("tmp/bin/f/b.bin"))) {
+            f.write(Nd4j.zeros(2, 10).castTo(DataType.FLOAT));
+        }
     }
 
     @Test
     void testCreate() {
-        Map<String, BinArrayFile> map = KeyFileMap.create(new File("src/test/resources"), "f");
+        Map<String, FileArrayReader> map = FileArrayReaderMap.create(Path.of("tmp/bin"), "");
+        assertThat(map, hasKey("f"));
         assertThat(map, hasKey("f.a"));
         assertThat(map, hasKey("f.b"));
-        assertThat(map, hasKey("f"));
-        assertEquals(new File("src/test/resources/f/a/data.bin"),
-                map.get("f.a").file());
+        assertEquals(3, map.size());
     }
 }

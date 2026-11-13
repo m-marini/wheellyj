@@ -34,7 +34,8 @@ import org.mmarini.wheelly.gyms.WithSignalsSpec;
 import org.mmarini.wheelly.utils.WithShutdownCompletable;
 import org.mmarini.yaml.Utils;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.function.Consumer;
 
 public interface Agent extends AdapterConnector, BatchAgent, AutoCloseable, WithShutdownCompletable {
@@ -44,14 +45,14 @@ public interface Agent extends AdapterConnector, BatchAgent, AutoCloseable, With
      *
      * @param file the configuration file
      */
-    static Agent fromFile(File file) throws Throwable {
+    static Agent fromFile(Path file) throws Throwable {
         return Utils.createObject(file);
     }
 
     /**
      * Backs up the model
      */
-    void backup();
+    void backup() throws IOException;
 
     @Override
     void close();
@@ -71,11 +72,9 @@ public interface Agent extends AdapterConnector, BatchAgent, AutoCloseable, With
      * </p>
      *
      * @param learning {@code true} to enable reinforcement learning and policy adaptation,
-     *                 {@code false} to lock the agent's behavior to execution-only mode.
+     *                 {@code false} to lock the agent's behaviour to execution-only mode.
      */
     void learning(boolean learning);
-
-    void validate(WithSignalsSpec adapter) throws Throwable;
 
     RLAgent onKpis(Consumer<TrainingKpis> callback);
 
@@ -83,4 +82,6 @@ public interface Agent extends AdapterConnector, BatchAgent, AutoCloseable, With
      * Saves the model
      */
     void save();
+
+    void validate(WithSignalsSpec adapter) throws Throwable;
 }

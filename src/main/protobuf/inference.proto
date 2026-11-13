@@ -1,0 +1,212 @@
+/*
+    Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
+
+    Permission is hereby granted, free of charge, to any person
+    obtaining a copy of this software and associated documentation
+    files (the "Software"), to deal in the Software without
+    restriction, including without limitation the rights to use,
+    copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following
+    conditions:
+
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+    OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+    NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+    OTHER DEALINGS IN THE SOFTWARE.
+
+    END OF TERMS AND CONDITIONS
+*/
+
+// Message definitions for serialising the world state, hardware specifications,
+// and AI inference/training records for the Wheelly robot.
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.mmarini.wheelly.protobuf.inferences";
+
+package wheelly.protobuf.inferences;
+
+import "robot_messages.proto";
+
+// Represents a coordinate or vector in two-dimensional (2D) space.
+message Point2D {
+  // Coordinate along the X-axis (typically in metres).
+  float x = 1;
+  // Coordinate along the Y-axis (typically in metres).
+  float y = 2;
+}
+
+// Defines the geometry and dimensions of the spatial grid used for
+// environment mapping.
+message GridTopology {
+  // Centre point of the grid in the world coordinate frame.
+  Point2D center = 1;
+  // Width of the grid expressed in number of cells.
+  int32 width = 2;
+  // Height of the grid expressed in number of cells.
+  int32 height = 3;
+  // Physical size (side length) of each individual grid cell.
+  float gridSize = 4;
+}
+
+// Specifies the physical, kinematic, and sensor parameters of the robot.
+message RobotSpec {
+  // Interval for sending status/telemetry messages (in milliseconds).
+  int64 sendInterval = 1;
+  // Interval for sensor scanning cycles (in milliseconds).
+  int64 scanInterval = 2;
+  // Field of View (FoV) of the LiDAR sensors.
+  int32 lidarFOV = 3;
+  // Field of View (FoV) of the camera.
+  int32 cameraFOV = 4;
+  // Total Field of View or angular range of the robot's head.
+  int32 headFOV = 5;
+  // Angular range of permitted movement directions.
+  int32 directionRange = 6;
+  // Maximum rotational range of the robot body.
+  int32 maxRotRange = 7;
+  // Maximum rotational speed (pulses or steps per second).
+  int32 maxRotPps = 8;
+  // Maximum linear speed permitted for the robot.
+  int32 maxSpeed = 9;
+  // Relative position of the head/camera with respect to the robot's centre.
+  Point2D headLocation = 10;
+  // Maximum range detectable by the radar/mapping system.
+  float maxRadarDistance = 11;
+  // Physical footprint radius of the robot for collision detection.
+  float contactRadius = 12;
+  // Mounting distance of the front LiDAR sensor from the robot's centre.
+  float frontLidarDistance = 13;
+  // Mounting distance of the rear LiDAR sensor from the robot's centre.
+  float rearLidarDistance = 14;
+  // Focal distance or maximum operational range of the camera.
+  float cameraDistance = 15;
+  // Tolerance distance within which a target is considered reached.
+  float targetRange = 16;
+  // Distance from an obstacle or target at which deceleration begins.
+  float decelerateDistance = 17;
+}
+
+// Overall configuration of the world model and robot capabilities.
+message WorldModelSpec {
+  // Physical and sensory specifications of the robot.
+  RobotSpec robotSpec = 1;
+  // Size of the local map maintained in the robot's memory.
+  int32 robotMapSize = 2;
+}
+
+// Metadata header for an inference stream or file.
+// Contains the static configuration valid for all subsequent records.
+message InferenceHeader {
+  // Identifier for the trace, format, or inference model type.
+  int32 type = 1;
+  // Specifications of the world model and robot.
+  WorldModelSpec worldSpec = 2;
+  // Spatial grid topology adopted during the session.
+  GridTopology topology = 3;
+}
+
+// Associates a visual camera event with the synchronised LiDAR reading
+// captured at the same instant.
+message CorrelatedCameraEvent {
+  // Data from the event captured by the camera.
+  wheelly.protobuf.robot.CameraEvent camera = 1;
+  // LiDAR sensor telemetry correlated with the visual capture.
+  wheelly.protobuf.robot.LidarTelemetry lidars = 4;
+}
+
+// Complete snapshot of the robot's sensory and kinematic state
+// at a given point in time.
+message RobotStatus {
+  // Internal robot timestamp at the moment of capture.
+  int64 robotTime = 1;
+  // Status of the contact/bumper sensors.
+  wheelly.protobuf.robot.ContactsTelemetry contacts = 2;
+  // Latest camera event correlated with LiDAR data.
+  CorrelatedCameraEvent camera = 3;
+  // Current telemetry from the LiDAR sensors.
+  wheelly.protobuf.robot.LidarTelemetry lidars = 4;
+  // Telemetry relating to position, velocity, and orientation (odometry).
+  wheelly.protobuf.robot.MotionTelemetry motion = 5;
+}
+
+// Represents a fiducial marker (e.g. AprilTag / ArUco) detected in the
+// environment for localisation and navigation.
+message FiducialMarker {
+  // Unique identifier of the marker.
+  int32 id = 1;
+  // Estimated position of the marker in the world coordinate frame.
+  Point2D location = 2;
+  // Weight or confidence level of the position estimate.
+  float weight = 3;
+  // Timestamp of the latest detection of the marker.
+  int64 markerTime = 4;
+  // Timestamp of the latest data update or cleanup.
+  int64 cleanTime = 5;
+}
+
+// Single cell of the radar/LiDAR-based occupancy grid map.
+message MapCell {
+  // Timestamp of the latest echo/obstacle detected within the cell.
+  int64 echoTime = 1;
+  // Weight or occupancy probability associated with the detected echo.
+  float echoWeight = 2;
+  // Timestamp of the latest physical contact occurring at this cell.
+  int64 contactTime = 3;
+}
+
+// Local occupancy map of the environment surrounding the robot.
+message RadarMap {
+  // Timestamp of the latest map cleanup/decay operation.
+  int64 cleanTimeStamp = 1;
+  // Linearised list of cells making up the map.
+  repeated MapCell cells = 2;
+}
+
+// Complete representation of the robot's perception and knowledge of the
+// environment at a given moment.
+message WorldModel {
+  // Instantaneous state of the robot's sensors and kinematics.
+  RobotStatus robotStatus = 1;
+  // List of currently known or tracked fiducial markers.
+  repeated FiducialMarker markers = 2;
+  // Occupancy map of obstacles detected around the robot.
+  RadarMap radarMap = 3;
+}
+
+// Complete state used as input for the decision-making model (AI/RL),
+// including world perception and ongoing actions.
+message BehaviourState {
+  // World model perceived by the robot.
+  WorldModel worldModel = 1;
+  // Identifier of the movement action currently being executed.
+  int32 moveActionId = 2;
+  // Identifier of the head orientation action currently being executed.
+  int32 headActionId = 3;
+}
+
+// Action selected or executed by the AI agent in response to a state.
+message BehaviourAction {
+  // Identifier of the movement action chosen for the robot.
+  int32 moveActionId = 1;
+  // Identifier of the head movement action chosen for the robot.
+  int32 headActionId = 2;
+}
+
+// Single (State, Action) pair recorded during execution.
+// Used for training datasets (Imitation/Reinforcement Learning) or analysis.
+message InferenceRecord {
+  // World and behaviour state observed prior to the action.
+  BehaviourState state = 1;
+  // Action taken in response to the observed state.
+  BehaviourAction action = 2;
+}

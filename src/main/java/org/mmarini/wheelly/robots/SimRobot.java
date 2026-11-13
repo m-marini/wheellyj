@@ -49,8 +49,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -182,7 +182,7 @@ public class SimRobot implements RobotApi {
      * @param file the configuration file object layout metadata tracking source origins
      * @return a newly configured and structured {@link SimRobot} instance channel
      */
-    public static SimRobot create(JsonNode root, File file) {
+    public static SimRobot create(JsonNode root, Path file) {
         Locator locator = Locator.root();
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME, file.toString());
         long mapSeed = locator.path("mapSeed").getNode(root).asLong(0);

@@ -31,14 +31,14 @@ package org.mmarini.wheelly.utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
+import java.nio.file.Path;
 
 /**
  * Load and cache JSON schemas
  */
 public interface WheellyJsonSchemas {
     Logger logger = LoggerFactory.getLogger(WheellyJsonSchemas.class);
-    org.mmarini.yaml.JsonSchemas singleton = org.mmarini.yaml.JsonSchemas.loadPath(new File("schemas"));
+    org.mmarini.yaml.JsonSchemas singleton = org.mmarini.yaml.JsonSchemas.loadPath(Path.of("schemas"));
 
     /**
      * Returns the singleton instance

@@ -42,8 +42,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.*;
 
 import static org.mmarini.wheelly.engines.StateResult.*;
@@ -82,7 +82,7 @@ public class StateMachineAgent implements ProcessorContextApi, DecisionMaker<Wor
      *
      * @param file the configuration document
      */
-    public static StateMachineAgent fromFile(File file) throws IOException {
+    public static StateMachineAgent fromFile(Path file) throws IOException {
         JsonNode root = Utils.fromFile(file);
         Locator locator = Locator.root();
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
@@ -186,7 +186,7 @@ public class StateMachineAgent implements ProcessorContextApi, DecisionMaker<Wor
      *
      * @param cleaner the modeller
      */
-    public void mapClener(WithClearMap cleaner) {
+    public void mapCleaner(WithClearMap cleaner) {
         this.modeller = cleaner;
     }
 

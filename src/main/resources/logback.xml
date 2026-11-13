@@ -82,7 +82,8 @@
     <logger name="org.mmarini.wheelly.rrt.RRTPathFinder" level="INFO"/>
 
     <logger name="org.mmarini.wheelly.storage.csv.CSVWriter" level="INFO"/>
-    <logger name="org.mmarini.wheelly.storage.serde.BinArrayFile" level="INFO"/>
+    <logger name="org.mmarini.wheelly.storage.serde.FileArrayReader" level="INFO"/>
+    <logger name="org.mmarini.wheelly.storage.serde.FileArrayWriter" level="INFO"/>
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

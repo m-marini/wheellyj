@@ -41,8 +41,8 @@ import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -63,7 +63,7 @@ public class WorldModeller implements Perceptor {
      * @param root the document
      * @param file the locator of radar map definition
      */
-    public static WorldModeller create(JsonNode root, File file) {
+    public static WorldModeller create(JsonNode root, Path file) {
         return create(root, Locator.root());
     }
 
@@ -87,7 +87,7 @@ public class WorldModeller implements Perceptor {
      * @param file the filename
      * @throws IOException in case of error
      */
-    public static WorldModeller fromFile(File file) throws Throwable {
+    public static WorldModeller fromFile(Path file) throws Throwable {
         return Utils.createObject(file);
     }
 

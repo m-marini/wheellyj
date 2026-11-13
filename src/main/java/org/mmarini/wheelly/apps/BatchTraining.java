@@ -54,7 +54,7 @@ import org.mmarini.wheelly.rlagents.DLListener;
 import org.mmarini.wheelly.rlagents.RLAgent;
 import org.mmarini.wheelly.rlagents.TrainingKpis;
 import org.mmarini.wheelly.robots.RobotApi;
-import org.mmarini.wheelly.storage.serde.BinArrayFile;
+import org.mmarini.wheelly.storage.serde.FileArrayReader;
 import org.mmarini.wheelly.storage.serde.KeyBinWriter;
 import org.mmarini.wheelly.swing.KpisPanel;
 import org.mmarini.wheelly.swing.Utils;
@@ -71,10 +71,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -207,7 +208,7 @@ public class BatchTraining {
 
         // Creates agent
         logger.atInfo().log("Creating agent ...");
-        agent = Agent.fromFile(new File(Locator.locate("agent").getNode(config).asText()));
+        agent = Agent.fromFile(Path.of(Locator.locate("agent").getNode(config).asText()));
 
         // Create layers' connection
         controller.init(robot);
@@ -246,11 +247,11 @@ public class BatchTraining {
             }
             String kpisPathname = args.getString("kpis");
             if (kpisPathname != null) {
-                File path = new File(kpisPathname);
-                if (!path.exists()) {
-                    this.kpisWriter = new KeyBinWriter(new File(kpisPathname));
+                Path path = Path.of(kpisPathname);
+                if (!Files.exists(path)) {
+                    this.kpisWriter = new KeyBinWriter(path);
                 } else {
-                    logger.atError().log("File {} already exists", path.getAbsoluteFile());
+                    logger.atError().log("File {} already exists", path.toString());
                 }
             }
         }
@@ -292,7 +293,7 @@ public class BatchTraining {
      * Returns the validated configuration
      */
     private JsonNode loadConfiguration() throws IOException {
-        File configFile = new File(this.args.getString("config"));
+        Path configFile = Path.of(this.args.getString("config"));
         JsonNode config = fromFile(configFile);
         WheellyJsonSchemas.instance().validateOrThrow(config, BATCH_SCHEMA_YML);
         return config;
@@ -400,18 +401,18 @@ public class BatchTraining {
      */
     private void runBatch() throws Exception {
         // Creates the batch trainer
-        File path = new File(args.getString("path"));
-        Map<String, BinArrayFile> stateFiles = adapter.stateSpec().keySet()
+        Path path = Path.of(args.getString("path"));
+        Map<String, FileArrayReader> stateFiles = adapter.stateSpec().keySet()
                 .stream()
                 .map(key ->
-                        Tuple2.of(key, new BinArrayFile(new File(path, key + ".bin"))))
+                        Tuple2.of(key, FileArrayReader.createByKey(path, key)))
                 .collect(Tuple2.toMap());
-        Map<String, BinArrayFile> actionMaskFiles = adapter.actionSpec().keySet()
+        Map<String, FileArrayReader> actionMaskFiles = adapter.actionSpec().keySet()
                 .stream()
                 .map(key ->
-                        Tuple2.of(key, new BinArrayFile(new File(path, key + ".bin"))))
+                        Tuple2.of(key, FileArrayReader.createByKey(path, key)))
                 .collect(Tuple2.toMap());
-        BinArrayFile rewardFile = new BinArrayFile(new File(path, "rewards.bin"));
+        FileArrayReader rewardFile = FileArrayReader.createByKey(path, "rewards");
         long size = rewardFile.size();
         if (agent instanceof RLAgent dlAgent) {
             DLListener listener = new DLListener((int) (size * numEpochs));

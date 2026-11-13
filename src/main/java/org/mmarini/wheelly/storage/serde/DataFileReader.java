@@ -28,8 +28,12 @@
 
 package org.mmarini.wheelly.storage.serde;
 
-import java.io.*;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static java.util.Objects.requireNonNull;
 
@@ -45,9 +49,9 @@ public class DataFileReader implements DataReader {
      * @param file the files
      * @throws IOException in case of error
      */
-    public static DataFileReader fromFile(File file) throws IOException {
-        file.getCanonicalFile().getParentFile().mkdirs();
-        return new DataFileReader(new FileInputStream(requireNonNull(file)), file.length());
+    public static DataFileReader fromFile(Path file) throws IOException {
+        Files.createDirectories(file.getParent());
+        return new DataFileReader(Files.newInputStream(file), Files.size(file));
     }
 
     private final InputStream file;

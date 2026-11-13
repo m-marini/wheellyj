@@ -31,24 +31,23 @@ package org.mmarini.wheelly.batch;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import org.mmarini.Tuple2;
-import org.mmarini.wheelly.behaviours.HeadActionId;
-import org.mmarini.wheelly.behaviours.MacroAction;
-import org.mmarini.wheelly.behaviours.MacroActionsState;
-import org.mmarini.wheelly.behaviours.MoveActionId;
+import org.mmarini.wheelly.behaviours.*;
 import org.mmarini.wheelly.gyms.GymAdapter;
 import org.mmarini.wheelly.gyms.StateFunction;
 import org.mmarini.wheelly.perception.Perceptor;
 import org.mmarini.wheelly.perception.WorldModel;
-import org.mmarini.wheelly.storage.serde.BinArrayFile;
-import org.mmarini.wheelly.storage.serde.InferenceFileReader;
+import org.mmarini.wheelly.storage.serde.ArrayWriter;
+import org.mmarini.wheelly.storage.serde.FileArrayWriter;
+import org.mmarini.wheelly.storage.serde.InferenceReader;
+import org.mmarini.wheelly.utils.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
@@ -59,7 +58,6 @@ import static org.mmarini.wheelly.gyms.MacroActionsAdapter.ACTION_MOVE_ID;
  * Builds the batch trainer
  */
 public class DatasetBuilder {
-    private static final int KB = 1024;
     private static final Logger logger = LoggerFactory.getLogger(DatasetBuilder.class);
 
     private static Map<String, INDArray> actionMask(MacroAction... action) {
@@ -75,10 +73,10 @@ public class DatasetBuilder {
         );
     }
 
-    private final InferenceFileReader reader;
+    private final InferenceReader reader;
     private final Perceptor perceptor;
     private final GymAdapter adapter;
-    private final File path;
+    private final Path path;
     private final PublishProcessor<ProgressInfo> progressInfos;
 
 
@@ -89,7 +87,7 @@ public class DatasetBuilder {
      * @param path    the file destination path
      * @param adapter the environment
      */
-    public DatasetBuilder(InferenceFileReader reader, Perceptor perceptor, File path, GymAdapter adapter) {
+    public DatasetBuilder(InferenceReader reader, Perceptor perceptor, Path path, GymAdapter adapter) {
         this.reader = requireNonNull(reader);
         this.perceptor = requireNonNull(perceptor);
         this.path = requireNonNull(path);
@@ -100,12 +98,12 @@ public class DatasetBuilder {
     /**
      * Returns the batch trainer
      */
-    public void build() throws IOException {
-        BinArrayFile rewards = new BinArrayFile(new File(path, "rewards.bin"), "rw");
+    public void build() throws Exception {
+        ArrayWriter rewards = FileArrayWriter.createByKey(path, "rewards");
         rewards.clear();
-        Map<String, BinArrayFile> states = adapter.stateSpec().keySet().stream()
+        Map<String, FileArrayWriter> states = adapter.stateSpec().keySet().stream()
                 .map(key -> {
-                    BinArrayFile file = new BinArrayFile(new File(path, key + ".bin"));
+                    FileArrayWriter file = FileArrayWriter.createByKey(path, key);
                     try {
                         file.clear();
                     } catch (IOException e) {
@@ -114,10 +112,9 @@ public class DatasetBuilder {
                     return Tuple2.of(key, file);
                 })
                 .collect(Tuple2.toMap());
-
-        Map<String, BinArrayFile> actionMasks = adapter.actionSpec().keySet().stream()
+        Map<String, FileArrayWriter> actionMasks = adapter.actionSpec().keySet().stream()
                 .map(key -> {
-                    BinArrayFile file = new BinArrayFile(new File(path, key + ".bin"));
+                    FileArrayWriter file = FileArrayWriter.createByKey(path, key);
                     try {
                         file.clear();
                     } catch (IOException e) {
@@ -130,17 +127,24 @@ public class DatasetBuilder {
         // Reads the inference records and convert to signals, actin masks and rewards
         StateFunction stateFunction = adapter.stateFunction();
         MacroActionsState s0 = null;
-        int tot = reader.available() / KB;
+        int tot = 0;
+        while (reader.readMacroActionStep() != null) {
+            tot++;
+        }
+        reader.reset();
         int n = 0;
         try (INDArray reward = Nd4j.create(1, 1)) {
             for (; ; ) {
                 try {
                     logger.atDebug().log("Reading record {}", n);
                     // Read record
-                    Tuple2<MacroActionsState, MacroAction> record = reader.readMacroActionStep();
+                    Tuple2<BehaviourState, BehaviourAction> record = reader.readMacroActionStep();
+                    if (record == null) {
+                        break;
+                    }
                     n++;
-                    MacroActionsState state = record.v1();
-                    MacroAction action = record.v2();
+                    BehaviourState state = record.v1();
+                    BehaviourAction action = record.v2();
                     // Write states
                     WorldModel w1 = perceptor.updateForInference(state.worldModel());
                     MacroActionsState s1 = new MacroActionsState(w1, state.moveActionId(), state.headActionId());
@@ -157,8 +161,7 @@ public class DatasetBuilder {
                         rewards.write(reward);
 
                         // Writes action masks
-
-                        Map<String, INDArray> actionMaskValues = actionMask(action);
+                        Map<String, INDArray> actionMaskValues = actionMask((MacroAction) action);
                         for (Map.Entry<String, INDArray> entry : actionMaskValues.entrySet()) {
                             actionMasks.get(entry.getKey())
                                     .write(entry.getValue());
@@ -166,22 +169,16 @@ public class DatasetBuilder {
                         actionMaskValues.values().forEach(INDArray::close);
                     }
                     s0 = s1;
-                    long byteRead = reader.position();
-                    progressInfos.onNext(new ProgressInfo("Read inference (KB)", (int) (byteRead / KB), tot));
+                    progressInfos.onNext(new ProgressInfo("Read inference (records)", n, tot));
                 } catch (EOFException ex) {
                     break;
                 }
             }
-            progressInfos.onNext(new ProgressInfo("Read inference completed (KB)", tot, tot));
+            progressInfos.onNext(new ProgressInfo("Read inference completed (KB)", n, tot));
         }
         progressInfos.onComplete();
         rewards.close();
-        for (BinArrayFile value : states.values()) {
-            value.close();
-        }
-        for (BinArrayFile value : actionMasks.values()) {
-            value.close();
-        }
+        Utils.close(states, actionMasks);
     }
 
     /**

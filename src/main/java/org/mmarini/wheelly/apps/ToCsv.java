@@ -38,13 +38,13 @@ import org.mmarini.MapStream;
 import org.mmarini.ParallelProcess;
 import org.mmarini.swing.Messages;
 import org.mmarini.wheelly.storage.csv.CSVWriter;
-import org.mmarini.wheelly.storage.serde.BinArrayFile;
-import org.mmarini.wheelly.storage.serde.KeyFileMap;
+import org.mmarini.wheelly.storage.serde.FileArrayReader;
+import org.mmarini.wheelly.storage.serde.FileArrayReaderMap;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -104,7 +104,7 @@ public class ToCsv {
 
     private final long batchSize;
     protected Namespace args;
-    private File destPath;
+    private Path destPath;
 
     /**
      * Creates the report application
@@ -117,8 +117,8 @@ public class ToCsv {
     }
 
     protected void start() throws Throwable {
-        this.destPath = new File(args.getString("destPath"));
-        Map<String, BinArrayFile> sources = KeyFileMap.create(new File(args.getString("sourcePath")), "");
+        this.destPath = Path.of(args.getString("destPath"));
+        Map<String, FileArrayReader> sources = FileArrayReaderMap.create(Path.of(args.getString("sourcePath")), "");
         List<Action> tasks = MapStream.of(sources).tuples()
                 .<Action>map(t -> () -> {
                     CSVWriter output = CSVWriter.createByKey(destPath, t.v1());

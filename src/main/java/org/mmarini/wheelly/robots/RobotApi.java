@@ -37,7 +37,7 @@ import org.mmarini.yaml.Utils;
 
 import java.awt.geom.Point2D;
 import java.io.Closeable;
-import java.io.File;
+import java.nio.file.Path;
 
 /**
  * API interface for controlling and managing the robot behaviour.
@@ -65,7 +65,7 @@ public interface RobotApi extends Closeable, WithErrorFlowable,
      * @return the initialised {@link RobotApi} instance
      * @throws Throwable if any error occurs whilst reading the file or instantiating the object
      */
-    static RobotApi fromFile(File file) throws Throwable {
+    static RobotApi fromFile(Path file) throws Throwable {
         return Utils.createObject(file, new Object[0], new Class[0]);
     }
 

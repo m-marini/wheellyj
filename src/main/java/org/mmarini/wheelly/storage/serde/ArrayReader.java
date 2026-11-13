@@ -30,8 +30,8 @@ package org.mmarini.wheelly.storage.serde;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.function.UnaryOperator;
 
 /**
@@ -45,7 +45,7 @@ public interface ArrayReader extends AutoCloseable {
     /**
      * Returns the file
      */
-    File file();
+    Path file();
 
     /**
      * Returns the ArrayReader with mapped data
@@ -60,7 +60,7 @@ public interface ArrayReader extends AutoCloseable {
             }
 
             @Override
-            public File file() {
+            public Path file() {
                 return ArrayReader.this.file();
             }
 

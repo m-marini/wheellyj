@@ -29,7 +29,6 @@
 package org.mmarini.wheelly.control;
 
 import org.mmarini.wheelly.robots.*;
-import org.mmarini.wheelly.storage.serde.InferenceFileReader;
 import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.geom.Point2D;
@@ -38,6 +37,8 @@ import static org.mmarini.wheelly.robots.HeadStatusId.FIX_DIRECTION;
 import static org.mmarini.wheelly.robots.MotionStatusId.*;
 import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_ROBOT_SPEC;
 import static org.mmarini.wheelly.robots.RobotSpec.UNKNOWN_MARKER;
+import static org.mmarini.wheelly.storage.serde.InferenceFileReader.DEFAULT_DECODE_VOLTAGE;
+import static org.mmarini.wheelly.storage.serde.InferenceFileReader.DEFAULT_SUPPLY_MESSAGE;
 import static org.mmarini.wheelly.utils.Utils.m2mm;
 
 public class RobotStatusBuilder {
@@ -104,8 +105,8 @@ public class RobotStatusBuilder {
                 xPulses, yPulses, robotDirDeg, headAngle, headStatus, headTargetDeg,
                 xHeadTarget, yHeadTarget);
         return new RobotStatus(DEFAULT_ROBOT_SPEC, time, motion, contacts,
-                InferenceFileReader.DEFAULT_SUPPLY_MESSAGE,
-                InferenceFileReader.DEFAULT_DECODE_VOLTAGE,
+                DEFAULT_SUPPLY_MESSAGE,
+                DEFAULT_DECODE_VOLTAGE,
                 new CorrelatedCameraEvent(camera, lidars),
                 lidars);
     }

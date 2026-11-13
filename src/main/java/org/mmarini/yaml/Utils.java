@@ -36,6 +36,8 @@ import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
@@ -67,7 +69,7 @@ public class Utils {
      * @param argClasses the method argument class
      * @param <T>        the type of object
      */
-    public static <T> T createObject(File file, Object[] args, Class<?>[] argClasses) throws Throwable {
+    public static <T> T createObject(Path file, Object[] args, Class<?>[] argClasses) throws Throwable {
         return createObject(file, "create", args, argClasses);
     }
 
@@ -77,7 +79,7 @@ public class Utils {
      * @param file the configuration file
      * @param <T>  the type of object
      */
-    public static <T> T createObject(File file) throws Throwable {
+    public static <T> T createObject(Path file) throws Throwable {
         return createObject(file, "create", new Object[0], new Class[0]);
     }
 
@@ -90,12 +92,12 @@ public class Utils {
      * @param argClasses the method argument class
      * @param <T>        the type of object
      */
-    public static <T> T createObject(File file, String method, Object[] args, Class<?>[] argClasses) throws Throwable {
+    public static <T> T createObject(Path file, String method, Object[] args, Class<?>[] argClasses) throws Throwable {
         JsonNode conf = Utils.fromFile(file);
         try {
             String className = conf.path("class").asText();
             Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
-            Class<?>[] argsType = Stream.concat(Stream.of(JsonNode.class, File.class),
+            Class<?>[] argsType = Stream.concat(Stream.of(JsonNode.class, Path.class),
                             Arrays.stream(argClasses))
                     .toArray(Class[]::new);
             Method creator = clazz.getDeclaredMethod(method, argsType);
@@ -149,8 +151,8 @@ public class Utils {
      * @param file the file
      * @throws IOException in case of error
      */
-    public static JsonNode fromFile(File file) throws IOException {
-        return objectMapper.readTree(new FileReader(file));
+    public static JsonNode fromFile(Path file) throws IOException {
+        return objectMapper.readTree(Files.newBufferedReader(file));
     }
 
     /**

@@ -35,8 +35,8 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
@@ -148,7 +148,7 @@ public interface Batches {
             }
         }
 
-        public void wakeUp(File file, long position) {
+        public void wakeUp(Path file, long position) {
             wakeUp(() -> format("Records %d at %s", position, file));
         }
     }

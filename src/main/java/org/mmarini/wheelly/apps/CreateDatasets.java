@@ -46,6 +46,7 @@ import org.mmarini.wheelly.gyms.RewardFunction;
 import org.mmarini.wheelly.perception.Perceptor;
 import org.mmarini.wheelly.robots.RobotApi;
 import org.mmarini.wheelly.storage.serde.InferenceFileReader;
+import org.mmarini.wheelly.storage.serde.InferenceReader;
 import org.mmarini.wheelly.utils.AppYaml;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
@@ -56,8 +57,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
@@ -228,7 +229,7 @@ public class CreateDatasets {
      * Returns the validated configuration
      */
     private JsonNode loadConfiguration() throws IOException {
-        File configFile = new File(this.args.getString("config"));
+        Path configFile = Path.of(this.args.getString("config"));
         JsonNode config = fromFile(configFile);
         WheellyJsonSchemas.instance().validateOrThrow(config, BATCH_SCHEMA_YML);
         return config;
@@ -301,11 +302,11 @@ public class CreateDatasets {
     private void runBatch() throws Exception {
         // Creates the batch trainer
         progressBar.setValue(0);
-        InferenceFileReader reader = InferenceFileReader.fromFile(new File(this.args.getString("dataset")));
+        InferenceReader reader = new InferenceFileReader(Path.of(this.args.getString("dataset")));
         DatasetBuilder builder = new DatasetBuilder(
                 reader,
                 perceptor,
-                new File(this.args.getString("temp")),
+                Path.of(this.args.getString("temp")),
                 adapter);
         builder.readProgressInfo()
                 .subscribeOn(Schedulers.io())

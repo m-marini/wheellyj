@@ -38,14 +38,14 @@ import org.mmarini.wheelly.robots.RobotCommand;
 import org.mmarini.yaml.Locator;
 import org.mmarini.yaml.Utils;
 
-import java.io.File;
+import java.nio.file.Path;
 
 /**
  * Manages the interaction bridge between the underlying robot controller and the TD learning agent.
  * <p>
  * This interface unifies operational telemetry streaming, macro-action dispatching, inference mapping,
  * and multi-input signal specification definitions into a centralised execution lifecycle container
- * for autonomous robotic behaviors.
+ * for autonomous robotic behaviours.
  * </p>
  */
 public interface BehaviourApi extends DecisionMaker<WorldModel, RobotCommand>,
@@ -79,19 +79,19 @@ public interface BehaviourApi extends DecisionMaker<WorldModel, RobotCommand>,
      * @return a fully initialised {@code EnvironmentApi} instance
      * @throws Throwable if any instantiation, validation, or reflection processing errors occur
      */
-    static BehaviourApi fromFile(File file, ControllerApi controller) throws Throwable {
+    static BehaviourApi fromFile(Path file, ControllerApi controller) throws Throwable {
         return Utils.createObject(file, new Object[]{controller}, new Class[]{ControllerApi.class});
     }
 
     /**
      * Parses and instantiates a concrete {@code EnvironmentApi} implementation from a physical configuration file
-     * utilizing a default or parameterless constructor configuration sequence.
+     * utilising a default or parameterless constructor configuration sequence.
      *
      * @param file the physical configuration file instance (e.g., YAML or JSON source)
      * @return a fully initialised {@code EnvironmentApi} instance
      * @throws Throwable if any instantiation, validation, or reflection processing errors occur
      */
-    static BehaviourApi fromFile(File file) throws Throwable {
+    static BehaviourApi fromFile(Path file) throws Throwable {
         return Utils.createObject(file);
     }
 }

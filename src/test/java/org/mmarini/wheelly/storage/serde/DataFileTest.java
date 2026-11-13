@@ -34,32 +34,34 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class DataFileTest {
-    public static final File FILE = new File("tmp/dump.bin");
+    public static final Path FILE = Path.of("tmp/dump.bin");
 
     private DataFileWriter writer;
 
     @BeforeEach
     void setUp() throws IOException {
-        FILE.delete();
+        Files.deleteIfExists(FILE);
         this.writer = DataFileWriter.fromFile(FILE);
     }
 
     @AfterEach
     void tearDown() throws Exception {
         writer.close();
-        FILE.delete();
+        Files.deleteIfExists(FILE);
     }
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void testBoolean(boolean value) throws IOException {
         writer.write(value);
+
         try (DataFileReader reader = DataFileReader.fromFile(FILE)) {
             boolean read = reader.readBoolean();
             assertEquals(1, reader.size());

@@ -41,8 +41,8 @@ import org.mmarini.yaml.Locator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.IntToDoubleFunction;
@@ -86,7 +86,7 @@ public class RobotController implements ControllerApi {
      * @return a fully constructed robot controller instance
      * @throws IllegalArgumentException if the configuration array lengths fail structural constraints
      */
-    public static RobotController create(JsonNode root, File file) {
+    public static RobotController create(JsonNode root, Path file) {
         Locator locator = Locator.root();
         WheellyJsonSchemas.instance().validateOrThrow(locator.getNode(root), SCHEMA_NAME);
         long reactionInterval = locator.path(REACTION_INTERVAL_ID).getNode(root).asLong();

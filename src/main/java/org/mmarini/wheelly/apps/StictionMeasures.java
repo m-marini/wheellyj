@@ -38,10 +38,10 @@ import org.mmarini.wheelly.sockets.LineSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Random;
@@ -56,7 +56,7 @@ import static java.lang.String.format;
 /**
  * Run a session of measure tests for stiction
  * The specific Wheelly stiction measure sketch installation is required.
- * The mqtt interface is yet not supported.
+ * The MQTT interface is yet not supported.
  */
 public class StictionMeasures {
     public static final int CONNECTION_TIMEOUT = 3000;
@@ -153,7 +153,7 @@ public class StictionMeasures {
     private long thresholdPulses;
 
     /**
-     * Creates the roboto executor
+     * Creates the robot executor
      */
     public StictionMeasures() {
     }
@@ -347,25 +347,22 @@ public class StictionMeasures {
     private void writeResults(Report report) throws IOException {
         String testId = format("%s_%2$tY%2$tm%2$td_%2$tH%2$tM%2$tS_%2$tL_%3$d_%4$d",
                 outputPrefix, Calendar.getInstance(), report.leftPower, report.rightPower);
-        File headMeasuresFile = new File(testId + "_head.csv");
-        //noinspection ResultOfMethodCallIgnored
-        headMeasuresFile.getParentFile().mkdirs();
-        try (PrintWriter writer = new PrintWriter(new FileWriter(headMeasuresFile))) {
+        Path headMeasuresFile = Path.of(testId + "_head.csv");
+        Files.createDirectories(headMeasuresFile.getParent());
+        try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(headMeasuresFile))) {
             writer.print(report.leftPower);
             writer.print(",");
             writer.print(report.rightPower);
             writer.println();
         }
-        File leftMeasuresFile = new File(testId + "_left.csv");
-        //noinspection ResultOfMethodCallIgnored
-        leftMeasuresFile.getParentFile().mkdirs();
-        try (PrintWriter writer = new PrintWriter(new FileWriter(leftMeasuresFile))) {
+        Path leftMeasuresFile = Path.of(testId + "_left.csv");
+        Files.createDirectories(leftMeasuresFile.getParent());
+        try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(leftMeasuresFile))) {
             writeCSV(writer, report.leftMeasures);
         }
-        File rightMeasuresFile = new File(testId + "_right.csv");
-        //noinspection ResultOfMethodCallIgnored
-        leftMeasuresFile.getParentFile().mkdirs();
-        try (PrintWriter writer = new PrintWriter(new FileWriter(rightMeasuresFile))) {
+        Path rightMeasuresFile = Path.of(testId + "_right.csv");
+        Files.createDirectories(rightMeasuresFile.getParent());
+        try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(rightMeasuresFile))) {
             writeCSV(writer, report.rightMeasures);
         }
     }

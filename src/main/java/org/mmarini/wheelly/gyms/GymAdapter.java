@@ -34,12 +34,12 @@ import org.mmarini.wheelly.perception.DecisionMaker;
 import org.mmarini.wheelly.perception.WorldModelSpec;
 import org.mmarini.yaml.Utils;
 
-import java.io.File;
+import java.nio.file.Path;
 
 /**
  * Defines the contract for an adaptation layer connecting execution environments to decision-making entities.
  * <p>
- * This interface bridges the gap between raw behavioral state telemetry and abstract agent actions
+ * This interface bridges the gap between raw behavioural state telemetry and abstract agent actions
  * by extending {@link DecisionMaker} and {@link WithSignalsSpec}. It operates within the core reinforcement
  * learning framework, allowing uniform action selection protocols based on {@link BehaviourState} inputs
  * and yielding structured {@link BehaviourAction} outputs.
@@ -59,7 +59,7 @@ public interface GymAdapter extends DecisionMaker<BehaviourState, BehaviourActio
      * @return A fully initialised {@code GymAdapter} instance matching the file specification.
      * @throws Throwable if initialisation, file I/O, or reflection instantiation routines fail.
      */
-    static GymAdapter fromFile(File file) throws Throwable {
+    static GymAdapter fromFile(Path file) throws Throwable {
         return Utils.createObject(file);
     }
 

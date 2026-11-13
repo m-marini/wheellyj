@@ -30,12 +30,13 @@ package org.mmarini.wheelly.storage.serde;
 
 import io.reactivex.rxjava3.functions.Action;
 import org.mmarini.ParallelProcess;
+import org.mmarini.wheelly.utils.Utils;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -83,7 +84,7 @@ public class KpiBinWriter implements AutoCloseable {
      * @param path the files path
      * @param keys the keys
      */
-    public static KpiBinWriter create(File path, String... keys) {
+    public static KpiBinWriter create(Path path, String... keys) {
         Predicate<String> matchers1 = Arrays.stream(keys)
                 .map(Pattern::compile)
                 .map(Pattern::asPredicate)
@@ -97,7 +98,7 @@ public class KpiBinWriter implements AutoCloseable {
      *
      * @param path the files path
      */
-    public static KpiBinWriter create(File path) {
+    public static KpiBinWriter create(Path path) {
         return new KpiBinWriter(path, x -> true);
     }
 
@@ -108,7 +109,7 @@ public class KpiBinWriter implements AutoCloseable {
      * @param path   the files path
      * @param labels the labels string
      */
-    public static KpiBinWriter createFromLabels(File path, String labels) {
+    public static KpiBinWriter createFromLabels(Path path, String labels) {
         String[] labs = parseLabels(labels);
         return labs != null
                 ? KpiBinWriter.create(path, labs)
@@ -132,14 +133,14 @@ public class KpiBinWriter implements AutoCloseable {
     }
 
     private final Predicate<String> matcher;
-    private final File path;
-    private final Map<String, BinArrayFile> files;
+    private final Path path;
+    private final Map<String, ArrayWriter> files;
 
     /**
      * @param path   the path of kpis
      * @param filter the matcher to filter
      */
-    public KpiBinWriter(File path, Predicate<String> filter) {
+    public KpiBinWriter(Path path, Predicate<String> filter) {
         this.path = requireNonNull(path);
         this.matcher = requireNonNull(filter);
         this.files = new HashMap<>();
@@ -152,7 +153,7 @@ public class KpiBinWriter implements AutoCloseable {
      */
     public void close() throws Exception {
         logger.atInfo().log("Closed kpi files");
-        KeyFileMap.close(files);
+        Utils.close(files);
     }
 
     /**
@@ -168,9 +169,9 @@ public class KpiBinWriter implements AutoCloseable {
         if (!keys.isEmpty()) {
             // Add file
             for (String key : keys) {
-                BinArrayFile file = files.get(key);
+                ArrayWriter file = files.get(key);
                 if (file == null) {
-                    file = BinArrayFile.createByKey(path, key);
+                    file = FileArrayWriter.createByKey(path, key);
                     file.clear();
                     files.put(key, file);
                 }

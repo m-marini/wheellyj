@@ -51,8 +51,10 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -99,7 +101,7 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      * @param avgReward          the average reward
      * @param concurrentTraining true if concurrent training
      */
-    protected static RLAgent create(File filePath, ComputationGraph network, Random random, int numEpochs,
+    protected static RLAgent create(Path filePath, ComputationGraph network, Random random, int numEpochs,
                                     int trajectorySize, int batchSize,
                                     Map<String, Float> alphas, float beta, float avgReward,
                                     boolean concurrentTraining) {
@@ -117,10 +119,10 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      * @param random   the random number generator seed
      * @throws IOException in case of error
      */
-    public static RLAgent fromFile(File filePath, Random random) throws IOException {
-        JsonNode json = Utils.fromFile(new File(filePath, AGENT_FILENAME));
+    public static RLAgent fromFile(Path filePath, Random random) throws IOException {
+        JsonNode json = Utils.fromFile(filePath.resolve(AGENT_FILENAME));
         WheellyJsonSchemas.instance().validateOrThrow(json, SCHEMA_NAME);
-        ComputationGraph network = ComputationGraph.load(new File(filePath, MODEL_FILENAME), true);
+        ComputationGraph network = ComputationGraph.load(filePath.resolve(MODEL_FILENAME).toFile(), true);
         int numEpochs = Locator.locate(NUM_EPOCHS_ID).getNode(json).asInt();
         int trajectorySize1 = Locator.locate(TRAJECTORY_SIZE_ID).getNode(json).asInt();
         int batchSize = Locator.locate(BATCH_SIZE_ID).getNode(json).asInt();
@@ -132,7 +134,7 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
         return create(filePath, network, random, numEpochs, trajectorySize1, batchSize, alphas, beta, avgReward, false);
     }
 
-    private final File filePath;
+    private final Path filePath;
     private final Random random;
     private final int numEpochs;
     private final int batchSize;
@@ -156,7 +158,7 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      * @param concurrentTraining true if concurrent training
      * @param status             the agent status
      */
-    protected RLAgent(File filePath, Random random, int numEpochs, int batchSize,
+    protected RLAgent(Path filePath, Random random, int numEpochs, int batchSize,
                       float beta, Map<String, Float> alphas, boolean concurrentTraining,
                       AtomicReference<RLAgentStatus> status) {
         this.filePath = requireNonNull(filePath);
@@ -194,20 +196,20 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
      * Before saving, backup() can rename the existing files to timestamped backups.
      */
     @Override
-    public void backup() {
+    public void backup() throws IOException {
         if (filePath != null) {
             String suffix = format("-%1$tY%1$tm%1$td-%1$tH%1$tM%1$tS", Calendar.getInstance());
-            File ymlFile = new File(filePath, AGENT_FILENAME);
-            if (ymlFile.exists() && ymlFile.canWrite()) {
+            Path ymlFile = filePath.resolve(AGENT_FILENAME);
+            if (Files.exists(ymlFile) && Files.isWritable(ymlFile)) {
                 // rename the file to back up
-                File backupYamlFile = new File(ymlFile.getParentFile(), "agent" + suffix + ".yml");
-                ymlFile.renameTo(backupYamlFile);
+                Path backupYamlFile = ymlFile.getParent().resolve("agent" + suffix + ".yml");
+                Files.move(ymlFile, backupYamlFile, StandardCopyOption.REPLACE_EXISTING);
                 logger.atInfo().log("Backup yaml file {}", backupYamlFile);
             }
-            File modelFile = new File(filePath, MODEL_FILENAME);
-            if (modelFile.exists() && modelFile.canWrite()) {
-                File backupBinFile = new File(modelFile.getParentFile(), "model" + suffix + ".zip");
-                modelFile.renameTo(backupBinFile);
+            Path modelFile = filePath.resolve(MODEL_FILENAME);
+            if (Files.exists(modelFile) && Files.isWritable(modelFile)) {
+                Path backupBinFile = modelFile.getParent().resolve("model" + suffix + ".zip");
+                Files.move(modelFile, backupBinFile, StandardCopyOption.REPLACE_EXISTING);
                 logger.atInfo().log("Backup bin file {}", backupBinFile);
             }
             save();
@@ -352,9 +354,8 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
                             .subscribeOn(Schedulers.computation())
                             .subscribe(() -> {
                                     },
-                                    ex -> {
-                                        logger.atError().setCause(ex).log("Error while training network");
-                                    }
+                                    ex ->
+                                            logger.atError().setCause(ex).log("Error while training network")
                             );
                 } else {
                     try {
@@ -420,14 +421,14 @@ public class RLAgent implements Agent, BatchAgent, WithShutdownCompletable {
         try {
             RLAgentStatus st = status.get();
             logger.atInfo().log("Saving model into \"{}\" ...", filePath);
-            filePath.mkdirs();
+            Files.createDirectories(filePath);
             JsonNode yaml = json();
-            File agentFile = new File(filePath, AGENT_FILENAME);
-            agentFile.delete();
-            Utils.objectMapper.writerWithDefaultPrettyPrinter().writeValue(agentFile, yaml);
-            File modelFile = new File(filePath, MODEL_FILENAME);
-            modelFile.delete();
-            st.network().save(modelFile, true);
+            Path agentFile = filePath.resolve(AGENT_FILENAME);
+            Files.deleteIfExists(agentFile);
+            Utils.objectMapper.writerWithDefaultPrettyPrinter().writeValue(agentFile.toFile(), yaml);
+            Path modelFile = filePath.resolve(MODEL_FILENAME);
+            Files.deleteIfExists(modelFile);
+            st.network().save(modelFile.toFile(), true);
             logger.atInfo().log("Saved model into \"{}\"", filePath);
         } catch (IOException e) {
             logger.atError().setCause(e).log("Error saving model in {}", filePath);

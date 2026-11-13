@@ -37,8 +37,9 @@ import org.mmarini.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
@@ -86,31 +87,37 @@ public class JsonSchemas {
         return new JsonSchemas(schemaMap);
     }
 
-    public static JsonSchemas loadPath(File path) {
+    public static JsonSchemas loadPath(Path path) {
         JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
-        Map<String, JsonSchema> schemaMap = Arrays.stream(path.listFiles((dir, name) ->
-                        name.toLowerCase().endsWith(".yml")))
-                .flatMap(id -> {
-                    try {
-                        return Stream.of(Utils.fromFile(id));
-                    } catch (IOException e) {
-                        logger.atError().setCause(e).log("Error loading schema {}", id);
-                        return Stream.of();
-                    }
-                })
-                .map(factory::getSchema)
-                .filter(schema -> {
-                    boolean hasId = schema.getSchemaNode().has("$id");
-                    if (!hasId) {
-                        logger.atError().log("Missing $id in schema {}", schema.getSchemaPath());
-                    }
-                    return hasId;
-                })
-                .map(schema -> Tuple2.of(
-                        schema.getSchemaNode().get("$id").asText(),
-                        schema
-                ))
-                .collect(Tuple2.toMap());
+        Map<String, JsonSchema> schemaMap = null;
+        try {
+            schemaMap = Files.list(path)
+                    .filter(file ->
+                            file.getFileName().toString().toLowerCase().endsWith(".yml"))
+                    .flatMap(id -> {
+                        try {
+                            return Stream.of(Utils.fromFile(id));
+                        } catch (IOException e) {
+                            logger.atError().setCause(e).log("Error loading schema {}", id);
+                            return Stream.of();
+                        }
+                    })
+                    .map(factory::getSchema)
+                    .filter(schema -> {
+                        boolean hasId = schema.getSchemaNode().has("$id");
+                        if (!hasId) {
+                            logger.atError().log("Missing $id in schema {}", schema.getSchemaPath());
+                        }
+                        return hasId;
+                    })
+                    .map(schema -> Tuple2.of(
+                            schema.getSchemaNode().get("$id").asText(),
+                            schema
+                    ))
+                    .collect(Tuple2.toMap());
+        } catch (IOException e) {
+            logger.atError().setCause(e).log("Error loading schemas");
+        }
         return new JsonSchemas(schemaMap);
     }
 

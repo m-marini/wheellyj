@@ -30,8 +30,8 @@ package org.mmarini.wheelly.storage.csv;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,7 +40,7 @@ import java.util.Map;
  */
 public class KeyCsvWriter implements AutoCloseable {
 
-    private final File path;
+    private final Path path;
     private final Map<String, CSVWriter> files;
 
     /**
@@ -48,7 +48,7 @@ public class KeyCsvWriter implements AutoCloseable {
      *
      * @param path the path
      */
-    public KeyCsvWriter(File path) {
+    public KeyCsvWriter(Path path) {
         this.path = path;
         this.files = new HashMap<>();
     }
@@ -74,7 +74,7 @@ public class KeyCsvWriter implements AutoCloseable {
                 String key = entry.getKey();
                 CSVWriter writer = files.get(key);
                 if (writer == null) {
-                    File file = new File(path.getName() + File.separator + key, "data.csv");
+                    Path file = path.resolve(key).resolve("data.csv");
                     writer = new CSVWriter(file);
                     writer.clear();
                     files.put(key, writer);

@@ -32,7 +32,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.mmarini</groupId>
     <artifactId>wheelly</artifactId>
-    <version>0.29.0</version>
+    <version>1.0.0</version>
     <name>Wheelly</name>
     <description>Wheelly</description>
     <properties>
@@ -44,6 +44,8 @@
         <junit.version>5.5.2</junit.version>
         <hamcrest.version>2.2</hamcrest.version>
         <mockito.version>5.8.0</mockito.version>
+        <protobuf-java.version>4.36.2</protobuf-java.version>
+        <protobuf.version>4.31.1</protobuf.version>
         <dl4j-master.version>1.0.0-M2.1</dl4j-master.version>
         <guava.version>33.4.8-jre</guava.version>
         <guava.version>33.4.8-jre</guava.version>
@@ -109,6 +111,25 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M5</version>
+            </plugin>
+            <plugin>
+                <groupId>io.github.ascopes</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>5.1.12</version>
+
+                <configuration>
+                    <protoc kind="binary-maven">
+                        <version>${protobuf.version}</version>
+                    </protoc>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <!-- Il goal si chiama generate, non compile -->
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <!-- https://mvnrepository.com/artifact/com.googlecode.mavennatives/maven-nativedependencies-plugin -->
             <!--ùà
@@ -212,11 +233,6 @@
             <artifactId>rxjava3-swing</artifactId>
             <version>3.0.0-RC6</version>
         </dependency>
-        <dependency>
-            <groupId>com.github.akarnokd</groupId>
-            <artifactId>rxjava3-swing</artifactId>
-            <version>3.1.1</version>
-        </dependency>
         <!-- Chatgpt
         <dependency>
             <groupId>io.github.sashirestela</groupId>
@@ -239,6 +255,11 @@
             <groupId>org.eclipse.paho</groupId>
             <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
             <version>${mqtt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf-java.version}</version>
         </dependency>
         <dependency>
             <groupId>org.glassfish.jersey.core</groupId>
@@ -324,12 +345,6 @@
             <!--
             <classifier>linux-x86_64-avx512</classifier>
             -->
-        </dependency>
-
-        <dependency>
-            <groupId>org.deeplearning4j</groupId>
-            <artifactId>deeplearning4j-ui</artifactId>
-            <version>${dl4j-master.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.jbox2d/jbox2d-library -->

@@ -36,7 +36,7 @@ import org.mmarini.wheelly.utils.WithErrorFlowable;
 import org.mmarini.wheelly.utils.WithShutdownCompletable;
 import org.mmarini.yaml.Utils;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.function.Consumer;
 
 /**
@@ -53,7 +53,7 @@ import java.util.function.Consumer;
  * The controller adheres to a strict lifecycle sequence:
  * </p>
  * <ol>
- *   <li><b>Instantiation:</b> Create the controller instance, optionally loading it from a JSON configuration via {@link #fromFile(File)}.</li>
+ *   <li><b>Instantiation:</b> Create the controller instance, optionally loading it from a JSON configuration via {@link #fromFile(Path)}.</li>
  *   <li><b>Initialisation:</b> Connect the physical or simulated robot instance using {@link #init(RobotApi)}.</li>
  *   <li><b>Subscription:</b> Register callbacks and event listeners onto the respective consumer streams.</li>
  *   <li><b>Activation:</b> Call {@link #start()} to spawn internal processing threads and establish active connection channels.</li>
@@ -121,7 +121,7 @@ public interface ControllerApi extends Controller,
      * @return the initialised controller instance
      * @throws Throwable if parsing, structural validation, or instantiation fails
      */
-    static ControllerApi fromFile(File file) throws Throwable {
+    static ControllerApi fromFile(Path file) throws Throwable {
         return Utils.createObject(file);
     }
 

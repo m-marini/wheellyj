@@ -56,10 +56,10 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Stream;
@@ -145,9 +145,9 @@ public class WheellyMeasures {
      * @param file    the csv file
      * @param reports the reports
      */
-    private static void exportDataCsv(File file, Map<SampleKey, SpeedMeasure> reports) throws IOException {
-        file.getAbsoluteFile().delete();
-        try (PrintWriter out = new PrintWriter(new FileWriter(file))) {
+    private static void exportDataCsv(Path file, Map<SampleKey, SpeedMeasure> reports) throws IOException {
+        Files.deleteIfExists(file);
+        try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(file))) {
             naturalSortedKeys(reports).toList().forEach(key -> {
                 out.print(key.type().ordinal());
                 out.print(",");
@@ -169,7 +169,7 @@ public class WheellyMeasures {
      *
      * @param file the file
      */
-    private static Map<SampleKey, SpeedMeasure> loadReport(File file) {
+    private static Map<SampleKey, SpeedMeasure> loadReport(Path file) {
         try (CSVReader in = new CSVReader(file)) {
             Map<SampleKey, SpeedMeasure> result = new HashMap<>();
             for (; ; ) {
@@ -446,7 +446,7 @@ public class WheellyMeasures {
                                 logger.atError().log("{}", err);
                                 return Single.error(new IllegalArgumentException(err));
                             }
-                    Single<List<Status>> r = readStatus().subscribeOn(Schedulers.io())
+                            Single<List<Status>> r = readStatus().subscribeOn(Schedulers.io())
                                     .skipWhile(s -> !s.isTesting())
                                     .takeWhile(Status::isTesting)
                                     .toList();
@@ -555,7 +555,7 @@ public class WheellyMeasures {
         frame.setVisible(true);
         robotDevice.client().connect().blockingGet();
         logger.atInfo().log("Device connected.");
-        setResults(loadReport(new File(args.getString("output"))));
+        setResults(loadReport(Path.of(args.getString("output"))));
         runButton.setEnabled(true);
         clearButton.setEnabled(true);
     }
@@ -565,7 +565,7 @@ public class WheellyMeasures {
      */
     private void saveResult() {
         try {
-            exportDataCsv(new File(args.getString("output")), this.results);
+            exportDataCsv(Path.of(args.getString("output")), this.results);
         } catch (IOException e) {
             logger.atError().setCause(e).log("Error exporting data");
         }

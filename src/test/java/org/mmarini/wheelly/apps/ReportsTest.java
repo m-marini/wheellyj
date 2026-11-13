@@ -30,16 +30,18 @@ package org.mmarini.wheelly.apps;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mmarini.wheelly.storage.serde.BinArrayFile;
+import org.mmarini.wheelly.storage.serde.FileArrayReader;
+import org.mmarini.wheelly.storage.serde.FileArrayWriter;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.stream.DoubleStream;
 
-import static java.lang.Math.*;
+import static java.lang.Math.log;
+import static java.lang.Math.log10;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -53,8 +55,8 @@ class ReportsTest {
     public static final int NUM_BATCH = 3;
     public static final int BATCH_SIZE = 2;
     public static final int NUM_RECORDS = NUM_BINS * NUM_BATCH * BATCH_SIZE + 1;
-    public static final File BIN_LIN_FILE = new File("tmp/testLinFile");
-    public static final File POLICY_FILE = new File("tmp/testPolicyFile");
+    public static final Path BIN_LIN_FILE = Path.of("tmp/testLinFile");
+    public static final Path POLICY_FILE = Path.of("tmp/testPolicyFile");
     public static final int NUM_ACTIONS = 3;
     public static final double EPSILON = 1e-3;
 
@@ -70,11 +72,11 @@ class ReportsTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        try (BinArrayFile file = new BinArrayFile(BIN_LIN_FILE)) {
+        try (FileArrayWriter file = new FileArrayWriter(BIN_LIN_FILE)) {
             file.clear();
             file.write(Nd4j.arange(2, NUM_RECORDS + 2).reshape(NUM_RECORDS, 1));
         }
-        try (BinArrayFile file = new BinArrayFile(POLICY_FILE)) {
+        try (FileArrayWriter file = new FileArrayWriter(POLICY_FILE)) {
             file.clear();
             try (INDArray preferences = Nd4j.arange(1, (NUM_RECORDS * NUM_ACTIONS) + 1).reshape(NUM_RECORDS, NUM_ACTIONS)) {
                 try (INDArray sum = preferences.sum(true, 1)) {
@@ -144,7 +146,7 @@ class ReportsTest {
         // 2 ... 7
         // 8 ... 13
         // 14 ... 20
-        BinArrayFile file = new BinArrayFile(BIN_LIN_FILE);
+        FileArrayReader file = new FileArrayReader(BIN_LIN_FILE);
 
         // When generate linear report
         INDArray[] result = Reports.linReport(file, x -> x.mul(2), NUM_BINS, 0.25, BATCH_SIZE);
@@ -175,7 +177,7 @@ class ReportsTest {
         // ...
         // 55, 56, 57
 
-        BinArrayFile file = new BinArrayFile(POLICY_FILE);
+        FileArrayReader file = new FileArrayReader(POLICY_FILE);
 
         // When generate linear report
         INDArray[] result = Reports.policyReport(file, NUM_BINS, 0.25, BATCH_SIZE);

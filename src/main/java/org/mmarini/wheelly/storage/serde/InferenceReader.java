@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,235 +28,40 @@
 
 package org.mmarini.wheelly.storage.serde;
 
-import org.mmarini.wheelly.behaviours.HeadActionId;
-import org.mmarini.wheelly.behaviours.MoveActionId;
-import org.mmarini.wheelly.control.RobotStatus;
-import org.mmarini.wheelly.perception.*;
-import org.mmarini.wheelly.robots.*;
-import org.mmarini.wheelly.utils.Angle;
+import org.mmarini.Tuple2;
+import org.mmarini.wheelly.behaviours.BehaviourAction;
+import org.mmarini.wheelly.behaviours.BehaviourState;
 
-import java.awt.geom.Point2D;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
+
 
 /**
- * Reads inference data
+ * Defines a reader for deserialising recorded AI inference or training steps
+ * from an underlying data source.
+ * <p>
+ * Each step consists of an observed {@link BehaviourState} paired with the
+ * corresponding {@link BehaviourAction} executed by the robot.
+ * </p>
  */
-public interface InferenceReader extends AutoCloseable, DataReader {
+public interface InferenceReader extends AutoCloseable {
 
     /**
-     * Returns the camera event
+     * Reads the next macro-action step from the input stream.
      *
-     * @throws IOException in case of error
+     * @return a {@link Tuple2} containing the observed {@link BehaviourState} and
+     * the executed {@link BehaviourAction}, or {@code null} if the end of
+     * the stream has been reached
+     * @throws IOException if an I/O error occurs whilst reading or deserialising
+     *                     the record
      */
-    default CameraEvent readCamera() throws IOException {
-        long timestamp = readLong();
-        int markerId = readInt();
-        int width = readInt();
-        int height = readInt();
-        return CameraEvent.create(timestamp, markerId, width, height, 1);
-    }
+    Tuple2<BehaviourState, BehaviourAction> readMacroActionStep() throws IOException;
 
     /**
-     * Returns the contact message
+     * Resets the reader back to the beginning of the inference stream, allowing
+     * the recorded steps to be replayed from the start.
      *
-     * @throws IOException in case of error
+     * @throws Exception if an error occurs whilst resetting the underlying stream
+     *                   or source
      */
-    default WheellyContactsMessage readContacts() throws IOException {
-        long simulationTime = readLong();
-        boolean frontSensor = readBoolean();
-        boolean rearSensor = readBoolean();
-        boolean canMoveForward = readBoolean();
-        boolean canMoveBackward = readBoolean();
-        return new WheellyContactsMessage(simulationTime,
-                frontSensor, rearSensor, canMoveForward, canMoveBackward);
-    }
-
-    /**
-     * Returns the camera event
-     *
-     * @throws IOException in case of error
-     */
-    default CorrelatedCameraEvent readCorrelatedCamera() throws IOException {
-        CameraEvent camera = readCamera();
-        WheellyLidarMessage lidar = readLidarMessage();
-        return new CorrelatedCameraEvent(camera, lidar);
-    }
-
-    /**
-     * Returns the angle (DEG) from file or null if end of file
-     */
-    default Angle readDeg() throws IOException {
-        return Angle.fromDeg(readInt());
-    }
-
-    default HeadActionId readHeadActionId() throws IOException {
-        return HeadActionId.values()[readInt()];
-    }
-
-    default HeadStatus readHeadStatus() throws IOException {
-        HeadStatusId id = readHeadStatusId();
-        return switch (id) {
-            case FIX_DIRECTION -> HeadStatus.scan(readDeg());
-            case FRONT_TRACK -> HeadStatus.trackFrontFace(readPoint2D());
-            case REAR_TRACK -> HeadStatus.trackRearFace(readPoint2D());
-        };
-    }
-
-    default HeadStatusId readHeadStatusId() throws IOException {
-        int ord = readInt();
-        return HeadStatusId.values()[ord];
-    }
-
-    /**
-     * Returns the lidar message
-     */
-    default WheellyLidarMessage readLidarMessage() throws IOException {
-        long simTime = readLong();
-        int headDirectionDeg = readInt();
-        int frontDistance = readInt();
-        int rearDistance = readInt();
-        double xPulses = readDouble();
-        double yPulses = readDouble();
-        int robotYawDeg = readInt();
-        HeadStatusId status = readHeadStatusId();
-        int headTargetDeg = readInt();
-        double xTarget = readDouble();
-        double yTarget = readDouble();
-        return new WheellyLidarMessage(simTime, frontDistance, rearDistance, xPulses, yPulses,
-                robotYawDeg, headDirectionDeg, status, headTargetDeg, xTarget, yTarget);
-    }
-
-    /**
-     * Returns the marker map
-     *
-     * @throws IOException in case of error
-     */
-    default Map<Integer, FiducialMarker> readMarkers() throws IOException {
-        int n = readInt();
-        List<FiducialMarker> markers = new ArrayList<>();
-        for (int i = 0; i < n; i++) {
-            int markerId = readInt();
-            Point2D location = readPoint2D();
-            double weight = readFloat();
-            long markerTime = readLong();
-            long cleanTime = readLong();
-            markers.add(new FiducialMarker(markerId, location, weight, markerTime, cleanTime));
-        }
-        return markers.stream()
-                .collect(Collectors.toMap(
-                        FiducialMarker::markerId,
-                        UnaryOperator.identity()
-                ));
-    }
-
-    /**
-     * Returns the model
-     *
-     * @throws IOException in case of error
-     */
-    WorldModel readModel() throws IOException;
-
-    /**
-     * Returns the motion message
-     *
-     * @throws IOException in case of error
-     */
-    default WheellyMotionMessage readMotion() throws IOException {
-        long simulationTime = readLong();
-        double xPulses = readFloat();
-        double yPulses = readFloat();
-        int directionDeg = readInt();
-        double leftPps = readFloat();
-        double rightPps = readFloat();
-        int imuFailure = readInt();
-        MotionStatusId status = readMotionStatusId();
-        int targetDeg = readInt();
-        int leftTargetPps = readInt();
-        int rightTargetPps = readInt();
-        int leftPower = readInt();
-        int rightPower = readInt();
-        double xTarget = readDouble();
-        double yTarget = readDouble();
-        return new WheellyMotionMessage(simulationTime, xPulses, yPulses,
-                directionDeg, leftPps, rightPps, imuFailure, status, targetDeg,
-                leftTargetPps, rightTargetPps, leftPower, rightPower, xTarget, yTarget);
-    }
-
-    default MotionStatus readMotionStatus() throws IOException {
-        MotionStatusId id = readMotionStatusId();
-        return switch (id) {
-            case HALT -> MotionStatus.halt();
-            case ROTATE -> MotionStatus.rotate(readDeg());
-            case FORWARD -> MotionStatus.forward(readPoint2D());
-            case BACKWARD -> MotionStatus.backward(readPoint2D());
-        };
-    }
-
-    default MotionStatusId readMotionStatusId() throws IOException {
-        return MotionStatusId.values()[readInt()];
-    }
-
-    default MoveActionId readMoveActionId() throws IOException {
-        return MoveActionId.values()[readInt()];
-    }
-
-    default Point2D readPoint2D() throws IOException {
-        return new Point2D.Double(
-                readDouble(),
-                readDouble()
-        );
-    }
-
-    /**
-     * Returns the radar map
-     *
-     * @throws IOException in case of error
-     */
-    RadarMap readRadar() throws IOException;
-
-    default RobotSpec readRobotSpec() throws IOException {
-        return new RobotSpec(readDouble(), // maxRadarDistance
-                readDeg(), // lidarFOV
-                readDouble(), // contactRadius
-                readDeg(), // cameraFOV
-                readPoint2D(), // headLocation
-                readDouble(), // frontLidarDistance
-                readDouble(), // rearLidarDistance
-                readDouble(), // cameraDistance
-                readDeg(), // headFOV
-                readDouble(), // targetRange
-                readDeg(), // directionRange
-                readDeg(), // maxRotRange
-                readInt(), // maxRotPps
-                readInt(), // maxSpeed
-                readDouble(), // decelerateDistance
-                readLong(), // sendInterval
-                readLong() // scanInterval
-        );
-    }
-
-    /**
-     * Returns the robot status
-     *
-     * @throws IOException in case of error
-     */
-    RobotStatus readStatus() throws IOException;
-
-    default GridTopology readTopology() throws IOException {
-        return GridTopology.create(readPoint2D(),
-                readInt(),
-                readInt(),
-                readDouble());
-    }
-
-    default WorldModelSpec readWorldSpec() throws IOException {
-        RobotSpec robotSpec = readRobotSpec();
-        int gridSize = readInt();
-        return new WorldModelSpec(robotSpec, gridSize);
-    }
+    void reset() throws Exception;
 }

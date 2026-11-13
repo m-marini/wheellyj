@@ -31,8 +31,8 @@ package org.mmarini.wheelly.storage.csv;
 import org.junit.jupiter.api.Test;
 import org.nd4j.linalg.factory.Nd4j;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 class CSVWriterTest {
     static {
@@ -41,14 +41,14 @@ class CSVWriterTest {
 
     @Test
     void createByNameTest() throws IOException {
-        CSVWriter writer = CSVWriter.createByKey(new File("tmp"), "a.b.c");
+        CSVWriter writer = CSVWriter.createByKey(Path.of("tmp"), "a.b.c");
         writer.write(Nd4j.zeros(1));
         writer.close();
     }
 
     @Test
     void writeTest1() throws IOException {
-        CSVWriter writer = new CSVWriter(new File("tmp/test/data.csv"));
+        CSVWriter writer = new CSVWriter(Path.of("tmp/test/data.csv"));
         writer.write(Nd4j.rand(900));
         writer.write(Nd4j.rand(900));
         writer.write(Nd4j.rand(900));
@@ -59,7 +59,7 @@ class CSVWriterTest {
 
     @Test
     void writeTest100() throws IOException {
-        CSVWriter writer = new CSVWriter(new File("tmp/test/data.csv"));
+        CSVWriter writer = new CSVWriter(Path.of("tmp/test/data.csv"));
         writer.write(Nd4j.rand(9, 100));
         writer.write(Nd4j.rand(9, 100));
         writer.write(Nd4j.rand(9, 100));
@@ -70,7 +70,7 @@ class CSVWriterTest {
 
     @Test
     void writeTest3x4() throws IOException {
-        CSVWriter writer = new CSVWriter(new File("tmp/test/data.csv"));
+        CSVWriter writer = new CSVWriter(Path.of("tmp/test/data.csv"));
         writer.write(Nd4j.rand(10, 3, 4));
         writer.write(Nd4j.rand(10, 3, 4));
         writer.write(Nd4j.rand(10, 3, 4));
@@ -80,7 +80,7 @@ class CSVWriterTest {
 
     @Test
     void writeTestnx1() throws IOException {
-        CSVWriter writer = new CSVWriter(new File("tmp/test/data.csv"));
+        CSVWriter writer = new CSVWriter(Path.of("tmp/test/data.csv"));
         writer.write(Nd4j.rand(900, 1));
         writer.write(Nd4j.rand(900, 1));
         writer.write(Nd4j.rand(900, 1));

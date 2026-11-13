@@ -43,8 +43,9 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -109,7 +110,7 @@ public class MDPDLTest {
                     activation: SoftMax
                     lossFunction: Mcxent
             """;
-    public static final File MODEL_PATH = new File("test/model");
+    public static final Path MODEL_PATH = Path.of("test/model");
     private static final Logger logger = LoggerFactory.getLogger(MDPDLTest.class);
 
     /**
@@ -220,7 +221,7 @@ public class MDPDLTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        MODEL_PATH.delete();
+        Files.deleteIfExists(MODEL_PATH);
         mdp = MDP.sequence(2);
         INDArray[] arys = IntStream.range(0, mdp.numStates())
                 .mapToObj(i -> mdp.state(i).get(STATE_ID))
