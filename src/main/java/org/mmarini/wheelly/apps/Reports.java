@@ -31,6 +31,7 @@ package org.mmarini.wheelly.apps;
 import org.mmarini.wheelly.storage.serde.ArrayReader;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +47,7 @@ import static java.lang.Math.min;
  */
 public interface Reports {
     Logger logger = LoggerFactory.getLogger(Reports.class);
+
     /**
      * Computes a binned linear statistical summary and an overall linear regression trend
      * for a serialised dataset.
@@ -79,7 +81,7 @@ public interface Reports {
      * @param gamma     the smoothing factor applied to the exponential moving average within each bin
      * @param batchSize the maximum number of records to read per batch
      * @return a two-element {@link INDArray} array containing the {@code [n, 5]} binned statistics matrix
-     *         at index {@code 0} and the {@code} regression endpoints matrix at index {@code 1}
+     * at index {@code 0} and the {@code} regression endpoints matrix at index {@code 1}
      * @throws IOException if an I/O error occurs while reading from {@code file}
      */
     static INDArray[] linReport(ArrayReader file, UnaryOperator<INDArray> preFunc, int n, double gamma, long batchSize) throws IOException {
@@ -168,17 +170,14 @@ public interface Reports {
             INDArray batchRecords;
             while ((batchRecords = readBin(file, end, batchSize)) != null) {
                 // Computes the number of records to read
-                try (INDArray max = batchRecords.max(true, 1)) {
-                    try (INDArray log10 = Transforms.log(max, 10, true)) {
-                        policyStats.add(log10);
-                        policyRegression.add(log10);
-                    }
+                INDArray max = batchRecords.get(NDArrayIndex.all(), NDArrayIndex.point(0));
+                try (INDArray log10 = Transforms.log(max, 10, true)) {
+                    policyStats.add(log10);
+                    policyRegression.add(log10);
                 }
-                // Computes the normalised entropy
-                try (INDArray h = batchRecords.entropy(1)) {
-                    entropyStats.add(h);
-                    entropyRegression.add(h);
-                }
+                INDArray h = batchRecords.get(NDArrayIndex.all(), NDArrayIndex.point(1));
+                entropyStats.add(h);
+                entropyRegression.add(h);
                 numActions = batchRecords.getInt(0, 2);
             }
 

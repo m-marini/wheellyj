@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- Issue [#673](https://github.com/m-marini/wheellyj/issues/673): Fix policy report positive lg10 probability
+
 ### Changed
 
 - Issue [#671](https://github.com/m-marini/wheellyj/issues/671): Protobuf inference file and java.nio files
