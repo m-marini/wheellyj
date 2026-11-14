@@ -30,6 +30,7 @@ package org.mmarini.wheelly.robots;
 
 import org.mmarini.wheelly.utils.Angle;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -73,6 +74,27 @@ public record CameraEvent(
                 xTot += x;
             }
             direction = Angle.fromPoint(((xTot - width * 2) / 4) * widthRatio, width);
+        }
+        return new CameraEvent(time, markerId, width, height, points, direction);
+    }
+
+    public static CameraEvent create(long time, int markerId, int width, int height, double widthRatio, int... coords) {
+        requireNonNull(coords);
+        if (!(coords.length == 0 || coords.length == 8)) {
+            throw new IllegalArgumentException("Require 0 or 8 coordinates: " + coords.length);
+        }
+        Point2D[] points = null;
+        Angle direction = Angle.DEG0;
+        if (coords.length == 8) {
+            points = new Point2D[4];
+            int xTot = 0;
+            for (int i = 0; i < 4; i++) {
+                int x = coords[i * 2];
+                int y = coords[i * 2 + 1];
+                points[i] = new Point(x, y);
+                xTot += x;
+            }
+            direction = Angle.fromPoint(((xTot - width * 2) * widthRatio / 4d), width);
         }
         return new CameraEvent(time, markerId, width, height, points, direction);
     }

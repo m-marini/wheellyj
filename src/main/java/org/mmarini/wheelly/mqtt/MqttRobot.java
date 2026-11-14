@@ -43,6 +43,7 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.mmarini.wheelly.protobuf.aruco.MarkerEvent;
 import org.mmarini.wheelly.robots.*;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
@@ -103,7 +104,7 @@ import static org.mmarini.wheelly.rx.RXFunc.logError;
  * </p>
  */
 public class MqttRobot implements RobotApi {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/mqtt-robot-schema-1.2";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/mqtt-robot-schema-2.0";
     public static final String DEFAULT_BROKER_URL = "tcp://localhost:1883";
     public static final long DEFAULT_CONFIGURE_INTERVAL = 1000;
     public static final long DEFAULT_RETRY_INTERVAL = 500;
@@ -157,7 +158,7 @@ public class MqttRobot implements RobotApi {
         long configureTimeout = locator.path("configureTimeout").getNode(root).asLong(DEFAULT_CONFIGURE_INTERVAL);
         long retryInterval = locator.path("retryInterval").getNode(root).asLong(DEFAULT_RETRY_INTERVAL);
         String robotId = locator.path("robotId").getNode(root).asText();
-        String qrDeviceId = locator.path("qrDeviceId").getNode(root).asText();
+        String amDeviceId = locator.path("amDeviceId").getNode(root).asText();
 
         RobotSpec robotSpec = RobotSpec.fromJson(root, locator);
         ObjectMapper objectMapper = new ObjectMapper(new JsonFactory());
@@ -179,7 +180,7 @@ public class MqttRobot implements RobotApi {
         try {
             return create(brokerUrl, clientId, user, password,
                     robotId,
-                    qrDeviceId, configureTimeout, retryInterval,
+                    amDeviceId, configureTimeout, retryInterval,
                     robotSpec, cfg);
         } catch (MqttException e) {
             logger.atError().setCause(e).log("Error creating mqtt robot");
@@ -195,7 +196,7 @@ public class MqttRobot implements RobotApi {
      * @param user             the mqtt client username
      * @param password         mqtt client password
      * @param robotId          robot device id
-     * @param qrId             QRCODE device id
+     * @param amId             QRCODE device id
      * @param configureTimeout the configuration timeout (ms)
      * @param retryInterval    the retry configuration interval (ms)
      * @param robotSpec        the robot specification
@@ -203,19 +204,40 @@ public class MqttRobot implements RobotApi {
      * @throws MqttException in case of error
      */
     public static MqttRobot create(String brokerUrl, String clientId, String user, String password,
-                                   String robotId, String qrId,
+                                   String robotId, String amId,
                                    long configureTimeout, long retryInterval,
                                    RobotSpec robotSpec, String[] robotConfig) throws MqttException {
         RxMqttClient client = RxMqttClient.create(brokerUrl, clientId, user, password);
         RemoteDevice robotDevice = new RemoteDevice(robotId, client);
-        RemoteDevice qrDevice = new RemoteDevice(qrId, client);
-        return new MqttRobot(client, robotDevice, qrDevice, configureTimeout, retryInterval, robotSpec,
+        RemoteDevice amDevice = new RemoteDevice(amId, client);
+        return new MqttRobot(client, robotDevice, amDevice, configureTimeout, retryInterval, robotSpec,
                 robotConfig);
+    }
+
+    /**
+     * Converts a Protocol Buffers {@link MarkerEvent} message into a domain
+     * {@link CameraEvent} instance, applying the specified timestamp and width
+     * scaling ratio.
+     *
+     * @param protoMarker the protobuf {@link MarkerEvent} containing the detected
+     *                    marker identifier, frame dimensions, and flattened corner
+     *                    coordinates
+     * @param time        the target timestamp (in milliseconds) to assign to the
+     *                    created domain event
+     * @param widthRatio  the horizontal scaling ratio used to normalise or adjust
+     *                    coordinates relative to the frame width
+     * @return the corresponding domain {@link CameraEvent} instance
+     */
+    private static CameraEvent fromProtoBuf(MarkerEvent protoMarker, long time, double widthRatio) {
+        int[] points = protoMarker.getCoordsList().stream()
+                .mapToInt(x -> x)
+                .toArray();
+        return CameraEvent.create(time, protoMarker.getMarkerId(), protoMarker.getWidth(), protoMarker.getHeight(), widthRatio, points);
     }
 
     private final RxMqttClient client;
     private final RemoteDevice robotDevice;
-    private final RemoteDevice qrDetectorDevice;
+    private final RemoteDevice amDetectorDevice;
     private final long configureTimeout;
     private final long retryInterval;
     private final RobotSpec robotSpec;
@@ -234,16 +256,16 @@ public class MqttRobot implements RobotApi {
      *
      * @param client           the mqtt client
      * @param robotDevice      the robot device
-     * @param qrDetectorDevice the qr detector device
+     * @param amDetectorDevice the qr detector device
      * @param configureTimeout the configuration timeout (ms)
      * @param retryInterval    the retry configuration interval (ms)
      * @param robotSpec        the robot specification
      * @param config           the configurations
      */
-    public MqttRobot(RxMqttClient client, RemoteDevice robotDevice, RemoteDevice qrDetectorDevice, long configureTimeout, long retryInterval, RobotSpec robotSpec, String[] config) {
+    public MqttRobot(RxMqttClient client, RemoteDevice robotDevice, RemoteDevice amDetectorDevice, long configureTimeout, long retryInterval, RobotSpec robotSpec, String[] config) {
         this.client = requireNonNull(client);
         this.robotDevice = requireNonNull(robotDevice);
-        this.qrDetectorDevice = requireNonNull(qrDetectorDevice);
+        this.amDetectorDevice = requireNonNull(amDetectorDevice);
         this.configureTimeout = configureTimeout;
         this.retryInterval = retryInterval;
         this.robotSpec = requireNonNull(robotSpec);
@@ -268,7 +290,7 @@ public class MqttRobot implements RobotApi {
         robotDevice.readData("hi", m -> new String(m.getPayload()))
                 .subscribe(this::onRobotHiMessage,
                         errors::onNext);
-        qrDetectorDevice.readData("qr", this::toCameraMessage)
+        amDetectorDevice.readData("am", this::toCameraMessage)
                 .subscribe(
                         this::onCameraEvent,
                         errors::onNext);
@@ -318,7 +340,7 @@ public class MqttRobot implements RobotApi {
         errors.onComplete();
         states.onComplete();
         robotDevice.closed().blockingAwait();
-        qrDetectorDevice.closed().blockingAwait();
+        amDetectorDevice.closed().blockingAwait();
         logger.atInfo().log("Robot closed ...");
     }
 
@@ -580,7 +602,7 @@ public class MqttRobot implements RobotApi {
      * Returns the robot device
      */
     public RemoteDevice qrCameraDevice() {
-        return qrDetectorDevice;
+        return amDetectorDevice;
     }
 
     @Override
@@ -647,7 +669,8 @@ public class MqttRobot implements RobotApi {
     private CameraEvent toCameraMessage(MqttMessage mqttMessage) {
         double widthRatio = 2 * tan(robotSpec.cameraFOV().toRad() / 2);
         try {
-            return CameraEvent.parse(robotTime(), new String(mqttMessage.getPayload()), widthRatio);
+            MarkerEvent protoMarker = MarkerEvent.parseFrom(mqttMessage.getPayload());
+            return fromProtoBuf(protoMarker, robotTime(), widthRatio);
         } catch (Throwable ex) {
             logger.atError().setCause(ex).log("Error parsing camera message");
             return null;

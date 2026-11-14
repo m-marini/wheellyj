@@ -230,6 +230,6 @@ class InferenceFileTest {
         writer.write(MACRO_ENV_STATE, AGENT_ACTION);
         writer.close();
         // header size reduced from 115 to 85 bytes with protobuf
-        assertEquals(5421, Files.size(FILE));
+        assertEquals(5412, Files.size(FILE));
     }
 }

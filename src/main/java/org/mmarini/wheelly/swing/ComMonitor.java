@@ -38,8 +38,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import java.util.HexFormat;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static java.lang.Math.min;
 
 /**
  * Monitor the communication activities
@@ -50,7 +53,7 @@ public class ComMonitor extends MatrixTable {
     public static final String CONTROLLER_KEY = "controller";
     public static final String SENSORS_KEY = "sensors";
     public static final String COMMANDS_KEY = "command";
-
+    public static final int MAX_MESSAGE_DUMP_SIZE = 20;
     private static final Logger logger = LoggerFactory.getLogger(ComMonitor.class);
     private static final Pattern NAME_PATTERN = Pattern.compile("^([^/]+)/[^/]+/[^/]+/[^/]+/(.*)$");
 
@@ -60,7 +63,7 @@ public class ComMonitor extends MatrixTable {
     public ComMonitor() {
         addColumn(CONTROLLER_KEY, Messages.getString("ComMonitor.controller"), 3).setScrollOnChange(true);
         addColumn(COMMANDS_KEY, Messages.getString("ComMonitor.commands"), 20);
-        addColumn(SENSORS_KEY, Messages.getString("ComMonitor.sensors"), 60);
+        addColumn(SENSORS_KEY, Messages.getString("ComMonitor.sensors"), MAX_MESSAGE_DUMP_SIZE * 2 + 20);
         addColumn(ERROR_KEY, Messages.getString("ComMonitor.error"), 80);
         setPrintTimestamp(false);
     }
@@ -118,12 +121,27 @@ public class ComMonitor extends MatrixTable {
      * @param message the message (topic, message)
      */
     public void onMessage(Tuple2<String, MqttMessage> message) {
-        logger.atDebug().log("message from {}", message.v1());
-        Matcher m = NAME_PATTERN.matcher(message.v1());
+        String topic = message.v1();
+        logger.atDebug().log("message from {}", topic);
+        Matcher m = NAME_PATTERN.matcher(topic);
         if (m.matches()) {
             String key = "cmd".equals(m.group(1))
                     ? COMMANDS_KEY : SENSORS_KEY;
-            String raw = m.group(2) + " " + new String(message.v2().getPayload());
+            byte[] payload = message.v2().getPayload();
+            String raw;
+            if (topic.contains("aruco")) {
+                StringBuilder builder = new StringBuilder();
+                int n = min(payload.length, MAX_MESSAGE_DUMP_SIZE);
+                builder.append(m.group(2))
+                        .append(" ")
+                        .append(HexFormat.of().formatHex(payload, 0, n));
+                if (payload.length > MAX_MESSAGE_DUMP_SIZE) {
+                    builder.append("...");
+                }
+                raw = builder.toString();
+            } else {
+                raw = m.group(2) + " " + new String(payload);
+            }
             printf(key, raw);
         }
     }

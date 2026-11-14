@@ -2,4 +2,4 @@
 $schema: https://mmarini.org/wheelly/monitor-schema-1.0
 robot: conf/robots/mqttRobot.yml
 #robot: conf/robots/simRobot10Obstacles.yml
-controller: conf/controllers/controller.yml
+controller: conf/control/controller.yml

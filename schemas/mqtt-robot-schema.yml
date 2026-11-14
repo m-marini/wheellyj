@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/mqtt-robot-schema-1.2
+$id: https://mmarini.org/wheelly/mqtt-robot-schema-2.0
 title: Robot
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/mqtt-robot-schema-1.2
+    const: https://mmarini.org/wheelly/mqtt-robot-schema-2.0
   class:
     const: org.mmarini.wheelly.mqtt.MqttRobot
   brokerUrl:
@@ -18,7 +18,7 @@ properties:
     type: string
   robotId:
     type: string
-  qrDeviceId:
+  amDeviceId:
     type: string
   retryInterval:
     type: integer
@@ -99,7 +99,7 @@ required:
   - user
   - password
   - robotId
-  - qrDeviceId
+  - amDeviceId
   - contactRadius
   - lidarFOV
   - cameraFOV

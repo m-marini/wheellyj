@@ -36,6 +36,7 @@ option java_package = "org.mmarini.wheelly.protobuf.inferences";
 package wheelly.protobuf.inferences;
 
 import "robot_messages.proto";
+import "marker.proto";
 
 // Represents a coordinate or vector in two-dimensional (2D) space.
 message Point2D {
@@ -119,7 +120,7 @@ message InferenceHeader {
 // captured at the same instant.
 message CorrelatedCameraEvent {
   // Data from the event captured by the camera.
-  wheelly.protobuf.robot.CameraEvent camera = 1;
+  wheelly.protobuf.aruco.MarkerEvent marker = 1;
   // LiDAR sensor telemetry correlated with the visual capture.
   wheelly.protobuf.robot.LidarTelemetry lidars = 4;
 }

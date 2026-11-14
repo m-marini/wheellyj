@@ -28,8 +28,8 @@
 
 package org.mmarini.wheelly.storage.serde;
 
+import org.mmarini.wheelly.protobuf.aruco.MarkerEvent;
 import org.mmarini.wheelly.protobuf.inferences.*;
-import org.mmarini.wheelly.protobuf.robot.CameraEvent;
 import org.mmarini.wheelly.protobuf.robot.ContactsTelemetry;
 import org.mmarini.wheelly.protobuf.robot.LidarTelemetry;
 import org.mmarini.wheelly.protobuf.robot.MotionTelemetry;
@@ -294,20 +294,20 @@ public class InferenceFileWriter implements InferenceWriter {
      */
     private static CorrelatedCameraEvent toProtoBuf(org.mmarini.wheelly.robots.CorrelatedCameraEvent cameraEvent) {
         return CorrelatedCameraEvent.newBuilder()
-                .setCamera(toProtoBuf(cameraEvent.cameraEvent()))
+                .setMarker(toProtoBuf(cameraEvent.cameraEvent()))
                 .setLidars(toProtoBuf(cameraEvent.lidar()))
                 .build();
     }
 
     /**
      * Converts a domain {@link org.mmarini.wheelly.robots.CameraEvent} into its
-     * Protocol Buffers {@link CameraEvent} representation.
+     * Protocol Buffers {@link MarkerEvent} representation.
      *
      * @param cameraEvent the domain camera event
-     * @return the corresponding protobuf {@link CameraEvent} message
+     * @return the corresponding protobuf {@link MarkerEvent} message
      */
-    private static CameraEvent toProtoBuf(org.mmarini.wheelly.robots.CameraEvent cameraEvent) {
-        return CameraEvent.newBuilder()
+    private static MarkerEvent toProtoBuf(org.mmarini.wheelly.robots.CameraEvent cameraEvent) {
+        return MarkerEvent.newBuilder()
                 .setTimestamp(cameraEvent.time())
                 .setMarkerId(cameraEvent.markerId())
                 .setWidth(cameraEvent.width())
@@ -323,10 +323,10 @@ public class InferenceFileWriter implements InferenceWriter {
      * @param points the array of {@link java.awt.geom.Point2D} instances, or {@code null}
      * @return a {@link List} of flattened coordinates, or an empty list if {@code points} is {@code null}
      */
-    private static List<Float> toProtoBuf(java.awt.geom.Point2D[] points) {
+    private static List<Integer> toProtoBuf(java.awt.geom.Point2D[] points) {
         return points != null
                 ? Arrays.stream(points)
-                .flatMap(p -> Stream.of((float) p.getX(), (float) p.getY()))
+                .flatMap(p -> Stream.of((int) p.getX(), (int) p.getY()))
                 .toList()
                 : List.of();
     }

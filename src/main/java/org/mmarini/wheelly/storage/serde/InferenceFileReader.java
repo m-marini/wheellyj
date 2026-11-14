@@ -32,10 +32,10 @@ import org.mmarini.Tuple2;
 import org.mmarini.wheelly.behaviours.HeadActionId;
 import org.mmarini.wheelly.behaviours.MacroActionsState;
 import org.mmarini.wheelly.behaviours.MoveActionId;
+import org.mmarini.wheelly.protobuf.aruco.MarkerEvent;
 import org.mmarini.wheelly.protobuf.inferences.*;
 import org.mmarini.wheelly.protobuf.inferences.CorrelatedCameraEvent;
 import org.mmarini.wheelly.protobuf.inferences.RobotSpec;
-import org.mmarini.wheelly.protobuf.robot.CameraEvent;
 import org.mmarini.wheelly.protobuf.robot.ContactsTelemetry;
 import org.mmarini.wheelly.protobuf.robot.LidarTelemetry;
 import org.mmarini.wheelly.protobuf.robot.MotionTelemetry;
@@ -163,7 +163,7 @@ public class InferenceFileReader implements InferenceReader {
      * @param coordsList the list of floating-point coordinates
      * @return a primitive {@code double[]} containing the converted coordinates
      */
-    private static double[] fromProto(List<Float> coordsList) {
+    private static double[] fromProto(List<Integer> coordsList) {
         return coordsList.stream()
                 .mapToDouble(x -> x)
                 .toArray();
@@ -194,7 +194,7 @@ public class InferenceFileReader implements InferenceReader {
      */
     private static org.mmarini.wheelly.robots.CorrelatedCameraEvent fromProtoBuf(CorrelatedCameraEvent camera) {
         return new org.mmarini.wheelly.robots.CorrelatedCameraEvent(
-                fromProtoBuf(camera.getCamera()),
+                fromProtoBuf(camera.getMarker()),
                 fromProtoBuf(camera.getLidars()));
 
     }
@@ -206,7 +206,7 @@ public class InferenceFileReader implements InferenceReader {
      * @param camera the protobuf camera event message
      * @return the corresponding domain camera event instance
      */
-    public static org.mmarini.wheelly.robots.CameraEvent fromProtoBuf(CameraEvent camera) {
+    public static org.mmarini.wheelly.robots.CameraEvent fromProtoBuf(MarkerEvent camera) {
         return org.mmarini.wheelly.robots.CameraEvent.create(
                 camera.getTimestamp(),
                 camera.getMarkerId(),

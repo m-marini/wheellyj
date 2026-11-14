@@ -141,20 +141,6 @@ message SupplyTelemetry {
   uint32 voltage = 2;
 }
 
-// Event generated when the vision system detects a fiducial marker in a camera frame.
-message CameraEvent {
-  // Timestamp when the camera frame was captured (in milliseconds).
-  int64 timestamp = 1;
-  // Unique identifier of the detected fiducial marker.
-  int32 markerId = 2;
-  // Width of the captured image frame in pixels.
-  int32 width = 3;
-  // Height of the captured image frame in pixels.
-  int32 height = 4;
-  // Flattened list of 2D image coordinates (e.g. corner points) of the detected marker.
-  repeated float coords = 5;
-}
-
 // Command instructing the robot to drive towards a target coordinate.
 message MoveCommand {
   // True to move forward towards the target, false to move in reverse.

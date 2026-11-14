@@ -1,12 +1,12 @@
 ---
-$schema: https://mmarini.org/wheelly/mqtt-robot-schema-1.2
+$schema: https://mmarini.org/wheelly/mqtt-robot-schema-2.0
 class: org.mmarini.wheelly.mqtt.MqttRobot
-#brokerUrl: tcp://localhost:1883
-brokerUrl: tcp://mosquitto.home:1883
+brokerUrl: tcp://localhost:1883
+#brokerUrl: tcp://mosquitto.home:1883
 user: wheellyj
 password: wheellyj
 robotId: "wheelly/e05a1b66f89c/v2"
-qrDeviceId: "wheellyqr/d94775b8c6f4/v0"
+amDeviceId: "aruco/7055a6cd4d53/v2"
 configureTimeout: 2000
 retryInterval: 3000
 #cameraTimeout: 2000
