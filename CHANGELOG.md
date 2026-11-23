@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- Issue [#670](https://github.com/m-marini/wheellyj/issues/670): Refactor protobuf migration
 - Issue [#671](https://github.com/m-marini/wheellyj/issues/671): Protobuf inference file and java.nio files
 
 
