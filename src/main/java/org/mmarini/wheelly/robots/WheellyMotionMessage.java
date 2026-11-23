@@ -34,8 +34,6 @@ import org.mmarini.wheelly.utils.Angle;
 import java.awt.geom.Point2D;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static java.lang.Double.parseDouble;
 import static java.lang.Integer.parseInt;
@@ -81,11 +79,6 @@ public record WheellyMotionMessage(long time, double xPulses, double yPulses,
      * The mandatory number of expected parameters within a valid split status string.
      */
     public static final int NO_STATUS_PARAMS = 17;
-    /**
-     * The regular expression pattern utilised to validate and parse structured telemetry argument strings.
-     */
-//    public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),([01]),([0123]),(-?\\d+),(.*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*)$");
-    public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),([01]),([0123]),(-?\\d+),(.*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*)$");
     /**
      * A default telemetry message template initialised with zero values.
      */
@@ -138,7 +131,7 @@ public record WheellyMotionMessage(long time, double xPulses, double yPulses,
      * converting the remote timestamp using a clock converter.
      *
      * @param line           the timed status string wrapper received from the robot
-     * @param clockConverter the converter utilized to translate remote time into local simulation time
+     * @param clockConverter the converter utilised to translate remote time into local simulation time
      * @return the initialised motion message instance
      * @throws IllegalArgumentException if the split parameter count does not match {@link #NO_STATUS_PARAMS}
      */
@@ -174,47 +167,6 @@ public record WheellyMotionMessage(long time, double xPulses, double yPulses,
                 right, imuFailure,
                 status, targetDeg, leftTargetPps, rightTargetPps, leftPower, rightPower,
                 xTarget, yTarget);
-    }
-
-    /**
-     * Parses a structured comma-separated argument telemetry string to build a motion status message.
-     * <p>
-     * The argument string pattern must strictly align with {@link #ARG_PATTERN}.
-     * </p>
-     *
-     * @param simTime the designated simulation timeline coordinate value (ms)
-     * @param arg     the incoming raw comma-separated payload argument string
-     * @return the parsed and initialised motion message instance
-     * @throws IllegalArgumentException if the text argument structure does not match the validation regex pattern
-     */
-    public static WheellyMotionMessage parse(long simTime, String arg) {
-        Matcher m = ARG_PATTERN.matcher(arg);
-        if (!m.matches()) {
-            throw new IllegalArgumentException(format("Wrong motion message \"%s\"", arg));
-        }
-
-        double x = parseDouble(m.group(1));
-        double y = parseDouble(m.group(2));
-        int robotDeg = parseInt(m.group(3));
-
-        double left = parseDouble(m.group(4));
-        double right = parseDouble(m.group(5));
-
-        int imuFailure = Integer.parseInt(m.group(6));
-        MotionStatusId status = MotionStatusId.values()[Integer.parseInt(m.group(7))];
-        int targetDeg = Integer.parseInt(m.group(8));
-        int leftTargetPps = Integer.parseInt(m.group(10));
-        int rightTargetPps = Integer.parseInt(m.group(11));
-        int leftPower = Integer.parseInt(m.group(12));
-        int rightPower = Integer.parseInt(m.group(13));
-
-        double xTarget = parseDouble(m.group(14));
-        double yTarget = parseDouble(m.group(15));
-
-        return new WheellyMotionMessage(simTime, x, y,
-                robotDeg, left,
-                right, imuFailure,
-                status, targetDeg, leftTargetPps, rightTargetPps, leftPower, rightPower, xTarget, yTarget);
     }
 
     /**

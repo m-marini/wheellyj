@@ -31,12 +31,7 @@ package org.mmarini.wheelly.robots;
 import org.mmarini.wheelly.utils.Angle;
 
 import java.awt.geom.Point2D;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import static java.lang.Double.parseDouble;
-import static java.lang.Integer.parseInt;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.robots.RobotSpec.location2Pulses;
 import static org.mmarini.wheelly.robots.RobotSpec.pulses2Location;
@@ -71,45 +66,11 @@ public record WheellyLidarMessage(long time,
                                   Angle robotYaw, Angle headTarget, Point2D robotLocation,
                                   Point2D target) implements WheellyMessage {
     /**
-     * The regular expression pattern utilised to validate and parse structured lidar argument strings.
-     */
-    public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(\\d+),(\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+),(-?\\d+),(-?\\d+),(\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*)$");
-    /**
      * A default lidar telemetry template initialised with baseline values.
      */
     public static final WheellyLidarMessage DEFAULT_MESSAGE = new WheellyLidarMessage(
             0, 0, 0, 0, 0, 0, 0,
             HeadStatusId.FIX_DIRECTION, 0, 0, 0);
-
-    /**
-     * Parses a structured comma-separated argument telemetry string to build a lidar status message.
-     * <p>
-     * The incoming telemetry payload parameter structure must align with {@link #ARG_PATTERN}.
-     * </p>
-     *
-     * @param simTime the designated simulation timeline coordinate value (ms)
-     * @param arg     the incoming raw comma-separated payload argument string
-     * @return the parsed and initialised lidar message instance
-     * @throws IllegalArgumentException if the text argument structure does not match the validation regex pattern
-     */
-    public static WheellyLidarMessage parse(long simTime, String arg) {
-        Matcher m = ARG_PATTERN.matcher(arg);
-        if (!m.matches()) {
-            throw new IllegalArgumentException(format("Wrong lidar message \"%s\"", arg));
-        }
-        int frontDistance = parseInt(m.group(1));
-        int rearDistance = parseInt(m.group(2));
-        double x = parseDouble(m.group(3));
-        double y = parseDouble(m.group(4));
-        int robotYaw = parseInt(m.group(5));
-        int direction = parseInt(m.group(6));
-        int headTargetDeg = parseInt(m.group(7));
-        HeadStatusId trackingState = HeadStatusId.values()[parseInt(m.group(8))];
-        double xTarget = parseDouble(m.group(9));
-        double yTarget = parseDouble(m.group(10));
-        return new WheellyLidarMessage(simTime, frontDistance, rearDistance, x, y,
-                robotYaw, direction, trackingState, headTargetDeg, xTarget, yTarget);
-    }
 
     /**
      * Initialises a {@link WheellyLidarMessage} with a reduced set of parameters,

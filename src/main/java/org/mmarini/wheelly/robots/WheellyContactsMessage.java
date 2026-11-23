@@ -31,8 +31,6 @@ package org.mmarini.wheelly.robots;
 import io.reactivex.rxjava3.schedulers.Timed;
 
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static java.lang.Long.parseLong;
 import static java.lang.String.format;
@@ -51,8 +49,6 @@ public record WheellyContactsMessage(long time,
                                      boolean canMoveForward, boolean canMoveBackward)
         implements WheellyMessage {
     public static final int NO_PARAMS = 6;
-    // [sampleTime] [frontSignals] [rearSignals] [canMoveForward] [canMoveBackward]
-    public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,([01]),([01]),([01]),([01])$");
     public static final WheellyContactsMessage DEFAULT_MESSAGE = new WheellyContactsMessage(0, true, true, true, true);
 
     /**
@@ -102,36 +98,6 @@ public record WheellyContactsMessage(long time,
         long simTime = time - timeOffset;
         return new WheellyContactsMessage(
                 simTime, frontSensors, rearSensors,
-                canMoveForward, canMoveBackward
-        );
-    }
-
-    /**
-     * Returns the Wheelly status from status string
-     * The string status is formatted as:
-     * <pre>
-     *     [sampleTime]
-     *     [frontSignals]
-     *     [rearSignals]
-     *     [canMoveForward]
-     *     [canMoveBackward]
-     * </pre>
-     *
-     * @param time the message time (ms)
-     * @param arg  the arguments string
-     */
-    public static WheellyContactsMessage parse(long time, String arg) {
-        Matcher m = ARG_PATTERN.matcher(arg);
-        if (!m.matches()) {
-            throw new IllegalArgumentException(format("Wrong contacts message \"%s\"", arg));
-        }
-        boolean frontSensors = Integer.parseInt(m.group(1)) != 0;
-        boolean rearSensors = Integer.parseInt(m.group(2)) != 0;
-
-        boolean canMoveForward = Integer.parseInt(m.group(3)) != 0;
-        boolean canMoveBackward = Integer.parseInt(m.group(4)) != 0;
-        return new WheellyContactsMessage(
-                time, frontSensors, rearSensors,
                 canMoveForward, canMoveBackward
         );
     }

@@ -29,38 +29,23 @@
 package org.mmarini.wheelly.mqtt;
 
 import org.mmarini.wheelly.robots.RobotStatusApi;
-import org.mmarini.wheelly.utils.WatchDog;
-
-import java.util.Objects;
 
 public record MqttRobotStatus(
         boolean started, boolean closed, boolean connecting, boolean connected,
         boolean robotConfiguring, boolean robotConfigured,
         boolean halted,
-        int configIndex, long startTime,
-        long lastActivity,
-        WatchDog watchDog) implements RobotStatusApi {
+        long startTime,
+        long lastActivity
+) implements RobotStatusApi {
 
-    /**
-     * Returns the real robot state with the changed config index
-     *
-     * @param configIndex the config index
-     */
-    public MqttRobotStatus configIndex(int configIndex) {
-        return this.configIndex != configIndex
-                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured,
-                halted, configIndex, startTime, lastActivity, watchDog)
-                : this;
+    @Override
+    public boolean configured() {
+        return robotConfigured;
     }
 
     @Override
     public boolean configuring() {
         return robotConfiguring || connecting;
-    }
-
-    @Override
-    public boolean configured() {
-        return robotConfigured;
     }
 
     /**
@@ -71,22 +56,14 @@ public record MqttRobotStatus(
     public MqttRobotStatus lastActivity(long lastActivity) {
         return this.lastActivity != lastActivity
                 ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured,
-                halted, configIndex, startTime, lastActivity, watchDog)
+                halted, startTime, lastActivity)
                 : this;
-    }
-
-    /**
-     * Returns the real robot state with the next config index
-     */
-    public MqttRobotStatus nextConfigIndex() {
-        return new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured,
-                halted, configIndex + 1, startTime, lastActivity, watchDog);
     }
 
     public MqttRobotStatus setClosed() {
         return !(closed && !connecting && connected && !robotConfiguring && robotConfigured)
                 ? new MqttRobotStatus(started, true, false, false, false, false,
-                false, configIndex, startTime, lastActivity, watchDog)
+                false, startTime, lastActivity)
                 : this;
     }
 
@@ -96,7 +73,7 @@ public record MqttRobotStatus(
     public MqttRobotStatus setConnected() {
         return !(connected && !connecting)
                 ? new MqttRobotStatus(started, closed, false, true, robotConfiguring, robotConfigured,
-                halted, configIndex, startTime, lastActivity, watchDog)
+                halted, startTime, lastActivity)
                 : this;
     }
 
@@ -107,7 +84,7 @@ public record MqttRobotStatus(
         return !(connecting && !connected)
                 ? new MqttRobotStatus(started, closed, true, false, robotConfiguring, robotConfigured,
                 halted,
-                configIndex, startTime, lastActivity, watchDog)
+                startTime, lastActivity)
                 : this;
     }
 
@@ -117,7 +94,7 @@ public record MqttRobotStatus(
     public MqttRobotStatus setRobotConfigured() {
         return !(!robotConfiguring && robotConfigured)
                 ? new MqttRobotStatus(started, closed, connecting, connected, false, true, halted,
-                configIndex, startTime, lastActivity, watchDog)
+                startTime, lastActivity)
                 : this;
     }
 
@@ -127,7 +104,7 @@ public record MqttRobotStatus(
     public MqttRobotStatus setRobotConfiguring() {
         return !(robotConfiguring && !robotConfigured)
                 ? new MqttRobotStatus(started, closed, connecting, connected, true, false, halted,
-                configIndex, startTime, lastActivity, watchDog)
+                startTime, lastActivity)
                 : this;
     }
 
@@ -137,7 +114,7 @@ public record MqttRobotStatus(
     public MqttRobotStatus setRobotNotConfigured() {
         return !(!robotConfiguring && !robotConfigured)
                 ? new MqttRobotStatus(started, closed, connecting, connected, false, false, halted,
-                configIndex, startTime, lastActivity, watchDog)
+                startTime, lastActivity)
                 : this;
     }
 
@@ -147,7 +124,7 @@ public record MqttRobotStatus(
     public MqttRobotStatus setUnconnected() {
         return !(!connecting && !connected)
                 ? new MqttRobotStatus(started, closed, false, false, robotConfiguring, robotConfigured, halted,
-                configIndex, startTime, lastActivity, watchDog)
+                startTime, lastActivity)
                 : this;
     }
 
@@ -158,7 +135,7 @@ public record MqttRobotStatus(
      */
     public MqttRobotStatus startTime(long startTime) {
         return this.startTime != startTime
-                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured, halted, configIndex, startTime, lastActivity, watchDog)
+                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured, halted, startTime, lastActivity)
                 : this;
     }
 
@@ -169,18 +146,7 @@ public record MqttRobotStatus(
      */
     public MqttRobotStatus started(boolean started) {
         return this.started != started
-                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured, halted, configIndex, startTime, lastActivity, watchDog)
-                : this;
-    }
-
-    /**
-     * Returns the real robot state with the changed watch dog
-     *
-     * @param watchDog the watch dog
-     */
-    public MqttRobotStatus watchDog(WatchDog watchDog) {
-        return !Objects.equals(this.watchDog, watchDog)
-                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured, halted, configIndex, startTime, lastActivity, watchDog)
+                ? new MqttRobotStatus(started, closed, connecting, connected, robotConfiguring, robotConfigured, halted, startTime, lastActivity)
                 : this;
     }
 }

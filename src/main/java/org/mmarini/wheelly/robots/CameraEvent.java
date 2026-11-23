@@ -30,12 +30,9 @@ package org.mmarini.wheelly.robots;
 
 import org.mmarini.wheelly.utils.Angle;
 
+import java.awt.*;
 import java.awt.geom.Point2D;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.IntStream;
 
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static org.mmarini.wheelly.robots.RobotSpec.UNKNOWN_MARKER;
 
@@ -53,7 +50,6 @@ public record CameraEvent(
         int width, int height,
         Point2D[] points,
         Angle direction) {
-    public static final Pattern ARG_PATTERN = Pattern.compile("^\\d+,(\\d+),(\\d+),(\\d+),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*)$");
     public static final CameraEvent DEFAULT_EVENT = unknown(0);
 
     public static CameraEvent create(long time, int markerId, int width, int height, double widthRatio, double... coords) {
@@ -77,27 +73,25 @@ public record CameraEvent(
         return new CameraEvent(time, markerId, width, height, points, direction);
     }
 
-    /**
-     * Returns the camera event from line
-     *
-     * @param time       the message time (ms)
-     * @param arg        the data line
-     * @param widthRatio the width ratio
-     */
-    public static CameraEvent parse(long time, String arg, double widthRatio) {
-        Matcher m = ARG_PATTERN.matcher(arg);
-        if (!m.matches()) {
-            throw new IllegalArgumentException(format("Wrong camera message \"%s\"", arg));
+    public static CameraEvent create(long time, int markerId, int width, int height, double widthRatio, int... coords) {
+        requireNonNull(coords);
+        if (!(coords.length == 0 || coords.length == 8)) {
+            throw new IllegalArgumentException("Require 0 or 8 coordinates: " + coords.length);
         }
-        int markerId = Integer.parseInt(m.group(1));
-        int width = Integer.parseInt(m.group(2));
-        int height = Integer.parseInt(m.group(3));
-
-        double[] points = IntStream.range(0, 8)
-                .mapToDouble(i -> Double.parseDouble(m.group(i + 4)))
-                .toArray();
-
-        return create(time, markerId, width, height, widthRatio, points);
+        Point2D[] points = null;
+        Angle direction = Angle.DEG0;
+        if (coords.length == 8) {
+            points = new Point2D[4];
+            int xTot = 0;
+            for (int i = 0; i < 4; i++) {
+                int x = coords[i * 2];
+                int y = coords[i * 2 + 1];
+                points[i] = new Point(x, y);
+                xTot += x;
+            }
+            direction = Angle.fromPoint(((xTot - width * 2) * widthRatio / 4d), width);
+        }
+        return new CameraEvent(time, markerId, width, height, points, direction);
     }
 
     /**

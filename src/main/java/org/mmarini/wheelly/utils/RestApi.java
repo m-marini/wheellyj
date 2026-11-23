@@ -51,6 +51,7 @@ import static java.util.Objects.requireNonNull;
 
 public class RestApi {
     private static final Logger logger = LoggerFactory.getLogger(RestApi.class);
+    public static final String NETWORK_LIST_SCHEMA = "https://mmarini.org/wheelly/wifi-network-schema.0.1";
 
     /**
      * Returns the network configuration
@@ -107,7 +108,7 @@ public class RestApi {
             throw new IOException(format("Http Status %d", response.getStatus()));
         }
         JsonNode netList = response.readEntity(JsonNode.class);
-        Set<ValidationMessage> errors = WheellyJsonSchemas.instance().validate(netList, "https://mmarini.org/wheelly/network-list-schema", null);
+        Set<ValidationMessage> errors = WheellyJsonSchemas.instance().validate(netList, NETWORK_LIST_SCHEMA, null);
         if (!errors.isEmpty()) {
             String text = errors.stream()
                     .map(ValidationMessage::toString)

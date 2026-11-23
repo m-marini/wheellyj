@@ -39,13 +39,14 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.concurrent.TimeUnit;
 
+import static org.mmarini.wheelly.mqtt.MqttRobotTest.DEFAULT_CONFIGURATION;
 import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_ROBOT_SPEC;
 
 public class TestApp {
-    private static final Logger logger = LoggerFactory.getLogger(TestApp.class);
     public static final String BROKER_URL = "tcp://localhost:1883";
     public static final String USER_NAME = "wheellyj";
     public static final String PASSWORD = "wheellyj";
+    private static final Logger logger = LoggerFactory.getLogger(TestApp.class);
 
     static void main(String[] args) {
         new TestApp().run();
@@ -59,8 +60,8 @@ public class TestApp {
         try {
             this.robot = MqttRobot.create(BROKER_URL, null, USER_NAME, PASSWORD,
                     "wheelly", "wheellyqr",
-                    5000, 3000, DEFAULT_ROBOT_SPEC
-                    , new String[0]);
+                    5000, 3000, DEFAULT_ROBOT_SPEC,
+                    DEFAULT_CONFIGURATION);
         } catch (MqttException e) {
             throw new RuntimeException(e);
         }

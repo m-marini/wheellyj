@@ -186,7 +186,7 @@ public class SensorMonitor extends MatrixTable {
                         addColumn(SENSOR_DIR_KEY, Messages.getString("SensorMonitor.sensorDir"), 3),
                         addColumn(FRONT_DIST_KEY, Messages.getString("SensorMonitor.frontDistance"), 4),
                         addColumn(REAR_DIST_KEY, Messages.getString("SensorMonitor.rearDistance"), 4),
-                        addColumn(MARKER_KEY, Messages.getString("SensorMonitor.qrCode"), 3),
+                        addColumn(MARKER_KEY, Messages.getString("SensorMonitor.aruco"), 3),
                         addColumn(HEAD_STATUS_KEY, Messages.getString("SensorMonitor.headStatus"), 13),
                         addColumn(SCAN_HEAD_KEY, Messages.getString("SensorMonitor.scanHead"), 13),
 

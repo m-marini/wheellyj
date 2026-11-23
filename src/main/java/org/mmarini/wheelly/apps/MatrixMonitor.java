@@ -559,7 +559,7 @@ public class MatrixMonitor {
         Angle robotDir = robotStatus.direction();
         Point2D location = robotStatus.location();
         return robotDir.add(Angle.fromDeg(headRotationSlider.getValue()))
-                .at(location, trackDistanceSlider.getValue() * CM);
+                .at(location, motionDistanceSlider.getValue() * CM);
     }
 
     /**

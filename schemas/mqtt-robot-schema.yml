@@ -1,11 +1,11 @@
 ---
 $schema: https://json-schema.org/draft/2020-12/schema
-$id: https://mmarini.org/wheelly/mqtt-robot-schema-1.2
+$id: https://mmarini.org/wheelly/mqtt-robot-schema-2.0
 title: Robot
 type: object
 properties:
   $schema:
-    const: https://mmarini.org/wheelly/mqtt-robot-schema-1.2
+    const: https://mmarini.org/wheelly/mqtt-robot-schema-2.0
   class:
     const: org.mmarini.wheelly.mqtt.MqttRobot
   brokerUrl:
@@ -18,7 +18,7 @@ properties:
     type: string
   robotId:
     type: string
-  qrDeviceId:
+  amDeviceId:
     type: string
   retryInterval:
     type: integer
@@ -89,43 +89,38 @@ properties:
     type: integer
     minimum: 1
     maximum: 60000
-  config:
-    type: array
-    items:
-      $ref: "#/$defs/Config"
+  asr:
+    type: integer
+    minimum: 0
+    maximum: 16383
+  lambdaFactor:
+    type: integer
+    minimum: 0
+    maximum: 100
+  maxPulseInterval:
+    type: integer
+    minimum: 1
+    maximum: 10000
+  delayedInterval:
+    type: integer
+    minimum: 1
+    maximum: 10000
+  tau:
+    type: integer
+    minimum: 1
+    maximum: 10000
+  antiGimbalRadius:
+    type: integer
+    minimum: 0
+    maximum: 60000
 required:
   - $schema
   - class
   - user
   - password
   - robotId
-  - qrDeviceId
+  - amDeviceId
   - contactRadius
   - lidarFOV
   - cameraFOV
   - maxRadarDistance
-$defs:
-  Config:
-    type: object
-    properties:
-      asr:
-        type: integer
-        minimum: 0
-        maximum: 16383
-      lambdaFactor:
-        type: integer
-        minimum: 0
-        maximum: 100
-      maxPulseInterval:
-        type: integer
-        minimum: 1
-        maximum: 10000
-      delayedInterval:
-        type: integer
-        minimum: 1
-        maximum: 10000
-      tau:
-        type: integer
-        minimum: 1
-        maximum: 10000
-
