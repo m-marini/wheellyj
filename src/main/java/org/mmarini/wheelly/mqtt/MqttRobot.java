@@ -28,38 +28,35 @@
 
 package org.mmarini.wheelly.mqtt;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.processors.BehaviorProcessor;
 import io.reactivex.rxjava3.processors.PublishProcessor;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.mmarini.wheelly.protobuf.aruco.MarkerEvent;
+import org.mmarini.wheelly.protobuf.robot.*;
 import org.mmarini.wheelly.robots.*;
+import org.mmarini.wheelly.robots.HeadStatusId;
+import org.mmarini.wheelly.robots.MotionStatusId;
 import org.mmarini.wheelly.utils.WheellyJsonSchemas;
 import org.mmarini.yaml.Locator;
-import org.mmarini.yaml.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.geom.Point2D;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.stream.Stream;
 
 import static java.lang.Math.round;
 import static java.lang.Math.tan;
@@ -103,49 +100,55 @@ import static org.mmarini.wheelly.rx.RXFunc.logError;
  * </p>
  */
 public class MqttRobot implements RobotApi {
-    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/mqtt-robot-schema-1.2";
+    public static final String SCHEMA_NAME = "https://mmarini.org/wheelly/mqtt-robot-schema-2.0";
     public static final String DEFAULT_BROKER_URL = "tcp://localhost:1883";
     public static final long DEFAULT_CONFIGURE_INTERVAL = 1000;
     public static final long DEFAULT_RETRY_INTERVAL = 500;
     public static final long DEFAULT_COMMAND_TIMEOUT = 3000;
+    public static final int DEFAULT_ASR = 200;
+    public static final int DEFAULT_LAMBDA_FACTOR = 30;
+    public static final int DEFAULT_MAX_PULSE_INTERVAL = 200;
+    public static final int DEFAULT_DELAYED_INTERVAL = 10;
+    public static final int DEFAULT_TAU = 500;
+    public static final int DEFAULT_ANTIGIMBAL_RADIUS = 20;
     private static final Logger logger = LoggerFactory.getLogger(MqttRobot.class);
 
     /**
-     * Returns the stream of config strings
+     * Builds a {@link Configuration.Builder} populated from the specified robot specifications.
+     * <p>
+     * Converts domain-level physical measurements (angles, distances, intervals, and
+     * speed limits) into the discrete units required by the Protocol Buffers
+     * {@link Configuration} schema, such as encoder pulses and integer degrees.
      *
-     * @param spec the robot specification
+     * @param spec the {@link RobotSpec} containing the physical and operational parameters of the robot
+     * @return a pre-populated {@link Configuration.Builder} ready for further customisation or building
      */
-    private static Stream<String> configText(RobotSpec spec) {
-        try {
-            ObjectMapper mapper = new ObjectMapper(new JsonFactory());
-            ObjectNode json = Utils.objectMapper.createObjectNode();
-            // Create motion controller configuration
-            json.put("minRotRange", spec.directionRange().toIntDeg())
-                    .put("maxRotRange", spec.maxRotRange().toIntDeg())
-                    .put("maxRotPps", spec.maxRotPps())
-                    .put("maxSpeed", spec.maxSpeed())
-                    .put("haltDistance", (int) round(distance2Pulse(spec.targetRange())))
-                    .put("decelerateDistance", (int) (round(distance2Pulse(spec.decelerateDistance()))));
-
-            String cfg0 = mapper.writeValueAsString(json);
-            json.removeAll()
-                    .put("minHeadDir", -spec.headFOV().toIntDeg() / 2)
-                    .put("maxHeadDir", spec.headFOV().toIntDeg() / 2)
-                    .put("sendInterval", spec.sendInterval())
-                    .put("scanInterval", spec.scanInterval());
-            String cfg1 = mapper.writeValueAsString(json);
-            return Stream.of(cfg0, cfg1);
-        } catch (JsonProcessingException e) {
-            logger.atError().setCause(e).log("Error create config string");
-            return Stream.empty();
-        }
+    static Configuration.Builder configFromSpec(RobotSpec spec) {
+        return Configuration.newBuilder()
+                .setMinRotRange(spec.directionRange().toIntDeg())
+                .setMaxRotRange(spec.maxRotRange().toIntDeg())
+                .setMaxRotPps(spec.maxRotPps())
+                .setMaxSpeed(spec.maxSpeed())
+                .setHaltDistance((int) round(distance2Pulse(spec.targetRange())))
+                .setDecelerateDistance((int) (round(distance2Pulse(spec.decelerateDistance()))))
+                .setMinHeadDir(-spec.headFOV().toIntDeg() / 2)
+                .setMaxHeadDir(spec.headFOV().toIntDeg() / 2)
+                .setSendInterval((int) spec.sendInterval())
+                .setScanInterval((int) spec.scanInterval());
     }
 
     /**
-     * Returns the robot from configuration
+     * Creates and configures a new {@link MqttRobot} instance from a JSON configuration tree.
+     * <p>
+     * Validates the root JSON node against the {@code SCHEMA_NAME} schema, extracts MQTT
+     * connection credentials, timing parameters, device identifiers, and physical robot
+     * specifications, and builds the complete Protocol Buffers {@link Configuration}
+     * payload before initialising the MQTT client connection.
      *
-     * @param root the configuration document
-     * @param file the configuration file
+     * @param root the root {@link JsonNode} containing the robot and MQTT configuration properties
+     * @param file the {@link Path} to the source configuration file (currently unused)
+     * @return a fully initialised {@link MqttRobot} instance
+     * @throws RuntimeException if an {@link MqttException} occurs whilst creating or connecting the MQTT client
      */
     public static MqttRobot create(JsonNode root, Path file) {
         Locator locator = Locator.root();
@@ -157,29 +160,22 @@ public class MqttRobot implements RobotApi {
         long configureTimeout = locator.path("configureTimeout").getNode(root).asLong(DEFAULT_CONFIGURE_INTERVAL);
         long retryInterval = locator.path("retryInterval").getNode(root).asLong(DEFAULT_RETRY_INTERVAL);
         String robotId = locator.path("robotId").getNode(root).asText();
-        String qrDeviceId = locator.path("qrDeviceId").getNode(root).asText();
+        String amDeviceId = locator.path("amDeviceId").getNode(root).asText();
 
         RobotSpec robotSpec = RobotSpec.fromJson(root, locator);
-        ObjectMapper objectMapper = new ObjectMapper(new JsonFactory());
-        Locator cameraConfigCommandsLoc = locator.path("config");
-        Stream<String> cfgStream = !cameraConfigCommandsLoc.getNode(root).isMissingNode()
-                ? cameraConfigCommandsLoc.elements(root).map(l -> {
-                    JsonNode json = l.getNode(root);
-                    try {
-                        return objectMapper.writeValueAsString(json);
-                    } catch (JsonProcessingException e) {
-                        logger.atError().setCause(e).log("Error converting configuration to json");
-                        return "";
-                    }
-                })
-                .filter(Predicate.not(String::isEmpty))
-                : Stream.empty();
-        String[] cfg = Stream.concat(configText(robotSpec), cfgStream)
-                .toArray(String[]::new);
+
+        Configuration.Builder builder = configFromSpec(robotSpec);
+        Configuration cfg = builder.setAsr(locator.path("asr").getNode(root).asInt(DEFAULT_ASR))
+                .setLambdaFactor(locator.path("lambdaFactor").getNode(root).asInt(DEFAULT_LAMBDA_FACTOR))
+                .setMaxPulseInterval(locator.path("maxPulseInterval").getNode(root).asInt(DEFAULT_MAX_PULSE_INTERVAL))
+                .setDelayedInterval(locator.path("delayedInterval").getNode(root).asInt(DEFAULT_DELAYED_INTERVAL))
+                .setAntiGimbalRadius(locator.path("antiGimbalRadius").getNode(root).asInt(DEFAULT_ANTIGIMBAL_RADIUS))
+                .setTau(locator.path("tau").getNode(root).asInt(DEFAULT_TAU))
+                .build();
         try {
             return create(brokerUrl, clientId, user, password,
                     robotId,
-                    qrDeviceId, configureTimeout, retryInterval,
+                    amDeviceId, configureTimeout, retryInterval,
                     robotSpec, cfg);
         } catch (MqttException e) {
             logger.atError().setCause(e).log("Error creating mqtt robot");
@@ -192,10 +188,10 @@ public class MqttRobot implements RobotApi {
      *
      * @param brokerUrl        the broker url
      * @param clientId         the client id
-     * @param user             the mqtt client username
-     * @param password         mqtt client password
+     * @param user             the MQTT client username
+     * @param password         MQTT client password
      * @param robotId          robot device id
-     * @param qrId             QRCODE device id
+     * @param amId             QRCODE device id
      * @param configureTimeout the configuration timeout (ms)
      * @param retryInterval    the retry configuration interval (ms)
      * @param robotSpec        the robot specification
@@ -203,102 +199,241 @@ public class MqttRobot implements RobotApi {
      * @throws MqttException in case of error
      */
     public static MqttRobot create(String brokerUrl, String clientId, String user, String password,
-                                   String robotId, String qrId,
+                                   String robotId, String amId,
                                    long configureTimeout, long retryInterval,
-                                   RobotSpec robotSpec, String[] robotConfig) throws MqttException {
+                                   RobotSpec robotSpec, Configuration robotConfig) throws MqttException {
         RxMqttClient client = RxMqttClient.create(brokerUrl, clientId, user, password);
         RemoteDevice robotDevice = new RemoteDevice(robotId, client);
-        RemoteDevice qrDevice = new RemoteDevice(qrId, client);
-        return new MqttRobot(client, robotDevice, qrDevice, configureTimeout, retryInterval, robotSpec,
+        RemoteDevice amDevice = new RemoteDevice(amId, client);
+        return new MqttRobot(client, robotDevice, amDevice, configureTimeout, retryInterval, robotSpec,
                 robotConfig);
+    }
+
+    /**
+     * Converts a Protocol Buffers {@link MarkerEvent} message into a domain
+     * {@link CameraEvent} instance, applying the specified timestamp and width
+     * scaling ratio.
+     *
+     * @param protoMarker the protobuf {@link MarkerEvent} containing the detected
+     *                    marker identifier, frame dimensions, and flattened corner
+     *                    coordinates
+     * @param time        the target timestamp (in milliseconds) to assign to the
+     *                    created domain event
+     * @param widthRatio  the horizontal scaling ratio used to normalise or adjust
+     *                    coordinates relative to the frame width
+     * @return the corresponding domain {@link CameraEvent} instance
+     */
+    private static CameraEvent fromProtoBuf(MarkerEvent protoMarker, long time, double widthRatio) {
+        int[] points = protoMarker.getCoordsList().stream()
+                .mapToInt(x -> x)
+                .toArray();
+        return CameraEvent.create(time, protoMarker.getMarkerId(), protoMarker.getWidth(), protoMarker.getHeight(), widthRatio, points);
+    }
+
+    /**
+     * Converts a Protocol Buffers {@link ContactsTelemetry} message into a domain
+     * {@link WheellyContactsMessage}.
+     *
+     * @param protoBuf the incoming Protobuf contact telemetry payload
+     * @param time     the reception or local correlation timestamp in milliseconds
+     * @return a populated {@link WheellyContactsMessage} instance
+     */
+    private static WheellyContactsMessage fromProtoBuf(ContactsTelemetry protoBuf, long time) {
+        return new WheellyContactsMessage(time,
+                (protoBuf.getSensors() & 1) != 0,
+                (protoBuf.getSensors() & 2) != 0,
+                (protoBuf.getSensors() & 4) != 0,
+                (protoBuf.getSensors() & 8) != 0);
+    }
+
+    /**
+     * Converts a Protocol Buffers {@link LidarTelemetry} message into a domain
+     * {@link WheellyLidarMessage}.
+     *
+     * @param protoBuf the incoming Protobuf LiDAR and head-tracking telemetry payload
+     * @param time     the reception or local correlation timestamp in milliseconds
+     * @return a populated {@link WheellyLidarMessage} instance
+     */
+    private static WheellyLidarMessage fromProtoBuf(LidarTelemetry protoBuf, long time) {
+        return new WheellyLidarMessage(time,
+                protoBuf.getFrontDistance(), protoBuf.getRearDistance(),
+                protoBuf.getX(), protoBuf.getY(),
+                protoBuf.getRobotYaw(), protoBuf.getHeadDirection(),
+                HeadStatusId.values()[protoBuf.getHeadStatusValue()],
+                protoBuf.getHeadTarget(),
+                protoBuf.getXTarget(),
+                protoBuf.getYTarget());
+    }
+
+    /**
+     * Converts a Protocol Buffers {@link SupplyTelemetry} message into a domain
+     * {@link WheellySupplyMessage}.
+     *
+     * @param protoBuf the incoming Protobuf power supply telemetry payload
+     * @param time     the reception or local correlation timestamp in milliseconds
+     * @return a populated {@link WheellySupplyMessage} instance
+     */
+    private static WheellySupplyMessage fromProtoBuf(SupplyTelemetry protoBuf, long time) {
+        return new WheellySupplyMessage(time, protoBuf.getVoltage());
+    }
+
+    /**
+     * Converts a Protocol Buffers {@link MotionTelemetry} message into a domain
+     * {@link WheellyMotionMessage}.
+     *
+     * @param protoBuf the incoming Protobuf motion and motor telemetry payload
+     * @param time     the reception or local correlation timestamp in milliseconds
+     * @return a populated {@link WheellyMotionMessage} instance
+     */
+    private static WheellyMotionMessage fromProtoBuf(MotionTelemetry protoBuf, long time) {
+        return new WheellyMotionMessage(time,
+                protoBuf.getX(), protoBuf.getY(),
+                protoBuf.getRobotDeg(),
+                protoBuf.getLeftPps(), protoBuf.getRightPps(),
+                protoBuf.getImuFailure(),
+                MotionStatusId.values()[protoBuf.getStatusIdValue()],
+                protoBuf.getTargetDeg(),
+                protoBuf.getLeftTargetPps(),
+                protoBuf.getRightTargetPps(),
+                protoBuf.getLeftPower(), protoBuf.getRightPower(),
+                protoBuf.getXTarget(), protoBuf.getYTarget());
+    }
+
+    /**
+     * Generates a unique message correlation identifier based on the current system time.
+     *
+     * @return the current epoch time in milliseconds
+     */
+    private static long generateId() {
+        return System.currentTimeMillis();
     }
 
     private final RxMqttClient client;
     private final RemoteDevice robotDevice;
-    private final RemoteDevice qrDetectorDevice;
+    private final RemoteDevice amDetectorDevice;
     private final long configureTimeout;
     private final long retryInterval;
     private final RobotSpec robotSpec;
     private final AtomicReference<MqttRobotStatus> status;
     private final BehaviorProcessor<RobotStatusApi> states;
     private final PublishProcessor<Throwable> errors;
-    private final String[] config;
-    private final List<Consumer<WheellyContactsMessage>> onContacts;
-    private final List<Consumer<WheellyMotionMessage>> onMotions;
-    private final List<Consumer<WheellyLidarMessage>> onLidars;
-    private final List<Consumer<WheellySupplyMessage>> onSupplies;
-    private final List<Consumer<CameraEvent>> onCameras;
+    private final Configuration config;
+    private final List<Disposable> disposables;
+    private Consumer<CameraEvent> onCameras;
+    private Consumer<WheellyMotionMessage> onMotions;
+    private Consumer<WheellySupplyMessage> onSupplies;
+    private Consumer<WheellyContactsMessage> onContacts;
+    private Consumer<WheellyLidarMessage> onLidars;
 
     /**
-     * Creates the mqtt robot
+     * Constructs a new {@code MqttRobot} controller and subscribes to incoming device telemetry streams.
+     * <p>
+     * Initialises the internal reactive state and error processors, sets up default
+     * robot status tracking, and registers RxJava subscriptions on both the primary
+     * robot device (motion, contacts, LiDAR range, power supply, and heartbeat channels)
+     * and the camera detector device.
      *
-     * @param client           the mqtt client
-     * @param robotDevice      the robot device
-     * @param qrDetectorDevice the qr detector device
-     * @param configureTimeout the configuration timeout (ms)
-     * @param retryInterval    the retry configuration interval (ms)
-     * @param robotSpec        the robot specification
-     * @param config           the configurations
+     * @param client           the reactive MQTT client used for broker communication (must not be {@code null})
+     * @param robotDevice      the remote device abstraction representing the main robot controller (must not be {@code null})
+     * @param amDetectorDevice the remote device abstraction representing the vision/camera detector module (must not be {@code null})
+     * @param configureTimeout the timeout duration in milliseconds allowed for initial device configuration
+     * @param retryInterval    the delay interval in milliseconds between configuration or connection retry attempts
+     * @param robotSpec        the physical and kinematic specifications of the robot (must not be {@code null})
+     * @param config           the Protocol Buffers configuration payload to apply to the robot (must not be {@code null})
+     * @throws NullPointerException if any of the required object arguments is {@code null}
      */
-    public MqttRobot(RxMqttClient client, RemoteDevice robotDevice, RemoteDevice qrDetectorDevice, long configureTimeout, long retryInterval, RobotSpec robotSpec, String[] config) {
+    public MqttRobot(RxMqttClient client, RemoteDevice robotDevice, RemoteDevice amDetectorDevice,
+                     long configureTimeout, long retryInterval, RobotSpec robotSpec, Configuration config) {
         this.client = requireNonNull(client);
         this.robotDevice = requireNonNull(robotDevice);
-        this.qrDetectorDevice = requireNonNull(qrDetectorDevice);
+        this.amDetectorDevice = requireNonNull(amDetectorDevice);
         this.configureTimeout = configureTimeout;
         this.retryInterval = retryInterval;
         this.robotSpec = requireNonNull(robotSpec);
         this.config = requireNonNull(config);
         status = new AtomicReference<>(new MqttRobotStatus(false, false, false, false,
-                false, false, false, 0, 0,
-                0, null));
+                false, false, false, 0,
+                0));
         this.states = BehaviorProcessor.createDefault(status.get());
         this.errors = PublishProcessor.create();
-        robotDevice.readData("mt", this::toMotionMessage)
-                .subscribe(this::onMotionMessage,
-                        errors::onNext);
-        robotDevice.readData("ct", this::toContactMessage)
-                .subscribe(this::onContactMessage,
-                        errors::onError);
-        robotDevice.readData("rg", this::toLidarMessage)
-                .subscribe(this::onLidarMessage,
-                        errors::onNext);
-        robotDevice.readData("sv", this::toSupplyMessage)
-                .subscribe(this::onSupplyMessages,
-                        errors::onNext);
-        robotDevice.readData("hi", m -> new String(m.getPayload()))
-                .subscribe(this::onRobotHiMessage,
-                        errors::onNext);
-        qrDetectorDevice.readData("qr", this::toCameraMessage)
-                .subscribe(
-                        this::onCameraEvent,
-                        errors::onNext);
-        this.onMotions = new ArrayList<>();
-        this.onLidars = new ArrayList<>();
-        this.onContacts = new ArrayList<>();
-        this.onSupplies = new ArrayList<>();
-        this.onCameras = new ArrayList<>();
+        this.disposables = List.of(
+                robotDevice.readData("mt", this::toMotionMessage)
+                        .subscribe(this::onMotionMessage,
+                                errors::onNext),
+                robotDevice.readData("ct", this::toContactMessage)
+                        .subscribe(this::onContactMessage,
+                                errors::onNext),
+                robotDevice.readData("rg", this::toLidarMessage)
+                        .subscribe(this::onLidarMessage,
+                                errors::onNext),
+                robotDevice.readData("sv", this::toSupplyMessage)
+                        .subscribe(this::onSupplyMessages,
+                                errors::onNext),
+                robotDevice.readData("hi", this::toHiMessage)
+                        .subscribe(this::onRobotHiMessage,
+                                errors::onNext),
+                amDetectorDevice.readData("am", this::toCameraMessage)
+                        .subscribe(
+                                this::onCameraEvent,
+                                errors::onNext));
     }
 
+    /**
+     * Registers a callback listener to receive incoming contact sensor telemetry messages.
+     *
+     * @param callback the {@link Consumer} invoked whenever a {@link WheellyContactsMessage} arrives
+     */
     @Override
     public void addOnContacts(Consumer<WheellyContactsMessage> callback) {
-        onContacts.add(callback);
+        onContacts = onContacts == null ? callback : onContacts.andThen(callback);
     }
 
+    /**
+     * Registers a callback listener to receive incoming LiDAR telemetry messages.
+     *
+     * @param callback the {@link Consumer} invoked whenever a {@link WheellyLidarMessage} arrives
+     */
     @Override
     public void addOnLidar(Consumer<WheellyLidarMessage> callback) {
-        onLidars.add(callback);
+        onLidars = onLidars == null ? callback : onLidars.andThen(callback);
     }
 
+    /**
+     * Registers a callback listener to receive incoming motion and odometry telemetry messages.
+     *
+     * @param callback the {@link Consumer} invoked whenever a {@link WheellyMotionMessage} arrives
+     */
     @Override
     public void addOnMotion(Consumer<WheellyMotionMessage> callback) {
-        onMotions.add(callback);
+        onMotions = onMotions == null ? callback : onMotions.andThen(callback);
     }
 
+    /**
+     * Registers a callback listener to receive incoming power supply telemetry messages.
+     *
+     * @param callback the {@link Consumer} invoked whenever a {@link WheellySupplyMessage} arrives
+     */
     @Override
     public void addOnSupply(Consumer<WheellySupplyMessage> callback) {
-        onSupplies.add(callback);
+        onSupplies = onSupplies == null ? callback : onSupplies.andThen(callback);
     }
 
+    /**
+     * Returns the remote device abstraction representing the ArUco marker detector camera module.
+     *
+     * @return the ArUco camera {@link RemoteDevice} instance
+     */
+    public RemoteDevice arucoCameraDevice() {
+        return amDetectorDevice;
+    }
+
+    /**
+     * Gracefully shuts down the robot connection and releases all reactive resources.
+     * <p>
+     * Sends a final halt command, marks the robot status as closed, disconnects and
+     * awaits termination of the underlying MQTT client, completes the reactive state
+     * and error processors, and blocks until both remote device abstractions are closed.
+     */
     @Override
     public void close() {
         logger.atInfo().log("Closing ...");
@@ -314,27 +449,35 @@ public class MqttRobot implements RobotApi {
         } catch (MqttException e) {
             logger.atError().setCause(e).log("Error shuttingDown mqtt");
         }
+        for (Disposable disposable : disposables) {
+            disposable.dispose();
+        }
         states.onNext(s1);
         errors.onComplete();
         states.onComplete();
         robotDevice.closed().blockingAwait();
-        qrDetectorDevice.closed().blockingAwait();
+        amDetectorDevice.closed().blockingAwait();
         logger.atInfo().log("Robot closed ...");
     }
 
     /**
-     * Returns the configuration command
+     * Returns the Protocol Buffers configuration payload associated with this robot.
+     *
+     * @return the active {@link Configuration} instance
      */
-    public String[] config() {
+    public Configuration config() {
         return config;
     }
 
     /**
-     * Forces robot configuration
+     * Initiates robot configuration if the client is connected, not closed, and not
+     * already in the process of configuring.
+     * <p>
+     * Transitions the internal status to configuring and dispatches the configuration
+     * command to the remote robot device.
      */
     public void configure() {
-        MqttRobotStatus st = status.getAndUpdate(s ->
-                s.setRobotConfiguring().configIndex(0));
+        MqttRobotStatus st = status.getAndUpdate(MqttRobotStatus::setRobotConfiguring);
         states.onNext(status.get());
         if (!st.robotConfiguring() && !st.closed() && st.connected()) {
             // not robotConfiguring
@@ -343,36 +486,30 @@ public class MqttRobot implements RobotApi {
         }
     }
 
+    /**
+     * Dispatches the {@link Configuration} command over MQTT and subscribes to the acknowledgement.
+     * <p>
+     * Generates a unique correlation identifier, transmits the Protobuf configuration
+     * payload with {@code configureTimeout}, verifies the response ID, and forwards the
+     * outcome to {@link #onRobotConfiguration(boolean)}.
+     */
     void configureRobot() {
-        MqttRobotStatus st = status.get();
-        if (st.configIndex() < config.length) {
-            // Send configuration file
-            configureRobot(config[st.configIndex()])
-                    .doOnSuccess(success ->
-                            logger.atDebug().log("Configuration {}/{} {}",
-                                    status.get().configIndex() + 1, config.length, success ? "OK" : "KO"))
-                    .subscribe(this::onRobotConfiguration,
-                            logError(logger, "Error configuring robot"));
-        } else {
-            // Robot configured
-            MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::setRobotConfigured);
-            states.onNext(s1);
-            logger.atInfo().log("Robot configured");
-        }
+        long id = generateId();
+        executeRobotCommand(ProtoBufCommand.configCommand(id, config), configureTimeout)
+                .filter(res ->
+                        res.getId() == id)
+                .map(x -> true)
+                .defaultIfEmpty(false)
+                .subscribe(this::onRobotConfiguration,
+                        logError(logger, "Error configuring robot"));
     }
 
     /**
-     * Execute single configure command
-     *
-     * @param command the command
+     * Initiates an asynchronous connection to the MQTT broker if not already started or closed.
+     * <p>
+     * Updates the internal robot status to connecting, records the start timestamp, and
+     * subscribes to the reactive MQTT client connection lifecycle.
      */
-    private Single<Boolean> configureRobot(String command) {
-        return executeRobotCommand("cf", command, configureTimeout)
-                .map(res ->
-                        res.equals(command))
-                .defaultIfEmpty(false);
-    }
-
     @Override
     public void connect() {
         if (!status.get().closed()) {
@@ -395,18 +532,20 @@ public class MqttRobot implements RobotApi {
     }
 
     /**
-     * Executes the command returning the command response
+     * Executes a Protocol Buffers-encoded device command with the specified timeout.
      *
-     * @param command the command
-     * @param arg     the command argument
-     * @param timeout the execution timeout
+     * @param <R>     the expected response type
+     * @param command the {@link ProtoBufCommand} to transmit
+     * @param timeout the maximum execution time in milliseconds
+     * @return a {@link Maybe} emitting the parsed response of type {@code R}, an empty
+     * {@link Maybe} if the client is disconnected, or an error {@link Maybe} if dispatch fails
      */
-    private Maybe<String> executeRobotCommand(String command, String arg, long timeout) {
+    private <R> Maybe<R> executeRobotCommand(ProtoBufCommand<R> command, long timeout) {
         if (!client.isConnected()) {
             return Maybe.empty();
         } else {
             try {
-                return robotDevice.execute(StringCommand.create(command, arg), timeout);
+                return robotDevice.execute(command, timeout);
             } catch (Throwable e) {
                 notifyError("Error executing robot command", e);
                 return Maybe.error(e);
@@ -414,36 +553,59 @@ public class MqttRobot implements RobotApi {
         }
     }
 
+    /**
+     * Sends an immediate halt command to stop all robot locomotion.
+     *
+     * @return a {@link Single} emitting {@code true} if the command was acknowledged with a
+     * matching correlation identifier, or {@code false} if it timed out or failed
+     */
     @Override
     public Single<Boolean> halt() {
-        return executeRobotCommand("ha", "ha", DEFAULT_COMMAND_TIMEOUT)
-                .isEmpty()
-                .map(s -> !s);
+        long id = generateId();
+        return executeRobotCommand(ProtoBufCommand.haltCommand(id), DEFAULT_COMMAND_TIMEOUT)
+                .filter(msg -> msg.getId() == id)
+                .map(x -> true)
+                .defaultIfEmpty(false);
     }
 
-    @Override
+    /**
+     * Checks whether the robot is currently in a halted state.
+     *
+     * @return {@code true} if the robot is halted; {@code false} otherwise
+     */
     public boolean isHalt() {
         return status.get().halted();
     }
 
+    /**
+     * Commands the robot to move forward or backward towards a target 2D location.
+     * <p>
+     * Converts the target physical coordinates into encoder pulses before transmitting
+     * the Protobuf move command.
+     *
+     * @param frontMove {@code true} to drive forward; {@code false} to drive backward
+     * @param location  the destination coordinates in physical units
+     * @return a {@link Single} emitting {@code true} if the command was acknowledged, or
+     * {@code false} if the client is disconnected or the command failed
+     */
     @Override
     public Single<Boolean> move(boolean frontMove, Point2D location) {
         if (!status.get().connected()) {
             return Single.just(false);
         }
+        long id = generateId();
         Point2D pulses = location2Pulses(location);
-        int x = (int) round(pulses.getX());
-        int y = (int) round(pulses.getY());
-        return executeRobotCommand("mv", (frontMove ? 0 : 1) + "," + x + "," + y, DEFAULT_COMMAND_TIMEOUT)
-                .isEmpty()
-                .map(s -> !s);
+        return executeRobotCommand(ProtoBufCommand.moveCommand(id, frontMove, pulses), DEFAULT_COMMAND_TIMEOUT)
+                .filter(msg -> msg.getId() == id)
+                .map(x -> true)
+                .defaultIfEmpty(false);
     }
 
     /**
-     * Notifies error
+     * Logs an error and forwards it to the reactive error stream.
      *
-     * @param message the message
-     * @param error   the error
+     * @param message the contextual log description
+     * @param error   the {@link Throwable} cause to log and emit
      */
     private void notifyError(String message, Throwable error) {
         if (error instanceof TimeoutException) {
@@ -455,26 +617,34 @@ public class MqttRobot implements RobotApi {
         }
     }
 
+    /**
+     * Registers a callback listener to receive incoming camera detection events.
+     *
+     * @param callback the {@link Consumer} invoked whenever a {@link CameraEvent} arrives
+     */
     @Override
     public void onCamera(Consumer<CameraEvent> callback) {
-        onCameras.add(callback);
+        onCameras = onCameras == null ? callback : onCameras.andThen(callback);
     }
 
     /**
-     * Handles camera event
+     * Dispatches an incoming {@link CameraEvent} to the registered camera listener, if present.
      *
-     * @param cameraEvent the camera event
+     * @param cameraEvent the received camera detection event
      */
     private void onCameraEvent(CameraEvent cameraEvent) {
-        for (Consumer<CameraEvent> callback : onCameras) {
-            callback.accept(cameraEvent);
+        if (onCameras != null) {
+            onCameras.accept(cameraEvent);
         }
     }
 
     /**
-     * Handles the broker client connection event
+     * Handles changes in the MQTT broker connection state.
+     * <p>
+     * Updates the internal robot status accordingly and triggers automatic robot
+     * configuration upon successful connection.
      *
-     * @param connected true if the client is connected
+     * @param connected {@code true} if the MQTT client is connected; {@code false} otherwise
      */
     private void onConnection(boolean connected) {
         logger.atDebug().log("Client mqtt connected.");
@@ -491,9 +661,10 @@ public class MqttRobot implements RobotApi {
     }
 
     /**
-     * Handles the mqtt connection failure
+     * Handles an MQTT connection failure by notifying error subscribers and scheduling
+     * a delayed reconnection attempt after {@code retryInterval} milliseconds.
      *
-     * @param error the error
+     * @param error the {@link Throwable} describing the connection failure
      */
     private void onConnectionFailure(Throwable error) {
         notifyError("Error mqtt", error);
@@ -502,49 +673,51 @@ public class MqttRobot implements RobotApi {
     }
 
     /**
-     * Handles contact message
+     * Dispatches an incoming {@link WheellyContactsMessage} to the registered contact listener, if present.
      *
-     * @param message the message
+     * @param message the received contact sensor telemetry message
      */
     private void onContactMessage(WheellyContactsMessage message) {
-        for (Consumer<WheellyContactsMessage> callback : onContacts) {
-            callback.accept(message);
+        if (onContacts != null) {
+            onContacts.accept(message);
         }
     }
 
     /**
-     * Handles lidar message
+     * Dispatches an incoming {@link WheellyLidarMessage} to the registered LiDAR listener, if present.
      *
-     * @param message the message
+     * @param message the received LiDAR telemetry message
      */
     private void onLidarMessage(WheellyLidarMessage message) {
-        for (Consumer<WheellyLidarMessage> callback : onLidars) {
-            callback.accept(message);
+        if (onLidars != null) {
+            onLidars.accept(message);
         }
     }
 
     /**
-     * Handles motion message
+     * Dispatches an incoming {@link WheellyMotionMessage} to the registered motion listener, if present.
      *
-     * @param message the message
+     * @param message the received motion and odometry telemetry message
      */
-
     private void onMotionMessage(WheellyMotionMessage message) {
-        for (Consumer<WheellyMotionMessage> callback : onMotions) {
-            callback.accept(message);
+        if (onMotions != null) {
+            onMotions.accept(message);
         }
     }
 
     /**
-     * Handles the configuration success
+     * Handles the outcome of a robot configuration attempt.
+     * <p>
+     * If configuration succeeded, marks the robot status as configured; otherwise,
+     * marks it as unconfigured and schedules a retry after {@code retryInterval} milliseconds.
      *
-     * @param success true if configuration success
+     * @param success {@code true} if the robot acknowledged the configuration; {@code false} otherwise
      */
     private void onRobotConfiguration(boolean success) {
         if (success) {
-            MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::nextConfigIndex);
+            MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::setRobotConfigured);
             states.onNext(s1);
-            configureRobot();
+            logger.atInfo().log("Robot configured");
         } else {
             logger.atDebug().log("Robot configuration failed");
             MqttRobotStatus s1 = status.updateAndGet(MqttRobotStatus::setRobotNotConfigured);
@@ -555,99 +728,144 @@ public class MqttRobot implements RobotApi {
     }
 
     /**
-     * Handles the hello robot message
+     * Handles an incoming heartbeat ({@link HiMessage}) from the robot controller.
+     * <p>
+     * Indicates that the robot has started or restarted, resetting its configuration
+     * state to unconfigured and triggering a fresh configuration push.
      *
-     * @param arg the argument
+     * @param hiMessage the received {@link HiMessage} heartbeat payload
      */
-    private void onRobotHiMessage(String arg) {
+    private void onRobotHiMessage(HiMessage hiMessage) {
         MqttRobotStatus st = status.updateAndGet(MqttRobotStatus::setRobotNotConfigured);
         states.onNext(st);
         configure();
     }
 
     /**
-     * Handles the supply message
+     * Dispatches an incoming {@link WheellySupplyMessage} to the registered power supply listener, if present.
      *
-     * @param message the message
+     * @param message the received power supply telemetry message
      */
     private void onSupplyMessages(WheellySupplyMessage message) {
-        for (Consumer<WheellySupplyMessage> callback : onSupplies) {
-            callback.accept(message);
+        if (onSupplies != null) {
+            onSupplies.accept(message);
         }
     }
 
     /**
-     * Returns the robot device
+     * Returns a reactive stream emitting runtime and communication errors.
+     *
+     * @return a {@link Flowable} of {@link Throwable} errors
      */
-    public RemoteDevice qrCameraDevice() {
-        return qrDetectorDevice;
-    }
-
     @Override
     public Flowable<Throwable> readErrors() {
         return errors;
     }
 
+    /**
+     * Returns a reactive stream emitting updates to the robot's operational status.
+     *
+     * @return a {@link Flowable} emitting {@link RobotStatusApi} state snapshots
+     */
     @Override
     public Flowable<RobotStatusApi> readRobotStatus() {
         return states;
     }
 
+    /**
+     * Triggers a reconnection attempt to the MQTT broker.
+     */
     @Override
     public void reconnect() {
     }
 
     /**
-     * Returns the robot device
+     * Returns the remote device abstraction representing the primary robot controller.
+     *
+     * @return the robot {@link RemoteDevice} instance
      */
     public RemoteDevice robotDevice() {
         return robotDevice;
     }
 
+    /**
+     * Returns the physical and kinematic specifications configured for this robot.
+     *
+     * @return the {@link RobotSpec} instance
+     */
     @Override
     public RobotSpec robotSpec() {
         return robotSpec;
     }
 
+    /**
+     * Returns the elapsed time in milliseconds since the robot connection lifecycle started.
+     *
+     * @return elapsed operational time in milliseconds
+     */
     @Override
     public long robotTime() {
         return System.currentTimeMillis() - status.get().startTime();
     }
 
+    /**
+     * Commands the robot to rotate towards a target heading angle.
+     *
+     * @param dir the target rotation angle in degrees
+     * @return a {@link Single} emitting {@code true} if the command was acknowledged, or
+     * {@code false} if the client is disconnected or the command timed out
+     */
     @Override
     public Single<Boolean> rotate(int dir) {
         if (!status.get().connected()) {
             return Single.just(false);
         }
-        return executeRobotCommand("ro", String.valueOf(dir), DEFAULT_COMMAND_TIMEOUT)
-                .isEmpty()
-                .map(s -> !s);
+        long id = generateId();
+        return executeRobotCommand(ProtoBufCommand.rotateCommand(id, dir), DEFAULT_COMMAND_TIMEOUT)
+                .filter(msg -> msg.getId() == id)
+                .map(x -> true)
+                .defaultIfEmpty(false);
     }
 
+    /**
+     * Commands the robot's head scanner to orient towards a specified angle.
+     *
+     * @param direction the target head scan angle in degrees
+     * @return a {@link Single} emitting {@code true} if the command was acknowledged, or
+     * {@code false} if the command failed or timed out
+     */
     @Override
     public Single<Boolean> scan(int direction) {
-        if (!status.get().connected()) {
-            return Single.just(false);
-        }
-        return executeRobotCommand("sc", String.valueOf(direction), DEFAULT_COMMAND_TIMEOUT)
-                .isEmpty()
+        long id = generateId();
+        return executeRobotCommand(ProtoBufCommand.scanCommand(id, direction), DEFAULT_COMMAND_TIMEOUT)
+                .filter(msg ->
+                        msg.getId() == id)
+                .map(x -> true)
+                .defaultIfEmpty(false)
                 .map(s -> !s);
     }
 
+    /**
+     * Returns the time-scaling factor used for simulation execution.
+     *
+     * @return the simulation speed multiplier (always {@code 1.0} for real hardware)
+     */
     @Override
     public double simulationSpeed() {
         return 1;
     }
 
     /**
-     * Returns the camera event from the mqtt message
+     * Deserialises an incoming MQTT payload into a domain {@link CameraEvent}.
      *
-     * @param mqttMessage the message
+     * @param mqttMessage the raw MQTT message received from the camera detector module
+     * @return the parsed {@link CameraEvent}, or {@code null} if Protobuf parsing fails
      */
     private CameraEvent toCameraMessage(MqttMessage mqttMessage) {
         double widthRatio = 2 * tan(robotSpec.cameraFOV().toRad() / 2);
         try {
-            return CameraEvent.parse(robotTime(), new String(mqttMessage.getPayload()), widthRatio);
+            MarkerEvent protoMarker = MarkerEvent.parseFrom(mqttMessage.getPayload());
+            return fromProtoBuf(protoMarker, robotTime(), widthRatio);
         } catch (Throwable ex) {
             logger.atError().setCause(ex).log("Error parsing camera message");
             return null;
@@ -655,36 +873,30 @@ public class MqttRobot implements RobotApi {
     }
 
     /**
-     * Return contact message from the mqtt message
+     * Deserialises an incoming MQTT payload into a domain {@link WheellyContactsMessage}.
      *
-     * @param mqttMessage the message
+     * @param mqttMessage the raw MQTT message received on the contacts telemetry channel
+     * @return the parsed {@link WheellyContactsMessage}, or {@code null} if Protobuf parsing fails
      */
     private WheellyContactsMessage toContactMessage(MqttMessage mqttMessage) {
         try {
-            return WheellyContactsMessage.parse(robotTime(), new String(mqttMessage.getPayload()));
+            ContactsTelemetry protoBuf = ContactsTelemetry.parseFrom(mqttMessage.getPayload());
+            return fromProtoBuf(protoBuf, robotTime());
         } catch (Throwable ex) {
             logger.atError().setCause(ex).log("Error parsing contact message");
             return null;
         }
     }
 
-    private WheellyLidarMessage toLidarMessage(MqttMessage mqttMessage) {
-        try {
-            return WheellyLidarMessage.parse(robotTime(), new String(mqttMessage.getPayload()));
-        } catch (Throwable ex) {
-            logger.atError().setCause(ex).log("Error parsing lidar message");
-            return null;
-        }
-    }
-
     /**
-     * Returns the motion message from mqtt message
+     * Deserialises an incoming MQTT payload into a Protocol Buffers {@link HiMessage}.
      *
-     * @param mqttMessage the message
+     * @param mqttMessage the raw MQTT message received on the heartbeat channel
+     * @return the parsed {@link HiMessage}, or {@code null} if Protobuf parsing fails
      */
-    private WheellyMotionMessage toMotionMessage(MqttMessage mqttMessage) {
+    private HiMessage toHiMessage(MqttMessage mqttMessage) {
         try {
-            return WheellyMotionMessage.parse(robotTime(), new String(mqttMessage.getPayload()));
+            return HiMessage.parseFrom(mqttMessage.getPayload());
         } catch (Throwable ex) {
             logger.atError().setCause(ex).log("Error parsing motion message");
             return null;
@@ -692,29 +904,74 @@ public class MqttRobot implements RobotApi {
     }
 
     /**
-     * Returns the supply message from mqtt message
+     * Deserialises an incoming MQTT payload into a domain {@link WheellyLidarMessage}.
      *
-     * @param mqttMessage the message
+     * @param mqttMessage the raw MQTT message received on the LiDAR telemetry channel
+     * @return the parsed {@link WheellyLidarMessage}, or {@code null} if Protobuf parsing fails
+     */
+    private WheellyLidarMessage toLidarMessage(MqttMessage mqttMessage) {
+        try {
+            LidarTelemetry protoBuf = LidarTelemetry.parseFrom(mqttMessage.getPayload());
+            return fromProtoBuf(protoBuf, robotTime());
+        } catch (Throwable ex) {
+            logger.atError().setCause(ex).log("Error parsing lidar message");
+            return null;
+        }
+    }
+
+    /**
+     * Deserialises an incoming MQTT payload into a domain {@link WheellyMotionMessage}.
+     *
+     * @param mqttMessage the raw MQTT message received on the motion telemetry channel
+     * @return the parsed {@link WheellyMotionMessage}, or {@code null} if Protobuf parsing fails
+     */
+    private WheellyMotionMessage toMotionMessage(MqttMessage mqttMessage) {
+        try {
+            MotionTelemetry protoBuf = MotionTelemetry.parseFrom(mqttMessage.getPayload());
+            return fromProtoBuf(protoBuf, robotTime());
+        } catch (Throwable ex) {
+            logger.atError().setCause(ex).log("Error parsing motion message");
+            return null;
+        }
+    }
+
+    /**
+     * Deserialises an incoming MQTT payload into a domain {@link WheellySupplyMessage}.
+     *
+     * @param mqttMessage the raw MQTT message received on the power supply telemetry channel
+     * @return the parsed {@link WheellySupplyMessage}, or {@code null} if Protobuf parsing fails
      */
     private WheellySupplyMessage toSupplyMessage(MqttMessage mqttMessage) {
         try {
-            return WheellySupplyMessage.parse(robotTime(), new String(mqttMessage.getPayload()));
+            SupplyTelemetry protoBuf = SupplyTelemetry.parseFrom(mqttMessage.getPayload());
+            return fromProtoBuf(protoBuf, robotTime());
         } catch (Throwable ex) {
             logger.atError().setCause(ex).log("Error parsing supply message");
             return null;
         }
     }
 
+    /**
+     * Commands the robot's head to track a target 2D location in front or rear mode.
+     * <p>
+     * Converts the target physical coordinates into encoder pulses before transmitting
+     * the Protobuf head-tracking command.
+     *
+     * @param frontTrack {@code true} for front-facing tracking; {@code false} for rear-facing tracking
+     * @param target     the target point coordinates in physical units
+     * @return a {@link Single} emitting {@code true} if the command was acknowledged, or
+     * {@code false} if the client is disconnected or the command timed out
+     */
     @Override
     public Single<Boolean> track(boolean frontTrack, Point2D target) {
         if (!status.get().connected()) {
             return Single.just(false);
         }
+        long id = generateId();
         Point2D pulses = location2Pulses(target);
-        int x = (int) round(pulses.getX());
-        int y = (int) round(pulses.getY());
-        return executeRobotCommand("ht", (frontTrack ? 0 : 1) + "," + x + "," + y, DEFAULT_COMMAND_TIMEOUT)
-                .isEmpty()
-                .map(s -> !s);
+        return executeRobotCommand(ProtoBufCommand.trackCommand(id, frontTrack, pulses), DEFAULT_COMMAND_TIMEOUT)
+                .filter(msg -> msg.getId() == id)
+                .map(x -> true)
+                .defaultIfEmpty(false);
     }
 }

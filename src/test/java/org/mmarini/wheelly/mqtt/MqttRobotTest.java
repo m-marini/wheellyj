@@ -37,6 +37,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mmarini.Tuple2;
+import org.mmarini.wheelly.protobuf.robot.Configuration;
 import org.mmarini.wheelly.robots.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mmarini.wheelly.mqtt.MqttRobot.*;
 import static org.mmarini.wheelly.robots.RobotSpec.DEFAULT_ROBOT_SPEC;
 
 class MqttRobotTest {
@@ -67,6 +69,14 @@ class MqttRobotTest {
     public static final int CLOSE_DELAY = 100;
     public static final int MESSAGE_DELAY = 100;
     public static final String CONFIG_STRING = "{}";
+    public static final Configuration DEFAULT_CONFIGURATION = MqttRobot.configFromSpec(DEFAULT_ROBOT_SPEC)
+            .setAsr(DEFAULT_ASR)
+            .setLambdaFactor(DEFAULT_LAMBDA_FACTOR)
+            .setMaxPulseInterval(DEFAULT_MAX_PULSE_INTERVAL)
+            .setDelayedInterval(DEFAULT_DELAYED_INTERVAL)
+            .setAntiGimbalRadius(DEFAULT_ANTIGIMBAL_RADIUS)
+            .setTau(DEFAULT_TAU)
+            .build();
     private static final Logger logger = LoggerFactory.getLogger(MockMqttClient.class);
     private MqttRobot robot;
     private TestSubscriber<RobotStatusApi> statusSub;
@@ -80,7 +90,7 @@ class MqttRobotTest {
         robot = assertDoesNotThrow(() -> MqttRobot.create(url, CLIENT_ID, USER, PASSWORD,
                 ROBOT_ID, QR_ID,
                 CONFIGURE_TIMEOUT, RETRY_INTERVAL, DEFAULT_ROBOT_SPEC,
-                new String[]{CONFIG_STRING}));
+                DEFAULT_CONFIGURATION));
         assertNotNull(robot);
         robot.readRobotStatus().subscribe(statusSub);
         robot.readErrors().subscribe(errorSub);

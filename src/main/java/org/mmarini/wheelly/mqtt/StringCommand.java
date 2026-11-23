@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -43,6 +43,11 @@ public record StringCommand(String id, MqttMessage arg) implements DeviceCommand
      */
     public static StringCommand create(String id, String arg) {
         return new StringCommand(id, new MqttMessage(arg.getBytes()));
+    }
+
+    @Override
+    public Throwable error(MqttMessage message) {
+        return new DeviceException(new String(message.getPayload()));
     }
 
     @Override

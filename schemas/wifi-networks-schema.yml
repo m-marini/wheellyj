@@ -1,0 +1,17 @@
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://mmarini.org/wheelly/wifi-network-schema.0.1
+title: Wheelly application
+
+# monitor schema
+type: object
+properties:
+  $schema:
+    type: string
+    const: https://mmarini.org/wheelly/wifi-network-schema.0.1
+  networks:
+    type: array
+    items:
+      type: string
+required:
+  - networks

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Marco Marini, marco.marini@mmarini.org
+ * Copyright (c) 2025-2026 Marco Marini, marco.marini@mmarini.org
  *
  *  Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -36,6 +36,13 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
  * @param <R> the command response type
  */
 public interface DeviceCommand<R> {
+
+    /**
+     * Returns the throwable from the error message
+     *
+     * @param message the message
+     */
+    Throwable error(MqttMessage message);
 
     /**
      * Returns the command id (suffix of topics)

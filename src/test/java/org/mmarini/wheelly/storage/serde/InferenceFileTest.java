@@ -31,6 +31,10 @@ package org.mmarini.wheelly.storage.serde;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mmarini.RandomArgumentsGenerator;
 import org.mmarini.Tuple2;
 import org.mmarini.wheelly.behaviours.*;
 import org.mmarini.wheelly.control.RobotStatus;
@@ -43,9 +47,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mmarini.Matchers.angleCloseTo;
 import static org.mmarini.Matchers.pointCloseTo;
@@ -82,6 +87,74 @@ class InferenceFileTest {
     public static final WorldModel MODEL = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS, null, null);
     public static final MacroActionsState MACRO_ENV_STATE = new MacroActionsState(MODEL, MoveActionId.MICRO_FORWARD_ACTION, HeadActionId.SCAN_ACTION);
 
+    public static Stream<Arguments> dataActions() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(0, MoveActionId.values().length - 1)
+                .uniform(0, HeadActionId.values().length - 1)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataContacts() {
+        //        long time, boolean frontSensor, boolean rearSensor, boolean canMoveForward, boolean canMoveBackward
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(0, 60000) // x
+                .booleans()
+                .booleans()
+                .booleans()
+                .booleans()
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataLidars() {
+        // long time, int frontDistance, int rearDistance, double x, double y,
+        // int dirDeg, int headDeg, int headId, int headTarget, double xt, double yt
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(0L, 60000L)
+                .uniform(0, 2000)
+                .uniform(0, 2000)
+                .uniform(distance2Pulse(-3), distance2Pulse(3), 10)
+                .uniform(distance2Pulse(-3), distance2Pulse(3), 10)
+                .uniform(-180, 179)
+                .uniform(-65, 65)
+                .uniform(0, HeadStatusId.values().length - 1)
+                .uniform(-65, 65)
+                .uniform(distance2Pulse(-3), distance2Pulse(3), 10)
+                .uniform(distance2Pulse(-3), distance2Pulse(3), 10)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataMarkers() {
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(-3d, 3d, 10) // x
+                .uniform(-3d, 3d, 10) // y
+                .uniform(-1d, 1d, 10) // weight
+                .uniform(0L, 60000L) // markerTime
+                .uniform(0L, 60000L) // cleanTime
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
+    public static Stream<Arguments> dataMotion() {
+        // long time, double x, double y, int dirDeg, double lpps, double rpps,
+        // int imu, int moveId, int targetDeg, int lt, int rt, int lpw, int rpw, double xt, double yt
+        return RandomArgumentsGenerator.create(SEED)
+                .uniform(0, 60000)
+                .uniform(distance2Pulse(-3), distance2Pulse(3), 10)
+                .uniform(distance2Pulse(-3), distance2Pulse(3), 10)
+                .uniform(-180, 179)
+                .uniform(-MAX_PPS, (double) MAX_PPS, 10)
+                .uniform(-MAX_PPS, (double) MAX_PPS, 10)
+                .uniform(0, 10)
+                .uniform(0, MotionStatusId.values().length - 1)
+                .uniform(-180, 179)
+                .uniform(-MAX_PPS, MAX_PPS)
+                .uniform(-MAX_PPS, MAX_PPS)
+                .uniform(-4096, 4096)
+                .uniform(-4096, 4096)
+                .uniform(distance2Pulse(-3), distance2Pulse(3), 10)
+                .uniform(distance2Pulse(-3), distance2Pulse(3), 10)
+                .build(NUM_RANDOM_TEST_CASES);
+    }
+
     private InferenceFileWriter writer;
 
     @BeforeEach
@@ -95,6 +168,140 @@ class InferenceFileTest {
     void tearDown() throws Exception {
         writer.close();
         Files.deleteIfExists(FILE);
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataActions")
+    void testActions(int moveId, int headId) throws Exception {
+        MoveActionId moveActionId = MoveActionId.values()[moveId];
+        HeadActionId headActionId = HeadActionId.values()[headId];
+        MacroAction action = new MacroAction(moveActionId, headActionId);
+        writer.write(MACRO_ENV_STATE, action);
+        writer.close();
+        try (InferenceFileReader reader = new InferenceFileReader(FILE)) {
+            Tuple2<BehaviourState, BehaviourAction> step = reader.readMacroActionStep();
+            assertNotNull(step);
+            BehaviourAction readAction = step.v2();
+            assertEquals(moveId, readAction.moveActionId().ordinal());
+            assertEquals(headId, readAction.headActionId().ordinal());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataContacts")
+    void testContacts(long time, boolean frontSensor, boolean rearSensor, boolean canMoveForward, boolean canMoveBackward) throws Exception {
+        WheellyContactsMessage contacts = new WheellyContactsMessage(time, frontSensor, rearSensor, canMoveForward, canMoveBackward);
+        RobotStatus robotStatus = new RobotStatus(DEFAULT_ROBOT_SPEC, 1, MOTION_MESSAGE,
+                contacts, DEFAULT_SUPPLY_MESSAGE, DEFAULT_DECODE_VOLTAGE, CORRELATED_CAMERA_EVENT, LIDAR_MESSAGE);
+        WorldModel model = new WorldModel(WORLD_MODEL_SPEC, robotStatus, RADAR, MARKERS, null, null);
+        MacroActionsState state = new MacroActionsState(model, MoveActionId.MICRO_FORWARD_ACTION, HeadActionId.SCAN_ACTION);
+        writer.write(state, AGENT_ACTION);
+        writer.close();
+        try (InferenceFileReader reader = new InferenceFileReader(FILE)) {
+            Tuple2<BehaviourState, BehaviourAction> step = reader.readMacroActionStep();
+            RobotStatus result = step.v1().worldModel().robotStatus();
+            WheellyContactsMessage msg = result.contactsMessage();
+            assertEquals(contacts, msg);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataActions")
+    void testFSMStates(int moveId, int headId) throws Exception {
+        MacroActionsState state = new MacroActionsState(MODEL, MoveActionId.values()[moveId], HeadActionId.values()[headId]);
+        writer.write(state, AGENT_ACTION);
+        writer.close();
+        try (InferenceFileReader reader = new InferenceFileReader(FILE)) {
+            Tuple2<BehaviourState, BehaviourAction> step = reader.readMacroActionStep();
+            BehaviourState readState = step.v1();
+            assertEquals(moveId, readState.moveActionId().ordinal());
+            assertEquals(headId, readState.headActionId().ordinal());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataLidars")
+    void testLidars(long time, int frontDistance, int rearDistance, double x, double y,
+                    int dirDeg, int headDeg, int headId, int headTarget, double xt, double yt) throws Exception {
+        WheellyLidarMessage msg0 = new WheellyLidarMessage(time, frontDistance, rearDistance, x, y,
+                dirDeg, headDeg, HeadStatusId.values()[headId], headTarget, xt, yt);
+        RobotStatus robotStatus = new RobotStatus(DEFAULT_ROBOT_SPEC, 1, MOTION_MESSAGE,
+                CONTACTS_MESSAGE, DEFAULT_SUPPLY_MESSAGE, DEFAULT_DECODE_VOLTAGE, CORRELATED_CAMERA_EVENT, msg0);
+        WorldModel model = new WorldModel(WORLD_MODEL_SPEC, robotStatus, RADAR, MARKERS, null, null);
+        MacroActionsState state = new MacroActionsState(model, MoveActionId.MICRO_FORWARD_ACTION, HeadActionId.SCAN_ACTION);
+        writer.write(state, AGENT_ACTION);
+        writer.close();
+        try (InferenceFileReader reader = new InferenceFileReader(FILE)) {
+            Tuple2<BehaviourState, BehaviourAction> step = reader.readMacroActionStep();
+            RobotStatus result = step.v1().worldModel().robotStatus();
+            WheellyLidarMessage msg = result.lidarMessage();
+            assertEquals(time, msg.time());
+            assertEquals(frontDistance, msg.frontDistance());
+            assertEquals(rearDistance, msg.rearDistance());
+            assertEquals(dirDeg, msg.robotYawDeg());
+            assertEquals(headDeg, msg.headDirectionDeg());
+            assertEquals(headId, msg.trackingState().ordinal());
+            assertEquals(headTarget, msg.headTargetDeg());
+            assertThat(msg.xPulses(), closeTo(x, 0.1));
+            assertThat(msg.yPulses(), closeTo(y, 0.1));
+            assertThat(msg.xTarget(), closeTo(xt, 0.1));
+            assertThat(msg.yTarget(), closeTo(yt, 0.1));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataMarkers")
+    void testMarkers(double x, double y, double weight, long markerTime, long cleanTime) throws Exception {
+        FiducialMarker marker = new FiducialMarker(0, new Point2D.Double(x, y), weight, markerTime, cleanTime);
+        Map<Integer, FiducialMarker> MARKERS = Map.of(0, marker);
+        WorldModel model = new WorldModel(WORLD_MODEL_SPEC, ROBOT_STATUS, RADAR, MARKERS, null, null);
+        MacroActionsState state = new MacroActionsState(model, MoveActionId.MICRO_FORWARD_ACTION, HeadActionId.SCAN_ACTION);
+        writer.write(state, AGENT_ACTION);
+        writer.close();
+        try (InferenceFileReader reader = new InferenceFileReader(FILE)) {
+            Tuple2<BehaviourState, BehaviourAction> step = reader.readMacroActionStep();
+            Map<Integer, FiducialMarker> markers = step.v1().worldModel().markers();
+            assertThat(markers, hasKey(0));
+            FiducialMarker marker1 = markers.get(0);
+            assertThat(marker1.location(), pointCloseTo(x, y, MM));
+            assertThat(marker1.weight(), closeTo(weight, 1e-6));
+            assertEquals(markerTime, marker1.markerTime());
+            assertEquals(cleanTime, marker1.cleanTime());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("dataMotion")
+    void testMotion(long time, double x, double y, int dirDeg, double lpps, double rpps,
+                    int imu, int moveId, int targetDeg, int lt, int rt, int lpw, int rpw, double xt, double yt) throws Exception {
+        WheellyMotionMessage msg0 = new WheellyMotionMessage(time, x, y, dirDeg, lpps, rpps,
+                imu, MotionStatusId.values()[moveId], targetDeg, lt, rt, lpw, rpw, xt, yt);
+        RobotStatus robotStatus = new RobotStatus(DEFAULT_ROBOT_SPEC, 1, msg0,
+                CONTACTS_MESSAGE, DEFAULT_SUPPLY_MESSAGE, DEFAULT_DECODE_VOLTAGE, CORRELATED_CAMERA_EVENT, LIDAR_MESSAGE);
+        WorldModel model = new WorldModel(WORLD_MODEL_SPEC, robotStatus, RADAR, MARKERS, null, null);
+        MacroActionsState state = new MacroActionsState(model, MoveActionId.MICRO_FORWARD_ACTION, HeadActionId.SCAN_ACTION);
+        writer.write(state, AGENT_ACTION);
+        writer.close();
+        try (InferenceFileReader reader = new InferenceFileReader(FILE)) {
+            Tuple2<BehaviourState, BehaviourAction> step = reader.readMacroActionStep();
+            RobotStatus result = step.v1().worldModel().robotStatus();
+            WheellyMotionMessage msg = result.motionMessage();
+            assertEquals(time, msg.time());
+            assertThat(msg.xPulses(), closeTo(x, 0.1));
+            assertThat(msg.yPulses(), closeTo(y, 0.1));
+            assertEquals(dirDeg, msg.directionDeg());
+            assertThat(msg.leftPps(), closeTo(lpps, 0.1));
+            assertThat(msg.rightPps(), closeTo(rpps, 0.1));
+            assertEquals(imu, msg.imuFailure());
+            assertEquals(moveId, msg.status().ordinal());
+            assertEquals(targetDeg, msg.targetDeg());
+            assertEquals(lt, msg.leftTargetPps());
+            assertEquals(rt, msg.rightTargetPps());
+            assertEquals(lpw, msg.leftPower());
+            assertEquals(rpw, msg.rightPower());
+            assertThat(msg.xTarget(), closeTo(xt, 0.1));
+            assertThat(msg.yTarget(), closeTo(yt, 0.1));
+        }
     }
 
     @Test
@@ -176,7 +383,7 @@ class InferenceFileTest {
     }
 
     @Test
-    void testReope() throws Exception {
+    void testReopen() throws Exception {
         writer.write(MACRO_ENV_STATE, AGENT_ACTION);
         writer.close();
 
@@ -230,6 +437,6 @@ class InferenceFileTest {
         writer.write(MACRO_ENV_STATE, AGENT_ACTION);
         writer.close();
         // header size reduced from 115 to 85 bytes with protobuf
-        assertEquals(5421, Files.size(FILE));
+        assertEquals(5397, Files.size(FILE));
     }
 }

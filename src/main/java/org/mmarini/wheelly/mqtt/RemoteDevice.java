@@ -97,14 +97,13 @@ public class RemoteDevice {
      */
     public <R> Maybe<R> execute(DeviceCommand<R> command, long timeout) {
         String commandTopic = commandTopicPath() + "/" + command.id();
-        String errorTopic = commandTopic + "/err";
         ConnectableFlowable<Tuple2<String, MqttMessage>> replyConnectable = getCommandReply(commandTopic)
                 .publish();
         Maybe<R> reply = replyConnectable.firstElement()
                 .timeout(timeout, TimeUnit.MILLISECONDS)
                 .flatMap(t -> {
-                    if (t.v1().equals(errorTopic)) {
-                        return Maybe.error(new DeviceException(new String(t.v2().getPayload())));
+                    if (t.v1().endsWith("/err")) {
+                        return Maybe.error(command.error(t.v2()));
                     }
                     R response = command.response(t.v2());
                     return response != null
